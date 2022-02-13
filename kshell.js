@@ -36,7 +36,7 @@ function mousePressed() {
 function updateMouseAnimationSystem() {
   for (var i in mouseAnimations) {
     let currentMouseAnimation = mouseAnimations[i];
-
+    
     noStroke();
     fill(127, 127, 127, 255 - currentMouseAnimation.width * 2);
     currentMouseAnimation.update();
@@ -138,7 +138,6 @@ Window.prototype.draw = function () {
     }
   }
 }
-
 Window.prototype.updateLogic = function () {
   if (this.hasTopBar) {
     if (mouseArray.x > this.width + this.x - (this.topBarHeight / 2) - (this.topBarHeight / 5) && mouseArray.y > this.y - (this.topBarHeight) + (this.topBarHeight / 4) && mouseArray.x < (this.width + this.x - (this.topBarHeight / 2) - (this.topBarHeight / 5)) + this.topBarHeight / 2 && mouseArray.y < (this.y - (this.topBarHeight) + (this.topBarHeight / 4)) + this.topBarHeight / 2 && mouseIsPressed && this.hasFocus && !this.isDragged) {
@@ -154,41 +153,31 @@ Window.prototype.updateLogic = function () {
 }
 
 //Window Manager Toolkit
-
 //All the values in the functions are percent based on the window properties
 //w and h are "percent width" and "percent height" respectively
 //if x is 50, the object will start at the middle of the window
 //if w is 100, the rectangle will fill 100% of the horizontal space in the window
-
 Window.prototype.removeElement = function (index) {
   this.elements.splice(index, 1);
 }
-
 Window.prototype.addFill = function (r, g, b, a) {
   this.elements.push([0, r, g, b, a]);
 }
-
 Window.prototype.addRect = function (x, y, w, h) {
   this.elements.push([1, x, y, w, h]);
-
 }
-
 Window.prototype.addText = function (message, x, y) {
   this.elements.push([2, message, x, y]);
 }
-
 Window.prototype.addStackingText = function (messages, x, y) {
   this.elements.push([3, messages, x, y]);
 }
-
 Window.prototype.addTextSize = function (size) {
   this.elements.push([4, size]);
 }
-
 Window.prototype.addButton = function (func, x, y, w, h) {
   this.elements.push([5, x, y, w, h, func]);
 }
-
 
 //Universal Functions
 function Button(x, y, w, h, func) {
@@ -253,7 +242,6 @@ function drawWindows() {
 //Settings app
 function Settings() {
 }
-
 Settings.prototype.update = function () {
 
 };
@@ -263,7 +251,6 @@ var Terminal = function () {
   this.prompt = "[kshell]$ ";
   this.blinkingCursor = true;
 }
-
 Terminal.prototype.createWindow = function () {
   this.prompt = "[jskernel]$ ";
   this.textArray = [];
@@ -281,7 +268,6 @@ Terminal.prototype.createWindow = function () {
 
   windows.push(terminalWindow);
 }
-
 Terminal.prototype.createIcon = function (x, y, size) {
   var icon = new Window();
   icon.addFill(0, 0, 0);
@@ -312,7 +298,6 @@ SOTF.prototype.createWindow = function () {
   }
   createProcess(gameSystemUpdate, 0, "SOTF");
 }
-
 SOTF.prototype.createIcon = function (x, y, size) {
   var icon = new Window();
   icon.addFill(80, 200, 80);
@@ -332,7 +317,6 @@ SOTF.prototype.createIcon = function (x, y, size) {
   icon.draw();
 }
 
-
 //App Dock
 var appDock = function () {
   this.iconSize = 64;
@@ -342,7 +326,6 @@ var appDock = function () {
   this.elements.push(new SOTF());
   this.pressed = false;
 }
-
 appDock.prototype.update = function () {
   for (var i in this.elements) {
     var currentElement = this.elements[i];
@@ -361,10 +344,7 @@ appDock.prototype.update = function () {
     }
   }
 }
-
 var appDockSystem = new appDock();
-
-
 
 //Background
 RenderRainbow = function () {
@@ -379,29 +359,24 @@ RenderRainbow = function () {
     }
   }
 }
-
 function GenericBackground() {
   noStroke();
   fill(200, 200, 200);
   rect(0, 0, width, height);
 }
-
 backgroundFunction = RenderRainbow;
 //backgroundFunction = GenericBackground;
-
-
 
 //Create functions for each set of processes
 function updateAppDockSystem() {
   appDockSystem.update();
   textSize(12);
 }
-
 function reportPerformance() {
   //  print(getCurrentFrametime())
 }
 
-//p5 system functions
+//Set up and create processes
 function setup() {
   createCanvas(windowWidth - 20, windowHeight - 20);
   frameRate(monitorFramerate);
