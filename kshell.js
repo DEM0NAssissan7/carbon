@@ -346,7 +346,6 @@ appDock.prototype.update = function () {
   }
 }
 var appDockSystem = new appDock();
-
 //Background
 RenderRainbow = function () {
   this.resolutionScale = 32;
@@ -355,7 +354,7 @@ RenderRainbow = function () {
     for (var l = 0; l < height; l += this.resolutionScale) {
       let widthScale = (i / width) * 510;
       let heightScale = (l / height) * 510;
-      fill(heightScale / 1.5, widthScale / 1.5, -heightScale + 510 - widthScale);
+      fill(heightScale / 1, widthScale / 2, -heightScale + 510 - widthScale);
       rect(i, l, this.resolutionScale, this.resolutionScale);
     }
   }
