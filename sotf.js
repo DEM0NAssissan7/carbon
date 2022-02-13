@@ -9,7 +9,7 @@ function SOTF(){
   
   //gravityForce is measured in m/s
   //Every 20px is one meter ingame
-  this.gravityForce = 0;
+  this.gravityForce = 9.8;
   this.playerSize = 40;
   
   this.groundStepHeight = 20;
@@ -45,51 +45,56 @@ SOTF.prototype.update = function(){
     this.keyboardRight = keyboardArray[this.controlArray[3]];
     this.keyboardShoot = keyboardArray[this.controlArray[4]];
     
+    let currentGravityForce = getAnimationExpansionRate(self.gravityForce,1000);
     if(this.falling){
-      this.gravity += getAnimationExpansionRate(self.gravityForce,1000);
+      this.gravity += currentGravityForce;
     }else if(!this.keyboardUp){
       this.gravity = 0;
     }
     
     //Jumping
     if(this.keyboardUp){
-      this.gravity -= getAnimationExpansionRate(self.gravityForce*40,1000);
+      this.gravity -= currentGravityForce*4;
     }
     
     if(this.keyboardDown){
-      this.gravity += getAnimationExpansionRate(self.gravityForce*60,1000);
+      this.gravity += currentGravityForce*4;
     }
     
     //Horizontal
+    let walkingSpeed = getAnimationExpansionRate(self.gravityForce*3,1000);
     if(this.keyboardRight){
-      this.horizontalVelocity += getAnimationExpansionRate(self.gravityForce*20,1000,"SOTF");
+      this.horizontalVelocity += walkingSpeed;
     }
     if(this.keyboardLeft){
-      this.horizontalVelocity -= getAnimationExpansionRate(self.gravityForce*20,1000,"SOTF");
+      this.horizontalVelocity -= walkingSpeed;
     }
     this.horizontalVelocity = this.horizontalVelocity/1.06;
     
-    
+    //Apply gravities
     this.y += this.gravity;
-    if(this.leftCollided || this.rightCollided){
-      this.horizontalVelocity = 0;
-    }
     this.x += this.horizontalVelocity;
     
     //Deal with ground collision
     var fallingVariableBuffer = true;
     for(var i = 0; i <= self.playerSize/self.groundStepWidth; i++){
-      currentWorldLevel = self.world[floor(i + this.x/self.groundStepWidth)];
+      let adjustedGroundIndex = floor(i + this.x/self.groundStepWidth);
+      let currentWorldLevel = self.world[adjustedGroundIndex];
       var adjustedCharacterY = this.y + self.playerSize+1;
       if(adjustedCharacterY > currentWorldLevel){
-        this.falling = true;
+        fallingVariableBuffer = false;
         var characterToGroundDifference = adjustedCharacterY - currentWorldLevel;
-        if(characterToGroundDifference < 10){
+        if(characterToGroundDifference < self.playerSize/5){
           this.y = currentWorldLevel - self.playerSize;
-          print(characterToGroundDifference);
         }else{
-          if(this.x){
-          
+          let currentWorldLevelX = adjustedGroundIndex*self.groundStepWidth;
+          if(this.horizontalVelocity > 0 && this.x+self.playerSize > currentWorldLevelX){
+            this.x = currentWorldLevelX-self.playerSize-this.horizontalVelocity;
+            this.horizontalVelocity = 0;
+          }
+          if(this.horizontalVelocity < 0 && this.x < currentWorldLevelX+self.groundStepWidth){
+            this.x = currentWorldLevelX+self.groundStepWidth-this.horizontalVelocity;
+            this.horizontalVelocity = 0;
           }
         }
       }else{
@@ -179,7 +184,7 @@ SOTF.prototype.update = function(){
     //Enemies
     createProcess(updateEnemies,1,"Enemies",this.processes);
     
-    
+    //Draw game things
     createProcess(drawGame,1,"Draw",this.processes);
     createProcess(drawPlayers,1,"Players",this.processes);
     
