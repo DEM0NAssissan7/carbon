@@ -36,7 +36,7 @@ function mousePressed() {
 function updateMouseAnimationSystem() {
   for (var i in mouseAnimations) {
     let currentMouseAnimation = mouseAnimations[i];
-    
+
     noStroke();
     fill(127, 127, 127, 255 - currentMouseAnimation.width * 2);
     currentMouseAnimation.update();
@@ -56,14 +56,15 @@ function Window(name) {
   } else {
     this.windowName = "window";
   }
+  this.topBarHeight = 40;
+
   this.width = 200;
   this.height = 200;
-  this.x = mouseArray.x;
-  this.y = mouseArray.y;
+  this.x = mouseArray.x-(this.width/2);
+  this.y = mouseArray.y-((this.height-this.topBarHeight)/2);
   this.hasTopBar = true;
   this.elements = [];
 
-  this.topBarHeight = 40;
   this.dead = false;
   this.isDragged = false;
   this.requestFocus = true;
