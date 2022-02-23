@@ -65,19 +65,20 @@ SOTF.prototype.update = function () {
     this.y += this.gravity;
     this.x += this.horizontalVelocity;
 
-    //Deal with ground collision
+    //Deal with ground collision and ground rendering
     var fallingVariableBuffer = true;
-    for (var i = 0; i <= self.playerSize / self.groundStepWidth; i++) {
-      let adjustedGroundIndex = floor(i + (this.x - this.camX) / self.groundStepWidth);
+    fill(100, 255, 100);
+    for (var i = 0; i <= width / self.groundStepWidth; i++) {
+      let adjustedGroundIndex = i + floor(this.camX / self.groundStepWidth);
       let currentWorldLevel = self.world[adjustedGroundIndex];
-      var adjustedCharacterY = this.y + self.playerSize + 1;
-      if (adjustedCharacterY > currentWorldLevel) {
+      let currentWorldLevelX = i * self.groundStepWidth;
+      //Deal with collisions
+      if (this.y + self.playerSize + 1 > currentWorldLevel && (this.x - this.camX + self.playerSize) > currentWorldLevelX && (this.x - this.camX) < currentWorldLevelX + self.groundStepWidth) {
         fallingVariableBuffer = false;
-        var characterToGroundDifference = adjustedCharacterY - currentWorldLevel;
-        if (characterToGroundDifference < self.playerSize / 5 + this.gravity) {
+        if ((this.y + self.playerSize + 1 - currentWorldLevel) < self.playerSize / 5 + this.gravity) {
           this.y = currentWorldLevel - self.playerSize;
+          print("chip")
         } else {
-          let currentWorldLevelX = adjustedGroundIndex * self.groundStepWidth;
           if (this.horizontalVelocity > 0 && this.x + self.playerSize > currentWorldLevelX) {
             this.x = currentWorldLevelX - self.playerSize - this.horizontalVelocity;
             this.horizontalVelocity = 0;
@@ -88,12 +89,14 @@ SOTF.prototype.update = function () {
           }
         }
       }
+      //Render world
+      rect(i * self.groundStepWidth, currentWorldLevel - this.camY, self.groundStepWidth, height - currentWorldLevel);
     }
     this.falling = fallingVariableBuffer;
 
     //Move camera when approaching the end of the screen
     let screenEdgeDeadzone = 5;
-    if(this.x - this.camX + self.playerSize > width - screenEdgeDeadzone){
+    if(this.x - this.camX + self.playerSize + this.horizontalVelocity > width - screenEdgeDeadzone){
       this.camX += this.horizontalVelocity+1;
     }
     if(this.x - this.camX < screenEdgeDeadzone){
@@ -105,6 +108,18 @@ SOTF.prototype.update = function () {
     fill(100, 100, 100);
     rect(this.x - this.camX, this.y - this.camY, self.playerSize, self.playerSize);
   }
+  //Enemies
+  function Enemy(playerCamX){
+    this.x = playerCamX + random(-width/2,width/2);
+    this.y = -10;
+    this.health = 100;
+    this.killCooldown = 100;
+  }
+  //Update enemy logic
+  Enemy.prototype.update = function(){
+
+  }
+
   if (!this.init) {
     //Functions for updating game mechanics
     function drawPlayers() {
@@ -130,46 +145,39 @@ SOTF.prototype.update = function () {
     //World Generation
     this.world[0] = height / 2;
     function generateWorld() {
+      let newGenerationHeight;
       for (var l = 0; l < self.players.length; l++) {
         var currentPlayer = self.players[l];
         let generationOverscan = (60/self.groundStepWidth);
         for (var i = 1; i < width / self.groundStepWidth + generationOverscan * 2; i++) {
-          if (!self.world[i + floor(currentPlayer.camX / self.groundStepWidth) - generationOverscan]) {
-            let newGenerationHeight = self.world[i - 1] + random(-self.groundStepHeight, self.groundStepHeight);
-            self.world[i + floor(currentPlayer.camX / self.groundStepWidth) - generationOverscan] = newGenerationHeight;
-            print("noice")
+          let worldIndex = i + floor(currentPlayer.camX / self.groundStepWidth - generationOverscan);
+          if (!self.world[worldIndex]) {
+            if(worldIndex > 0){
+              newGenerationHeight = self.world[worldIndex - 1] + random(-self.groundStepHeight, self.groundStepHeight);
+            }else{
+              newGenerationHeight = self.world[worldIndex + 1] + random(-self.groundStepHeight, self.groundStepHeight);
+            }
+            self.world[worldIndex] = newGenerationHeight;
           }
         }
       }
     }
-    function drawWorld() {
-      fill(100, 255, 100);
-      for (var l in self.players) {
-        var currentPlayer = self.players[l];
-        for (var i = 0; i < width / self.groundStepWidth; i++) {
-          let currentHeight = self.world[i + floor(currentPlayer.camX / self.groundStepWidth)];
-          rect(i * self.groundStepWidth, currentHeight - currentPlayer.camY, self.groundStepWidth, height - currentHeight);
-        }
-      }
-    }
     function drawBackground() {
-    }
-    function drawGame() {
       fill(0, 0, 0);
       rect(0, 0, width, height);
-      drawBackground();
-      drawWorld();
-      drawEnemies();
     }
+
     //World
-    createProcess(generateWorld, 3, "World", this.processes);
-    //Players
-    createProcess(updatePlayers, 0, "Players", this.processes);
+    createProcess(generateWorld, "World", 2, this.processes);
     //Enemies
-    createProcess(updateEnemies, 1, "Enemies", this.processes);
-    //Draw game and player
-    createProcess(drawGame, 1, "Draw", this.processes);
-    createProcess(drawPlayers, 1, "Players", this.processes);
+    createProcess(updateEnemies, "Enemies", 3, this.processes);
+    //Draw background
+    createProcess(drawBackground, "Background", 2, this.processes);
+    //Draw enemies and player
+    createProcess(drawEnemies, "Enemies", 1, this.processes);
+    createProcess(drawPlayers, "Players", 1, this.processes);
+    //Players
+    createProcess(updatePlayers, "Players", 0, this.processes);
     this.init = true;
   }
 
@@ -201,9 +209,9 @@ SOTF.prototype.update = function () {
     }
 
     fill(30);
-    Button(width / 2 - ((100) / 2), height - 70, 100, 50, shutdownGame);
+    Button(width / 2 - ((100) / 2), height - 170, 100, 50, shutdownGame);
     fill(255)
-    centerText("Exit", width / 2 - ((100) / 2), height - 70, 100, 50, 20);
+    centerText("Exit", width / 2 - ((100) / 2), height - 170, 100, 50, 20);
   }
   //Game system
   if (this.menuState === "game") {

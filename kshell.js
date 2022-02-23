@@ -60,8 +60,8 @@ function Window(name) {
 
   this.width = 200;
   this.height = 200;
-  this.x = mouseArray.x-(this.width/2);
-  this.y = mouseArray.y-((this.height-this.topBarHeight)/2);
+  this.x = mouseArray.x - (this.width / 2);
+  this.y = mouseArray.y - ((this.height - this.topBarHeight) / 2);
   this.hasTopBar = true;
   this.elements = [];
 
@@ -97,7 +97,11 @@ Window.prototype.draw = function () {
         }
         break;
       case 1:
-        rect(currentElement[1] / 100 * this.width + this.x, currentElement[2] / 100 * this.height + this.y, currentElement[3] / 100 * this.width, currentElement[4] / 100 * this.height);
+        if(!currentElement[5]){
+          rect(currentElement[1] / 100 * this.width + this.x, currentElement[2] / 100 * this.height + this.y, currentElement[3] / 100 * this.width, currentElement[4] / 100 * this.height);
+        }else{
+          rect(currentElement[1] / 100 * this.width + this.x, currentElement[2] / 100 * this.height + this.y, currentElement[3] / 100 * this.width, currentElement[4] / 100 * this.height, currentElement[5]);
+        }
         break;
       case 2:
         text(currentElement[1], currentElement[2] / 100 * this.width + this.x, currentElement[3] / 100 * (this.height - textSize() - 2) + this.y + textSize());
@@ -164,8 +168,8 @@ Window.prototype.removeElement = function (index) {
 Window.prototype.addFill = function (r, g, b, a) {
   this.elements.push([0, r, g, b, a]);
 }
-Window.prototype.addRect = function (x, y, w, h) {
-  this.elements.push([1, x, y, w, h]);
+Window.prototype.addRect = function (x, y, w, h, r) {
+  this.elements.push([1, x, y, w, h, r]);
 }
 Window.prototype.addText = function (message, x, y) {
   this.elements.push([2, message, x, y]);
@@ -297,7 +301,7 @@ SOTF.prototype.createWindow = function () {
   for (var i in kshellProcessesIDs) {
     suspend(kshellProcessesIDs[i]);
   }
-  createProcess(gameSystemUpdate, 0, "SOTF");
+  createProcess(gameSystemUpdate, "SOTF", 0);
 }
 SOTF.prototype.createIcon = function (x, y, size) {
   var icon = new Window();
@@ -306,7 +310,36 @@ SOTF.prototype.createIcon = function (x, y, size) {
   icon.addFill(255, 255, 255);
   icon.addTextSize(20);
   icon.addText("SOTF", 6, 24);
-  icon.addRect(10, 70, 80, 20)
+  icon.addRect(10, 70, 80, 20);
+  icon.hasTopBar = false;
+  icon.fadeFill = 0;
+
+  icon.x = x;
+  icon.y = y;
+  icon.width = size;
+  icon.height = size;
+
+  icon.draw();
+}
+//Rayhamburger
+Rayham.prototype.createWindow = function () {
+  var gameSystem = new Rayham();
+  function gameSystemUpdate() {
+    gameSystem.update();
+  }
+  var kshellProcessesIDs = find("kshell");
+  for (var i in kshellProcessesIDs) {
+    suspend(kshellProcessesIDs[i]);
+  }
+  createProcess(gameSystemUpdate, "rayhamburger", 0);
+}
+Rayham.prototype.createIcon = function (x, y, size) {
+  var icon = new Window();
+  icon.addFill(208, 80, 255);
+  icon.addRect(0, 0, 100, 100);
+  icon.addFill(255, 255, 255);
+  icon.addTextSize(20);
+  icon.addRect(10, 10, 80, 80, 100);
   icon.hasTopBar = false;
   icon.fadeFill = 0;
 
@@ -325,19 +358,15 @@ var appDock = function () {
   this.elements = [];
   this.elements.push(new Terminal());
   this.elements.push(new SOTF());
+  this.elements.push(new Rayham());
   this.pressed = false;
 }
 appDock.prototype.update = function () {
-  for (var i in this.elements) {
-    var currentElement = this.elements[i];
-    function elementCreateWindow() {
-      currentElement.createWindow();
-    }
+  for (var i = 0; i < this.elements.length; i++) {
     var iconX = width / 2 + (this.iconSize + this.iconPadding) * i - this.elements.length * this.iconSize / 2;
     var iconY = height - this.iconSize;
-    currentElement.createIcon(iconX, iconY, this.iconSize);
     if (mouseArray.x >= iconX && mouseArray.x <= iconX + this.iconSize && mouseArray.y >= iconY && mouseArray.y <= iconY + this.iconSize && mouseIsPressed && !this.pressed) {
-      new currentElement.createWindow();
+      new this.elements[i].createWindow();
       this.pressed = true;
     }
     if (!mouseIsPressed) {
@@ -345,10 +374,17 @@ appDock.prototype.update = function () {
     }
   }
 }
+appDock.prototype.draw = function () {
+  for (var i = 0; i < this.elements.length; i++) {
+    var iconX = width / 2 + (this.iconSize + this.iconPadding) * i - this.elements.length * this.iconSize / 2;
+    var iconY = height - this.iconSize;
+    this.elements[i].createIcon(iconX, iconY, this.iconSize);
+  }
+}
 var appDockSystem = new appDock();
 //Background
 RenderRainbow = function () {
-  this.resolutionScale = 32;
+  this.resolutionScale = 16;
   noStroke();
   for (var i = 0; i < width; i += this.resolutionScale) {
     for (var l = 0; l < height; l += this.resolutionScale) {
@@ -370,21 +406,19 @@ backgroundFunction = RenderRainbow;
 //Create functions for each set of processes
 function updateAppDockSystem() {
   appDockSystem.update();
+}
+function drawAppDockSystem() {
+  appDockSystem.draw();
   textSize(12);
 }
 function reportPerformance() {
   //  print(getCurrentFrametime())
 }
 
-//Set up and create processes
-function setup() {
-  createCanvas(windowWidth - 20, windowHeight - 20);
-  frameRate(monitorFramerate);
-
-  //Create processes
-  createProcess(backgroundFunction, 2, "kshell");
-  createProcess(drawWindows, 2, "kshell");
-  createProcess(updateAppDockSystem, 0, "kshell");
-  createProcess(updateMouseAnimationSystem, 1, "kshell");
-  createProcess(updateWindowSystemLogic, 1, "kshell");
-}
+//Create processes
+createProcess(updateWindowSystemLogic, "kshell", 0);
+createProcess(backgroundFunction, "kshell", 2);
+createProcess(drawWindows, "kshell", 1);
+createProcess(drawAppDockSystem, "kshell", 2);
+createProcess(updateAppDockSystem, "kshell", 0);
+createProcess(updateMouseAnimationSystem, "kshell", 1);
