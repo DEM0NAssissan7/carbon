@@ -97,9 +97,9 @@ Window.prototype.draw = function () {
         }
         break;
       case 1:
-        if(!currentElement[5]){
+        if (!currentElement[5]) {
           rect(currentElement[1] / 100 * this.width + this.x, currentElement[2] / 100 * this.height + this.y, currentElement[3] / 100 * this.width, currentElement[4] / 100 * this.height);
-        }else{
+        } else {
           rect(currentElement[1] / 100 * this.width + this.x, currentElement[2] / 100 * this.height + this.y, currentElement[3] / 100 * this.width, currentElement[4] / 100 * this.height, currentElement[5]);
         }
         break;
@@ -384,7 +384,7 @@ appDock.prototype.draw = function () {
 var appDockSystem = new appDock();
 //Background
 RenderRainbow = function () {
-  this.resolutionScale = 16;
+  this.resolutionScale = 3;
   noStroke();
   for (var i = 0; i < width; i += this.resolutionScale) {
     for (var l = 0; l < height; l += this.resolutionScale) {

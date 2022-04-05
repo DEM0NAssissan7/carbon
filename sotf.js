@@ -96,11 +96,11 @@ SOTF.prototype.update = function () {
 
     //Move camera when approaching the end of the screen
     let screenEdgeDeadzone = 5;
-    if(this.x - this.camX + self.playerSize + this.horizontalVelocity > width - screenEdgeDeadzone){
-      this.camX += this.horizontalVelocity+1;
+    if (this.x - this.camX + self.playerSize + this.horizontalVelocity > width - screenEdgeDeadzone) {
+      this.camX += this.horizontalVelocity + 1;
     }
-    if(this.x - this.camX < screenEdgeDeadzone){
-      this.camX += this.horizontalVelocity-1;
+    if (this.x - this.camX < screenEdgeDeadzone) {
+      this.camX += this.horizontalVelocity - 1;
     }
   }
   //Draw player
@@ -109,14 +109,14 @@ SOTF.prototype.update = function () {
     rect(this.x - this.camX, this.y - this.camY, self.playerSize, self.playerSize);
   }
   //Enemies
-  function Enemy(playerCamX){
-    this.x = playerCamX + random(-width/2,width/2);
+  function Enemy(playerCamX) {
+    this.x = playerCamX + random(-width / 2, width / 2);
     this.y = -10;
     this.health = 100;
     this.killCooldown = 100;
   }
   //Update enemy logic
-  Enemy.prototype.update = function(){
+  Enemy.prototype.update = function () {
 
   }
 
@@ -148,13 +148,13 @@ SOTF.prototype.update = function () {
       let newGenerationHeight;
       for (var l = 0; l < self.players.length; l++) {
         var currentPlayer = self.players[l];
-        let generationOverscan = (60/self.groundStepWidth);
+        let generationOverscan = (60 / self.groundStepWidth);
         for (var i = 1; i < width / self.groundStepWidth + generationOverscan * 2; i++) {
           let worldIndex = i + floor(currentPlayer.camX / self.groundStepWidth - generationOverscan);
           if (!self.world[worldIndex]) {
-            if(worldIndex > 0){
+            if (worldIndex > 0) {
               newGenerationHeight = self.world[worldIndex - 1] + random(-self.groundStepHeight, self.groundStepHeight);
-            }else{
+            } else {
               newGenerationHeight = self.world[worldIndex + 1] + random(-self.groundStepHeight, self.groundStepHeight);
             }
             self.world[worldIndex] = newGenerationHeight;
