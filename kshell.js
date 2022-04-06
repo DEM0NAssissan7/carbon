@@ -384,7 +384,7 @@ appDock.prototype.draw = function () {
 var appDockSystem = new appDock();
 //Background
 RenderRainbow = function () {
-  this.resolutionScale = 3;
+  this.resolutionScale = 10;
   noStroke();
   for (var i = 0; i < width; i += this.resolutionScale) {
     for (var l = 0; l < height; l += this.resolutionScale) {
@@ -401,6 +401,18 @@ function GenericBackground() {
   rect(0, 0, width, height);
 }
 backgroundFunction = RenderRainbow;
+function backgroundScheduler(self){
+  if(self.command !== backgroundFunction){
+    return processes[1].execRatio;
+  }else{
+    if(self.trackPerformance === false){
+      self.trackPerformance = true;
+      return 1;
+    }else{
+      return self.frametime / targetLatency;
+    }
+  }
+}
 //backgroundFunction = GenericBackground;
 
 //Create functions for each set of processes
@@ -417,8 +429,8 @@ function reportPerformance() {
 
 //Create processes
 createProcess(updateWindowSystemLogic, "kshell", 0);
-createProcess(backgroundFunction, "kshell", 2);
-createProcess(drawWindows, "kshell", 1);
-createProcess(drawAppDockSystem, "kshell", 2);
+createProcess(backgroundFunction, "kshell", 2, processes, backgroundScheduler);
+createProcess(drawWindows, "kshell", 1, processes, backgroundScheduler);
+createProcess(drawAppDockSystem, "kshell", 2, processes, backgroundScheduler);
 createProcess(updateAppDockSystem, "kshell", 0);
-createProcess(updateMouseAnimationSystem, "kshell", 1);
+createProcess(updateMouseAnimationSystem, "kshell", 1, processes, backgroundScheduler);
