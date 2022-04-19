@@ -1,6 +1,11 @@
 //Animations
-function getAnimationExpansionRate(size, time) {
-  return (size / systemFps) * (1000 / time);
+function getAnimationExpansionRate(size, time, noAbs) {
+  if(noAbs === undefined){
+    return (abs(size) / systemFps) * (1000 / time);
+  }
+  if(noAbs === true){
+    return (size / systemFps) * (1000 / time);
+  }
 }
 function animation(x, y, finalWidth, finalHeight, timeMs) {
   this.x = x;
@@ -27,11 +32,18 @@ animation.prototype.update = function () {
     this.dead = true;
   }
 }
+function animateAcceleration(value, targetSize, time){
+  if(round(value) !== targetSize){
+    return getAnimationExpansionRate(targetSize - value, time, true);
+  } else{
+    return 0;
+  }
+}
 
 //Mouse click animation
 var mouseAnimations = [];
 function mousePressed() {
-  mouseAnimations.push(new animation(mouseX, mouseY, 128, 128, 100));
+  mouseAnimations.push(new animation(mouseX, mouseY, 128, 128, 500));
 }
 function updateMouseAnimationSystem() {
   for (var i in mouseAnimations) {
@@ -56,19 +68,23 @@ function Window(name) {
   } else {
     this.windowName = "window";
   }
-  this.topBarHeight = 40;
+  this.topBarHeight = 20;
 
-  this.width = 200;
-  this.height = 200;
+  this.width = 100;
+  this.height = 100;
   this.x = mouseArray.x - (this.width / 2);
   this.y = mouseArray.y - ((this.height - this.topBarHeight) / 2);
   this.hasTopBar = true;
   this.elements = [];
 
   this.dead = false;
+  this.started = false;
   this.isDragged = false;
   this.requestFocus = true;
   this.fadeFill = 255;
+
+  this.maximize = false;
+  this.fullscreen = false;
 }
 Window.prototype.updateDragStatus = function () {
   if (mouseArray.x >= this.x && mouseArray.x <= this.x + this.width && mouseArray.y <= this.y && mouseArray.y >= this.y - this.topBarHeight && mouseIsPressed && !this.isDragged && this.hasFocus) {
@@ -76,9 +92,9 @@ Window.prototype.updateDragStatus = function () {
     this.offsetMousePlacementY = mouseArray.y - this.y;
     this.isDragged = true;
   }
-  if (this.isDragged) {
-    this.x = (mouseArray.x - this.offsetMousePlacementX);
-    this.y = (mouseArray.y - this.offsetMousePlacementY);
+  if (this.isDragged && !this.died && !this.maximize) {
+    this.x = (mouseArray.x - this.offsetMousePlacementX + mouseArray.vectorX);
+    this.y = (mouseArray.y - this.offsetMousePlacementY + mouseArray.vectorY);
   }
   if (!mouseIsPressed && this.isDragged) {
     this.isDragged = false;
@@ -132,13 +148,90 @@ Window.prototype.draw = function () {
     //Close button
     fill(255, 0, 0, 255 - this.fadeFill);
     rect(this.width + this.x - (this.topBarHeight / 2) - (this.topBarHeight / 5), this.y - (this.topBarHeight) + (this.topBarHeight / 4), this.topBarHeight / 2, this.topBarHeight / 2);
+    //Maximize button
+    fill(0, 255, 0, 255 - this.fadeFill);
+    rect(this.width + this.x - (this.topBarHeight) - (this.topBarHeight / 2), this.y - (this.topBarHeight) + (this.topBarHeight / 4), this.topBarHeight / 2, this.topBarHeight / 2);
   }
-  if (this.fadeFill >= 0 && !this.died) {
-    this.fadeFill -= getAnimationExpansionRate(255, 100);
+  //Opening and closing animations
+  let startCloseAnimationTime = 200;
+  if (!this.died && !this.started) {
+    let targetWidth = 200;
+    let targetHeight = 200;
+    let targetTopBarHeight = 40;
+
+    this.x -= animateAcceleration(this.width, targetWidth, startCloseAnimationTime)/2;
+    this.width += animateAcceleration(this.width, targetWidth, startCloseAnimationTime);
+
+    this.y -= animateAcceleration(this.height, targetHeight, startCloseAnimationTime)/2;
+    this.height += animateAcceleration(this.height, targetHeight, startCloseAnimationTime);
+
+    this.topBarHeight += animateAcceleration(this.topBarHeight, targetTopBarHeight, startCloseAnimationTime);
+
+    if(this.fadeFill > 0){
+      this.fadeFill = 255 - (((this.width/targetWidth) * 255) + ((this.height/targetHeight) * 255)) / 2;
+    }else if(this.maximize === true){
+      this.started = true;
+    }
+
+    if(round(this.height) >= targetHeight && round(this.width) >= targetWidth && round(this.fadeFill) <= 1 && round(this.topBarHeight) >= targetTopBarHeight){
+      this.started = true;
+    }
+  }
+  //Experimental maximize
+  if(this.maximize === true && this.started === true){
+    let targetTopBarHeight = 20;
+    let animationTime = 200;
+
+    this.width += animateAcceleration(this.width, width, startCloseAnimationTime);
+    this.height += animateAcceleration(this.height, height - targetTopBarHeight, startCloseAnimationTime);
+
+    this.x += animateAcceleration(this.x, 0, animationTime);
+    this.y += animateAcceleration(this.y, this.topBarHeight + 1, animationTime);
+
+    this.topBarHeight += animateAcceleration(this.topBarHeight, targetTopBarHeight, animationTime);
+
+    if(round(this.height) >= height - targetTopBarHeight && round(this.width) >= width && round(this.topBarHeight) <= targetTopBarHeight && floor(this.x) <= 0 && floor(this.y) <= targetTopBarHeight + 1){
+      this.maximize = false;
+    }
+  }
+  if(this.fullscreen === true && this.started === true){
+    let animationTime = 300;
+
+    this.width += animateAcceleration(this.width, width, animationTime);
+    this.height += animateAcceleration(this.height, height, animationTime);
+
+    this.x += animateAcceleration(this.x, 0, animationTime);
+    this.y += animateAcceleration(this.y, 0, animationTime);
+
+    this.topBarHeight += animateAcceleration(this.topBarHeight, 0, animationTime);
+    if(!this.fullscreenSuccess){
+      this.trueWindowName = this.windowName;
+      this.windowName = '';
+      this.fullscreenSuccess = true;
+    }
+
+    if(round(this.height) >= height && round(this.width) >= width && round(this.topBarHeight) <= 0 && round(this.x) <= 0 && round(this.y) <= 0){
+      this.fullscreen = false;
+    }
   }
   if (this.died) {
-    this.fadeFill += getAnimationExpansionRate(255, 100);
-    if (this.fadeFill > 255) {
+    var targetWidth = 100;
+    var targetHeight = 100;
+
+    this.x -= animateAcceleration(this.width, targetWidth, startCloseAnimationTime)/2;
+    this.width += animateAcceleration(this.width, targetWidth, startCloseAnimationTime);
+
+    this.y -= animateAcceleration(this.height, targetHeight, startCloseAnimationTime)/2;
+    this.height += animateAcceleration(this.height, targetHeight, startCloseAnimationTime);
+
+    this.windowName = '';
+    this.topBarHeight += animateAcceleration(this.topBarHeight, 0, startCloseAnimationTime);
+
+    if(this.fadeFill < 255){
+      this.fadeFill = (((targetWidth/this.width) * 255) + ((targetHeight/this.height) * 255)) / 2 + 1;
+    }
+
+    if(round(this.fadeFill) >= 255){
       this.dead = true;
     }
   }
@@ -147,6 +240,10 @@ Window.prototype.updateLogic = function () {
   if (this.hasTopBar) {
     if (mouseArray.x > this.width + this.x - (this.topBarHeight / 2) - (this.topBarHeight / 5) && mouseArray.y > this.y - (this.topBarHeight) + (this.topBarHeight / 4) && mouseArray.x < (this.width + this.x - (this.topBarHeight / 2) - (this.topBarHeight / 5)) + this.topBarHeight / 2 && mouseArray.y < (this.y - (this.topBarHeight) + (this.topBarHeight / 4)) + this.topBarHeight / 2 && mouseIsPressed && this.hasFocus && !this.isDragged) {
       this.died = true;
+      this.maximize = false;
+    }
+    if (mouseArray.x > this.width + this.x - (this.topBarHeight) - (this.topBarHeight / 2) && mouseArray.y > this.y - (this.topBarHeight) + (this.topBarHeight / 4) && mouseArray.x < (this.width + this.x - (this.topBarHeight) - (this.topBarHeight / 2)) + this.topBarHeight/2 && mouseArray.y < (this.y - (this.topBarHeight) + (this.topBarHeight / 4)) + this.topBarHeight / 2 && mouseIsPressed && this.hasFocus && !this.isDragged) {
+      this.maximize = true;
     }
     this.updateDragStatus();
   }
@@ -155,6 +252,7 @@ Window.prototype.updateLogic = function () {
   } else {
     this.requestFocus = false;
   }
+  //this.command(this);
 }
 
 //Window Manager Toolkit
@@ -384,7 +482,7 @@ appDock.prototype.draw = function () {
 var appDockSystem = new appDock();
 //Background
 RenderRainbow = function () {
-  this.resolutionScale = 10;
+  this.resolutionScale = 20;
   noStroke();
   for (var i = 0; i < width; i += this.resolutionScale) {
     for (var l = 0; l < height; l += this.resolutionScale) {
@@ -409,7 +507,7 @@ function backgroundScheduler(self){
       self.trackPerformance = true;
       return 1;
     }else{
-      return self.frametime / targetLatency;
+      return (self.frametime / systemLatency)  * (systemLatency/targetLatency);
     }
   }
 }
