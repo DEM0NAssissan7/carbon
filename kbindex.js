@@ -5,6 +5,8 @@ loadedFiles = [
     "jskernel/kerneltools.js",
     "sotf.js",
     "rayhamburger.js",
-    "kshell.js"
+    "kwm.js",
+    "kwmtest.js"
+//    "kshell.js"
 ];
 kbInit();//Leave this at the end
