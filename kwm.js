@@ -15,9 +15,13 @@ function animateAcceleration(value, targetSize, time){
   }
 }
 
+function windowManagerScheduler(){
+  return systemLatency/targetLatency;
+}
+
 //Window Manager
 var windows = [];
-function Window(name, program) {
+function Window(name, windowProcesses) {
   if (name) {
     this.windowName = name;
   } else {
@@ -27,19 +31,22 @@ function Window(name, program) {
 
   this.width = 0;
   this.height = 0;
-  this.x = mouseArray.x - (this.width / 2);
-  this.y = mouseArray.y - ((this.height - this.topBarHeight) / 2);
+  this.x = mouseX - (this.width / 2);
+  this.y = mouseY - ((this.height - this.topBarHeight) / 2);
+  this.targetHeight = 400;
+  this.targetWidth = 400;
   this.hasTopBar = true;
   this.elements = [];
-  this.program = program;
+
+  this.processes = windowProcesses;
 
   this.dead = false;
   this.started = false;
   this.isDragged = false;
   this.requestFocus = true;
+  this.hasStartup = true;
 
   this.maximize = false;
-  this.fullscreen = false;
 }
 Window.prototype.updateDragStatus = function () {
   if (mouseArray.x >= this.x && mouseArray.x <= this.x + this.width && mouseArray.y <= this.y && mouseArray.y >= this.y - this.topBarHeight && mouseIsPressed && !this.isDragged && this.hasFocus) {
@@ -56,44 +63,9 @@ Window.prototype.updateDragStatus = function () {
   }
 }
 Window.prototype.draw = function () {
-  //Update Elements
-  for (var i in this.elements) {
-    var currentElement = this.elements[i];
-    switch (currentElement[0]) {
-      case 0:
-        if (currentElement[4]) {
-          fill(currentElement[1], currentElement[2], currentElement[3], currentElement[4]);
-        } else {
-          fill(currentElement[1], currentElement[2], currentElement[3]);
-        }
-        break;
-      case 1:
-        if (!currentElement[5]) {
-          rect(currentElement[1] / 100 * this.width + this.x, currentElement[2] / 100 * this.height + this.y, currentElement[3] / 100 * this.width, currentElement[4] / 100 * this.height);
-        } else {
-          rect(currentElement[1] / 100 * this.width + this.x, currentElement[2] / 100 * this.height + this.y, currentElement[3] / 100 * this.width, currentElement[4] / 100 * this.height, currentElement[5]);
-        }
-        break;
-      case 2:
-        text(currentElement[1], currentElement[2] / 100 * this.width + this.x, currentElement[3] / 100 * (this.height - textSize() - 2) + this.y + textSize());
-        break;
-      case 3:
-        for (var i in currentElement[1]) {
-          text(currentElement[1][i], currentElement[2] / 100 * this.width + this.x, (currentElement[3] / 100 * (this.height - textSize() - 2) + this.y + textSize()) + (i * textSize()));
-        }
-        break;
-      case 4:
-        textSize(currentElement[1]);
-        break;
-      case 5:
-        if (mouseArray.x >= currentElement[1] / 100 * this.width + this.x && mouseArray.x <= currentElement[2] / 100 * this.width && mouseArray.y >= currentElement[3] / 100 * this.height + this.y && mouseArray.y <= currentElement[4] / 100 * this.height) {
-          currentElement[5]();
-        }
-        break;
-    }
-  }
   //Top Bar
   if (this.hasTopBar) {
+    textSize(12);
     fill(40, 40, 40);
     rect(this.x, this.y - this.topBarHeight, this.width, this.topBarHeight);
     //Window Title Text
@@ -110,25 +82,25 @@ Window.prototype.draw = function () {
   let startCloseAnimationTime = 200;
   //Starting
   if (!this.died && !this.started) {
-    let targetWidth = 200;
-    let targetHeight = 200;
-    let targetTopBarHeight = 40;
+    var targetTopBarHeight = 40;
 
-    this.x -= animateAcceleration(this.width, targetWidth, startCloseAnimationTime)/2;
-    this.width += animateAcceleration(this.width, targetWidth, startCloseAnimationTime);
+    this.x -= animateAcceleration(this.width, this.targetWidth, startCloseAnimationTime)/2;
+    this.width += animateAcceleration(this.width, this.targetWidth, startCloseAnimationTime);
 
-    this.y -= animateAcceleration(this.height, targetHeight, startCloseAnimationTime)/2;
-    this.height += animateAcceleration(this.height, targetHeight, startCloseAnimationTime);
+    this.y -= animateAcceleration(this.height, this.targetHeight, startCloseAnimationTime)/2;
+    this.height += animateAcceleration(this.height, this.targetHeight, startCloseAnimationTime);
 
     this.topBarHeight += animateAcceleration(this.topBarHeight, targetTopBarHeight, startCloseAnimationTime);
 
-    if(round(this.height) >= targetHeight && round(this.width) >= targetWidth && round(this.topBarHeight) >= targetTopBarHeight){
+    if(round(this.height) >= this.targetHeight && round(this.width) >= this.targetWidth && round(this.topBarHeight) >= targetTopBarHeight){
       this.started = true;
+      this.width = this.targetWidth;
+      this.height = this.targetHeight;
     }
   }
   //Maximize
   if(this.maximize === true && this.started === true){
-    let targetTopBarHeight = 20;
+    var targetTopBarHeight = 20;
     let animationTime = 200;
 
     this.width += animateAcceleration(this.width, width, startCloseAnimationTime);
@@ -141,44 +113,24 @@ Window.prototype.draw = function () {
 
     if(round(this.height) >= height - targetTopBarHeight && round(this.width) >= width && round(this.topBarHeight) <= targetTopBarHeight && floor(this.x) <= 0 && floor(this.y) <= targetTopBarHeight + 1){
       this.maximize = false;
-    }
-  }
-  //Fullscreen
-  if(this.fullscreen === true && this.started === true){
-    let animationTime = 300;
-
-    this.width += animateAcceleration(this.width, width, animationTime);
-    this.height += animateAcceleration(this.height, height, animationTime);
-
-    this.x += animateAcceleration(this.x, 0, animationTime);
-    this.y += animateAcceleration(this.y, 0, animationTime);
-
-    this.topBarHeight += animateAcceleration(this.topBarHeight, 0, animationTime);
-    if(!this.fullscreenSuccess){
-      this.trueWindowName = this.windowName;
-      this.windowName = '';
-      this.fullscreenSuccess = true;
-    }
-
-    if(round(this.height) >= height && round(this.width) >= width && round(this.topBarHeight) <= 0 && round(this.x) <= 0 && round(this.y) <= 0){
-      this.fullscreen = false;
+      this.x = 0;
+      this.y = this.topBarHeight + 1;
+      this.width = width;
+      this.height = height - targetTopBarHeight;
     }
   }
   //Closing
   if (this.died) {
-    var targetWidth = 0;
-    var targetHeight = 0;
+    this.x -= animateAcceleration(this.width, 0, startCloseAnimationTime)/2;
+    this.width += animateAcceleration(this.width, 0, startCloseAnimationTime);
 
-    this.x -= animateAcceleration(this.width, targetWidth, startCloseAnimationTime)/2;
-    this.width += animateAcceleration(this.width, targetWidth, startCloseAnimationTime);
-
-    this.y -= animateAcceleration(this.height, targetHeight, startCloseAnimationTime)/2;
-    this.height += animateAcceleration(this.height, targetHeight, startCloseAnimationTime);
+    this.y -= animateAcceleration(this.height, 0, startCloseAnimationTime)/2;
+    this.height += animateAcceleration(this.height, 0, startCloseAnimationTime);
 
     this.windowName = '';
     this.topBarHeight += animateAcceleration(this.topBarHeight, 0, startCloseAnimationTime);
 
-    if(round(this.width) <= targetWidth && round(this.height) <= targetHeight){
+    if(round(this.width) <= 0 && round(this.height) <= 0){
       this.dead = true;
     }
   }
@@ -199,68 +151,36 @@ Window.prototype.updateLogic = function () {
   } else {
     this.requestFocus = false;
   }
+  if(this.processes.length === 0){
+    this.died = true;
+  }
 }
 Window.prototype.run = function(){
   //Set up virtual program environment
   translate(this.x, this.y);
   width = this.width;
   height = this.height;
-  mouseArray.x -= this.x;
-  mouseArray.y -= this.y;
+  if(this.hasFocus){
+    mouseArray.x -= this.x;
+    mouseArray.y -= this.y;
+  }else{
+    var keyboardArrayBuffer = keyboardArray;
+    keyboardArray = [];
+  }
 
-  this.program();
+  updateProcesses(this.processes);
 
   //Reset all variables back to system
   translate(-this.x, -this.y);
   width = canvas.width;
   height = canvas.height;
-  mouseArray.x += this.x;
-  mouseArray.y += this.y;
-}
-
-//Window Manager Toolkit
-//All the values in the functions are percent based on the window properties
-//w and h are "percent width" and "percent height" respectively
-//if x is 50, the object will start at the middle of the window
-//if w is 100, the rectangle will fill 100% of the horizontal space in the window
-Window.prototype.removeElement = function (index) {
-  this.elements.splice(index, 1);
-}
-Window.prototype.addFill = function (r, g, b, a) {
-  this.elements.push([0, r, g, b, a]);
-}
-Window.prototype.addRect = function (x, y, w, h, r) {
-  this.elements.push([1, x, y, w, h, r]);
-}
-Window.prototype.addText = function (message, x, y) {
-  this.elements.push([2, message, x, y]);
-}
-Window.prototype.addStackingText = function (messages, x, y) {
-  this.elements.push([3, messages, x, y]);
-}
-Window.prototype.addTextSize = function (size) {
-  this.elements.push([4, size]);
-}
-Window.prototype.addButton = function (func, x, y, w, h) {
-  this.elements.push([5, x, y, w, h, func]);
-}
-
-//Universal Functions
-function Button(x, y, w, h, func) {
-  if (mouseArray.x > x && mouseArray.x < x + w && mouseArray.y > y && mouseArray.y < y + h && mouseIsPressed) {
-    func();
+  if(this.hasFocus){
+    mouseArray.x += this.x;
+    mouseArray.y += this.y;
+  }else{
+    keyboardArray = keyboardArrayBuffer;
   }
-  rect(x, y, w, h);
-}
-function centerText(buttonText, x, y, w, h, textsize) {
-  if (textsize) {
-    this.textsize = textsize;
-  } else {
-    this.textsize = 12;
-  }
-  textSize(this.textsize);
-  var buttonTextLength = (textWidth(buttonText) / 2);
-  text(buttonText, x + ((w / 2) - buttonTextLength), y + ((h / 2) + (this.textsize / 3)));
+  this.draw();
 }
 
 //Window Logic Updater
@@ -298,12 +218,6 @@ function updateWindowSystemLogic() {
   }
   textSize(12);
 }
-//Window renderer
-function drawWindows() {
-  for (var i in windows) {
-    windows[i].draw();
-  }
-}
 //Window runner
 function runWindows() {
   for (var i in windows) {
@@ -311,6 +225,14 @@ function runWindows() {
   }
 }
 //Window functions
-function createWindow(name, program){
-  windows.push(new Window(name, program));
+function createWindow(name, windowProcesses){
+  windows.push(new Window(name, windowProcesses));
+}
+function windowProcess(command, windowProcesses, priority, name, scheduler){
+  createProcess(command, name, priority, windowProcesses, scheduler)
+}
+function simpleWindow(name, command){
+  var windowProcesses = [];
+  createProcess(command, name, 1, windowProcesses);
+  createWindow(name, windowProcesses);
 }

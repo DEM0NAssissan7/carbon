@@ -1,3 +1,19 @@
+function centerText(buttonText, x, y, w, h, textsize) {
+  if (textsize) {
+    this.textsize = textsize;
+  } else {
+    this.textsize = 12;
+  }
+  textSize(this.textsize);
+  var buttonTextLength = (textWidth(buttonText) / 2);
+  text(buttonText, x + ((w / 2) - buttonTextLength), y + ((h / 2) + (this.textsize / 3)));
+}
+function Button(x, y, w, h, func) {
+  if (mouseArray.x > x && mouseArray.x < x + w && mouseArray.y > y && mouseArray.y < y + h && mouseIsPressed) {
+    func();
+  }
+  rect(x, y, w, h);
+}
 //Survival of the Fittest
 function SOTF() {
   this.players = [];
@@ -199,19 +215,6 @@ SOTF.prototype.update = function () {
     Button(width / 2 - ((300) / 2), height / 2 - ((200) / 2), 300, 200, convertMenuState);
     fill(255)
     centerText("Play", width / 2 - 20, height / 2 - 20, 40, 40, 40);
-
-    function shutdownGame() {
-      var kshellProcessesIDs = find("kshell");
-      for (var i in kshellProcessesIDs) {
-        resume(kshellProcessesIDs[i]);
-      }
-      killall("SOTF");
-    }
-
-    fill(30);
-    Button(width / 2 - ((100) / 2), height - 170, 100, 50, shutdownGame);
-    fill(255)
-    centerText("Exit", width / 2 - ((100) / 2), height - 170, 100, 50, 20);
   }
   //Game system
   if (this.menuState === "game") {

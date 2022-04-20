@@ -67,7 +67,6 @@ function Rayham(){
     function background(){
         fill(0);
         rect(0,0,width,height);
-        kill(1, self.processes);
     }
     function updateLights(){
         blendMode(ADD);
@@ -80,8 +79,7 @@ function Rayham(){
                 }        
             }
             if(self.cycleCount >= 360){
-                kill(2,self.processes);
-                print("Render complete.")
+                console.log("Render complete.")
                 blendMode(BLEND);
             }
         }
