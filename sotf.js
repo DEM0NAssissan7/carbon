@@ -1,32 +1,17 @@
-function centerText(buttonText, x, y, w, h, textsize) {
-  if (textsize) {
-    this.textsize = textsize;
-  } else {
-    this.textsize = 12;
-  }
-  textSize(this.textsize);
-  var buttonTextLength = (textWidth(buttonText) / 2);
-  text(buttonText, x + ((w / 2) - buttonTextLength), y + ((h / 2) + (this.textsize / 3)));
-}
-function Button(x, y, w, h, func) {
-  if (mouseArray.x > x && mouseArray.x < x + w && mouseArray.y > y && mouseArray.y < y + h && mouseIsPressed) {
-    func();
-  }
-  rect(x, y, w, h);
-}
 //Survival of the Fittest
 function SOTF() {
   this.players = [];
   this.enemies = [];
   this.world = [];
-  this.menuState = "menu";
+  this.menuState = "start";
+  this.startupScreenTimer = 72;
 
   //gravityForce is measured in m/s
   //Every 20px is one meter ingame
   this.gravityForce = 9.8;
   this.playerSize = 30;
 
-  this.groundStepHeight = 20;
+  this.groundStepHeight = 10;
   this.groundStepWidth = 10;
   this.processes = [];
 }
@@ -81,11 +66,28 @@ SOTF.prototype.update = function () {
     this.y += this.gravity;
     this.x += this.horizontalVelocity;
 
+    //Move camera when approaching the end of the screen
+    let screenEdgeDeadzone = 50;
+    if (this.x - this.camX + self.playerSize + this.horizontalVelocity > width - screenEdgeDeadzone) {
+      this.camX += this.horizontalVelocity;
+    }
+    if (this.x - this.camX + this.horizontalVelocity < screenEdgeDeadzone) {
+      this.camX += this.horizontalVelocity;
+    }
+    if (this.y - this.camY + self.playerSize + this.gravity > height - screenEdgeDeadzone) {
+      this.camY += this.gravity;
+    }
+    if (this.y - this.camY + this.gravity < screenEdgeDeadzone) {
+      this.camY += this.gravity;
+    }
+  }
+  Player.prototype.updateWorld = function () {
+
     //Deal with ground collision and ground rendering
     var fallingVariableBuffer = true;
     fill(100, 255, 100);
-    for (var i = 0; i <= width / self.groundStepWidth; i++) {
-      let adjustedGroundIndex = i + floor(this.camX / self.groundStepWidth);
+    for (var i = 0; i < width / self.groundStepWidth; i++) {
+      let adjustedGroundIndex = abs(i + floor(this.camX / self.groundStepWidth));
       let currentWorldLevel = self.world[adjustedGroundIndex];
       let currentWorldLevelX = i * self.groundStepWidth;
       //Deal with collisions
@@ -93,36 +95,28 @@ SOTF.prototype.update = function () {
         fallingVariableBuffer = false;
         if ((this.y + self.playerSize + 1 - currentWorldLevel) < self.playerSize / 5 + this.gravity) {
           this.y = currentWorldLevel - self.playerSize;
-          print("chip")
         } else {
-          if (this.horizontalVelocity > 0 && this.x + self.playerSize > currentWorldLevelX) {
-            this.x = currentWorldLevelX - self.playerSize - this.horizontalVelocity;
+          if (this.horizontalVelocity > 0 && this.x - this.camX + self.playerSize > currentWorldLevelX) {
+            this.x = currentWorldLevelX + this.camX - self.playerSize - this.horizontalVelocity;
             this.horizontalVelocity = 0;
           }
-          if (this.horizontalVelocity < 0 && this.x < currentWorldLevelX + self.groundStepWidth) {
-            this.x = currentWorldLevelX + self.groundStepWidth - this.horizontalVelocity;
+          if (this.horizontalVelocity < 0 && this.x - this.camX < currentWorldLevelX + self.groundStepWidth) {
+            this.x = currentWorldLevelX + this.camX + self.groundStepWidth - this.horizontalVelocity;
             this.horizontalVelocity = 0;
           }
         }
       }
       //Render world
-      rect(i * self.groundStepWidth, currentWorldLevel - this.camY, self.groundStepWidth, height - currentWorldLevel);
+      rect(i * self.groundStepWidth, currentWorldLevel - this.camY, self.groundStepWidth, max(height - currentWorldLevel, 0));
     }
     this.falling = fallingVariableBuffer;
-
-    //Move camera when approaching the end of the screen
-    let screenEdgeDeadzone = 5;
-    if (this.x - this.camX + self.playerSize + this.horizontalVelocity > width - screenEdgeDeadzone) {
-      this.camX += this.horizontalVelocity + 1;
-    }
-    if (this.x - this.camX < screenEdgeDeadzone) {
-      this.camX += this.horizontalVelocity - 1;
-    }
   }
   //Draw player
   Player.prototype.draw = function () {
     fill(100, 100, 100);
-    rect(this.x - this.camX, this.y - this.camY, self.playerSize, self.playerSize);
+    if(this.x - this.camX > 0 && this.y - this.camY > 0 && this.x - this.camX + self.playerSize < width && this.y - this.camY + self.playerSize < height){
+      rect(this.x - this.camX, this.y - this.camY, self.playerSize, self.playerSize);
+    }
   }
   //Enemies
   function Enemy(playerCamX) {
@@ -136,68 +130,18 @@ SOTF.prototype.update = function () {
 
   }
 
-  if (!this.init) {
-    //Functions for updating game mechanics
-    function drawPlayers() {
-      for (var i in self.players) {
-        self.players[i].draw();
-      }
-    }
-    function updatePlayers() {
-      for (var i in self.players) {
-        self.players[i].update();
-      }
-    }
-    function drawEnemies() {
-      for (var i in self.enemies) {
-        self.enemies[i].draw();
-      }
-    }
-    function updateEnemies() {
-      for (var i in self.enemies) {
-        self.enemies[i].update();
-      }
-    }
-    //World Generation
-    this.world[0] = height / 2;
-    function generateWorld() {
-      let newGenerationHeight;
-      for (var l = 0; l < self.players.length; l++) {
-        var currentPlayer = self.players[l];
-        let generationOverscan = (60 / self.groundStepWidth);
-        for (var i = 1; i < width / self.groundStepWidth + generationOverscan * 2; i++) {
-          let worldIndex = i + floor(currentPlayer.camX / self.groundStepWidth - generationOverscan);
-          if (!self.world[worldIndex]) {
-            if (worldIndex > 0) {
-              newGenerationHeight = self.world[worldIndex - 1] + random(-self.groundStepHeight, self.groundStepHeight);
-            } else {
-              newGenerationHeight = self.world[worldIndex + 1] + random(-self.groundStepHeight, self.groundStepHeight);
-            }
-            self.world[worldIndex] = newGenerationHeight;
-          }
-        }
-      }
-    }
-    function drawBackground() {
-      fill(0, 0, 0);
-      rect(0, 0, width, height);
-    }
-
-    //World
-    createProcess(generateWorld, "World", 2, this.processes);
-    //Enemies
-    createProcess(updateEnemies, "Enemies", 3, this.processes);
-    //Draw background
-    createProcess(drawBackground, "Background", 2, this.processes);
-    //Draw enemies and player
-    createProcess(drawEnemies, "Enemies", 1, this.processes);
-    createProcess(drawPlayers, "Players", 1, this.processes);
-    //Players
-    createProcess(updatePlayers, "Players", 0, this.processes);
-    this.init = true;
-  }
-
   //Menu system
+  if(this.menuState === "start") {
+    fill(150,205,150);
+    rect(0, 0, width, height);
+
+    fill(0);
+    centerText("SOTF", width / 2 - 20, height / 2 - 20, 40, 40, 75);
+    this.startupScreenTimer --;
+    if(this.startupScreenTimer <= 0){
+      this.menuState = "menu";
+    }
+  }
   if (this.menuState === "menu") {
     fill(127);
     rect(0, 0, width, height);
@@ -206,13 +150,13 @@ SOTF.prototype.update = function () {
     function convertMenuState() {
       self.menuState = "game";
       var newControlArray = [38, 40, 37, 39, 90];
-      self.players.push(new Player(width / 2, 0, newControlArray));
+      self.players.push(new Player(width / 2, 60, newControlArray));
     }
     fill(255);
     centerText("Survival of the Fittest", width / 2 - 20, 30, 40, 40, 75);
 
     fill(30);
-    Button(width / 2 - ((300) / 2), height / 2 - ((200) / 2), 300, 200, convertMenuState);
+    Button(width / 2 - ((300) / 2), height / 2 - ((200) / 2), 300, 200, convertMenuState, );
     fill(255)
     centerText("Play", width / 2 - 20, height / 2 - 20, 40, 40, 40);
   }
@@ -220,4 +164,81 @@ SOTF.prototype.update = function () {
   if (this.menuState === "game") {
     updateProcesses(this.processes);
   }
+}
+SOTF.prototype.createWindow = function(){
+  var self = new SOTF();
+  //Functions for updating game mechanics
+  function drawPlayers() {
+    for (var i in self.players) {
+      self.players[i].draw();
+    }
+  }
+  function updatePlayers() {
+    for (var i in self.players) {
+      self.players[i].update();
+    }
+  }
+  function updatePlayerWorlds() {
+    for (var i in self.players) {
+      self.players[i].updateWorld();
+    }
+  }
+  function drawEnemies() {
+    for (var i in self.enemies) {
+      self.enemies[i].draw();
+    }
+  }
+  function updateEnemies() {
+    for (var i in self.enemies) {
+      self.enemies[i].update();
+    }
+  }
+  //World Generation
+  this.world[0] = height / 2;
+  function generateWorld() {
+    let newGenerationHeight;
+    for (var l = 0; l < self.players.length; l++) {
+      var currentPlayer = self.players[l];
+      let generationOverscan = (60 / self.groundStepWidth);
+      for (var i = 1; i < width / self.groundStepWidth + generationOverscan * 2; i++) {
+        let worldIndex = abs(i + floor(currentPlayer.camX / self.groundStepWidth - generationOverscan));
+        if (!self.world[worldIndex]) {
+          if (worldIndex > 0) {
+            newGenerationHeight = self.world[worldIndex - 1] + random(-self.groundStepHeight, self.groundStepHeight);
+          } else {
+            newGenerationHeight = height/1.5;
+          }
+          self.world[worldIndex] = newGenerationHeight;
+        }
+      }
+    }
+  }
+  function drawBackground() {
+    fill(0, 0, 0);
+    rect(0, 0, width, height);
+  }
+
+  function updateGame() {
+    self.update();
+  }
+  var windowProcesses = [];
+  //Create window processes
+  //World
+  windowProcess(generateWorld, windowProcesses, 4, "World", schedulerPrioritySystemPerformance);
+  //Enemies
+  windowProcess(updateEnemies, windowProcesses, 3, "Enemies", schedulerPrioritySystemPerformance);
+  //Draw background
+  windowProcess(drawBackground, windowProcesses, 2, "Background");
+  //Draw enemies and player
+  windowProcess(drawEnemies, windowProcesses, 1, "Enemies");
+  windowProcess(drawPlayers, windowProcesses, 1, "Players");
+  //Players
+  windowProcess(updatePlayers, windowProcesses, 0, "Players");
+  windowProcess(updatePlayerWorlds, windowProcesses, 0, "Players");
+  //Update game states
+  windowProcess(updateGame, windowProcesses, 1);
+  
+  var window = new Window("Survival of the Fittest", windowProcesses);
+  window.maximize = true;
+  windows.push(window);
 }

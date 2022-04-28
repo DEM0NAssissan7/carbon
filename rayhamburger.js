@@ -3,8 +3,8 @@ function Rayham(){
     this.lights = [];
     this.objects = [];
     this.cycleCount = 0;
-    this.execSpeed = 1;
-    this.lightQuality = 30; //The quality of the ray rendering
+    this.execSpeed = 0.1;
+    this.lightQuality = 1; //The quality of the ray rendering
     this.radConst = (1 / 360) * (2 * Math.PI);
     var self = this;
 
