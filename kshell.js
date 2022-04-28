@@ -63,7 +63,6 @@ function simpleCursor() {
   ellipse(0, 0, 10);
 }
 function macCursor() {
-  scale(0.8)
   strokeWeight(1.4);
   beginShape();
   //Base (left)
@@ -317,23 +316,10 @@ function createBackgroundWindow() {
   background.hasTopBar = false;
   windows.push(background);
 }
-function createMouseWindow() {
-  var windowProcesses = [];
-  windowProcess(renderMouseCursor, windowProcesses, 1);
-  var cursor = new Window("mouse cursor", windowProcesses, false);
-  cursor.x = mouseArray.x;
-  cursor.y = mouseArray.y;
-  cursor.targetWidth = 13;
-  cursor.targetHeight = 21;
-  cursor.hasTopBar = false;
-  window.push(cursor);
-}
 
 createStartup(function () {
   //Create background window
   createBackgroundWindow();
-  //Create mouse cursor window
-  createMouseWindow();
   //Create dock icons
   appDockSystem.createIcons();
 });
