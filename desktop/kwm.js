@@ -30,7 +30,7 @@ class Window {
     this.topBarHeight = 0;
 
     this.targetHeight = 400 * systemScale;
-    this.targetWidth = 400 * systemScale;
+    this.targetWidth = 500 * systemScale;
     if(hasTopBar === undefined){
       this.hasTopBar = true;
     } else {
@@ -44,8 +44,8 @@ class Window {
       this.width = 0;
       this.height = 0;  
     }
-    this.x = mouseArray.x - (this.width / 2);
-    this.y = mouseArray.y - ((this.height - this.topBarHeight) / 2);
+    this.x = (window.innerWidth / 2);
+    this.y = (window.innerHeight / 2) - ((this.height - this.topBarHeight) / 2);
 
     this.fadeFill = 255;
 
@@ -215,6 +215,10 @@ class Window {
       var keyboardKeyArrayBuffer = keyboardKeyArray;
       keyboardArray = [];
       keyboardKeyArray = [];
+      if(this.hasTopBar){
+        var mousePressedBuffer = mouseIsPressed;
+        mouseIsPressed = false;
+      }
     }
 
     //Run processes
@@ -232,6 +236,9 @@ class Window {
     } else {
       keyboardArray = keyboardArrayBuffer;
       keyboardKeyArray = keyboardKeyArrayBuffer;
+      if(this.hasTopBar){
+        mouseIsPressed = mousePressedBuffer;
+      }
     }
   }
 }
@@ -261,17 +268,19 @@ function setCursor (cursorFunction){
   kwmCursor = cursorFunction;
 }
 function drawCursor(){
-  push();
-  translate(mouseArray.x, mouseArray.y);
-  scale(systemScale);
-  kwmCursor();
-  pop();
+  if(mouseInfo.x && mouseInfo.y){
+    push();
+    translate(mouseArray.x, mouseArray.y);
+    scale(systemScale);
+    kwmCursor();
+    pop();
+  }
 }
 //Create cursorProcess
 var cursorProcess;
 {
   var tempCursorProcessGroup = [];
-  createProcess(drawCursor, "mouse cursor", 1, tempCursorProcessGroup);
+  createGraphicalProcess(drawCursor, "mouse cursor", 1, tempCursorProcessGroup);
   cursorProcess = tempCursorProcessGroup[0];
 }
 function updateCursorProcess(){
@@ -374,11 +383,11 @@ function windowProcess(command, windowProcesses, priority, name, scheduler) {
   if(name !== undefined){
     currentName = name;
   }
-  createProcess(command, currentName, priority, windowProcesses, scheduler);
+  createGraphicalProcess(command, currentName, priority, windowProcesses, scheduler);
 }
 function simpleWindow(name, command) {
   var windowProcesses = [];
-  createProcess(command, name, 1, windowProcesses);
+  createGraphicalProcess(command, name, 1, windowProcesses);
   createWindow(name, windowProcesses);
 }
 function imageWindow(filePath){
@@ -395,12 +404,10 @@ createStartup(function () {
   fill(75);
   rect(0, 0, width, height);
 });
-var kwmProcessGroup = [];
 
 //Create window manager processes
-createProcess(updateWindowSystemLogic, "kwm", 0, kwmProcessGroup);
-createProcess(drawWindows, "kwm", 0, kwmProcessGroup);
-createProcess(runCompositer, "kwm", 0, kwmProcessGroup);
-createProcess(runWindows, "kwm", 1, kwmProcessGroup);
-createProcess(updateCursorProcess, "kwm", 0, kwmProcessGroup);
-addProcessGroup(kwmProcessGroup);
+createProcess(updateWindowSystemLogic, "kwm", 0);
+createGraphicalProcess(drawWindows, "kwm", 0);
+//createGraphicalProcess(runCompositer, "kwm", 0);
+createGraphicalProcess(runWindows, "kwm", 1);
+createGraphicalProcess(updateCursorProcess, "kwm", 0);

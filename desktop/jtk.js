@@ -31,7 +31,7 @@ function centerText(buttonText, x, y, w, h, textsize) {
     }
 }
 function blankButton(x, y, w, h, func){
-    if (mouseArray.x > x && mouseArray.x < x + w && mouseArray.y > y && mouseArray.y < y + h && mouseIsPressed && buttonClicked === false) {
+    if (mouseArray.x > x && mouseArray.x < x + w && mouseArray.y > y && mouseArray.y < y + h && mouseInfo.clicked && buttonClicked === false) {
         func();
         buttonClicked = true;
     }
@@ -42,7 +42,7 @@ function Button(x, y, w, h, func, followColorScheme) {
         stroke(colorScheme[0]);
         strokeWeight(1.8);
 
-        if(mouseIsPressed && buttonClicked === false){
+        if(mouseInfo.clicked && buttonClicked === false){
             func();
             buttonClicked = true;
         }
@@ -55,7 +55,7 @@ function Button(x, y, w, h, func, followColorScheme) {
     rect(rectangleX, rectangleY, Math.max(Math.min(w, width - rectangleX), 0), Math.max(Math.min(h, height - rectangleY), 0));
     pop();
 }
-function labledButton(x, y, w, h, func, buttonText, textColor, textsize){
+function labledButton(x, y, w, h, func, buttonText, textsize, textColor){
     if(!textColor){
         Button(x, y, w, h, func);
         fill(colorScheme[4]);

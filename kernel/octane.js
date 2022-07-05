@@ -1,50 +1,39 @@
 //Option Variables
-var monitorFramerate = 60;
-var showFPS = false;
+var targetCyclesPerSecond = 60;
 var disableScheduler = false;
-var trackPerformance = false;
+var trackPerformance = true;
 var limitFps = false;
 var idleSuspend = true;
 
+//Performance numbers/ kernel clock tracker
+var systemExecutionLatency = 0;
+var kernelExecutionCycleCount = 0;
+var kernelCycleLatency = 0;
+var kernelCyclesPerSecond = 0;
+var performanceSampleSize = Math.floor(targetCyclesPerSecond/10);
+let kernelClock = 0;
+function kernelClockDaemon() {
+    if(kernelCycleLatency){
+        kernelClock += kernelCycleLatency;
+    }
+}
+function kernelLatencyReporter() {
+    var dividedCycleCounter = kernelExecutionCycleCount % (performanceSampleSize * 2);
+    if(dividedCycleCounter === 0){
+        this.time1 = Date.now();
+    }
+    if(dividedCycleCounter === performanceSampleSize){
+        this.time2 = Date.now();
+    }
+    kernelCycleLatency = Math.abs(this.time1 - this.time2) / performanceSampleSize;
+    kernelCyclesPerSecond = Math.floor(1000/kernelCycleLatency);
+}
 
-//System Performance Indicators
-let latencyCalculationBufferSize = Math.floor(monitorFramerate/10);//Every x frames, count average FPS
-function getLatency() {
-    let dividedFrameCounter = frameCount % (latencyCalculationBufferSize * 2);
-    if (dividedFrameCounter === 0) {
-        this.frameMarker1 = Date.now();
-    }
-    if (dividedFrameCounter === latencyCalculationBufferSize) {
-        this.frameMarker2 = Date.now();
-    }
-    return Math.abs(this.frameMarker1 - this.frameMarker2) / latencyCalculationBufferSize;
-}
-//Store performance numbers as variables
-var targetLatency = 1000 / monitorFramerate;
-var systemLatency = targetLatency;
-var systemFps = monitorFramerate;
-//Function to update performance variables
-function updatePerformanceIndicators() {
-    if (getLatency()){
-        systemLatency = getLatency();
-        systemFps = 1000 / systemLatency;
-    }
-}
-
-//Schedulers
-function schedulerPrioritySystemPerformance(self){
-    return (systemLatency * self.processesArray.length * this.priority) / (targetLatency * self.processesArray[0].prioritySum);
-    // R = (L/t)(y/P)*p
-}
-function schedulerPriorityProcessPerformance(self){
-    if(self.trackPerformance === false){
-        self.trackPerformance = true;
-        return 1;
-    }
-    return (self.frametime * self.processesArray.length * this.priority) / (targetLatency * self.processesArray[0].prioritySum);
-}
-function schedulerSystemPerformance(){
-    return systemLatency/targetLatency;
+//Scheduler
+var targetKernelLatency = 1000/targetCyclesPerSecond
+function schedulerSolidPriorityKernelPerformance(self){
+    return (kernelCycleLatency / targetKernelLatency) * self.priority;
+    //R = (L/t)*p
 }
 
 //Process class
@@ -122,7 +111,7 @@ function createProcess(command, name, priority, group, scheduler) {
     //Scheduler
     let currentScheduler;
     if(scheduler === undefined){
-        currentScheduler = schedulerPrioritySystemPerformance;
+        currentScheduler = schedulerSolidPriorityKernelPerformance;
     }else{
         currentScheduler = scheduler;
     }
@@ -143,9 +132,6 @@ function kill(PID, quiet) {
         }
     }
 }
-function addProcessGroup(processGroup){
-    processGroups.push(processGroup);
-}
 let systemError = [];
 function updateProcesses(processGroup) {
     for (let i = 0; i < processGroup.length; i++) {
@@ -162,9 +148,22 @@ function updateProcesses(processGroup) {
         }
     }
 }
+function ProcessGroup(groupProcesses, groupName){
+    this.processes = groupProcesses;
+    this.name = groupName;
+    this.frametime = 0;
+}
+ProcessGroup.prototype.update = function(){
+    var timeBefore = Date.now();
+    updateProcesses(this.processes);
+    this.frametime = Date.now() - timeBefore;
+}
+function addProcessGroup(processGroup, name){
+    processGroups.push(new ProcessGroup(processGroup, name));
+}
 function updateSystem(){
     for(var i = 0; i < processGroups.length; i++){
-        updateProcesses(processGroups[i]);
+        processGroups[i].update();
     }
 }
 function suspend(PID) {
@@ -200,30 +199,57 @@ function runStartups(startupArray){
 }
 
 //Input management
-var mouseArray = function () {
+//Mouse
+var mouseInfo = function () {
     this.x = 0;
     this.y = 0;
     this.vectorX = 0;
     this.vectorY = 0;
+    this.clicked = false;
 };
-function updateMouse() {
-    mouseArray.vectorX = mouseArray.x - mouseX;
-    mouseArray.vectorY = mouseArray.y - mouseY;
-    mouseArray.x = mouseX;
-    mouseArray.y = mouseY;
-}
+var mouseArray = mouseInfo;//Depricated
+document.onmousemove = function (event){
+    mouseInfo.vectorX = mouseInfo.x - event.pageX;
+    mouseInfo.vectorY = mouseInfo.y - event.pageY;
+    mouseInfo.x = event.pageX;
+    mouseInfo.y = event.pageY;
+};
+document.onmousedown = function(){
+    mouseInfo.clicked = true;
+};
+document.onmouseup = function(){
+    mouseInfo.clicked = false;
+};
+//Keyboard
 var keyboardKeyArray = [];
 var keyboardArray = [];
-function keyPressed () {
-    keyboardArray[keyCode] = true;
-    keyboardKeyArray.push(key);
+var keyboardInfo = function() {
+    this.pressed = false;
 };
-function keyReleased () {
-    keyboardArray[keyCode] = false;
+document.onkeydown = function (event) {
+    keyboardArray[event.keyCode] = true;
+    keyboardKeyArray.push(event.key);
+    keyboardInfo.pressed = true;
+};
+document.onkeyup = function(event) {
+    keyboardArray[event.keyCode] = false;
+    keyboardInfo.pressed = false;
 };
 function keyboardConfigurationDaemon() {
     keyboardKeyArray = [];
 }
+//Controllers
+var controllerArray = [];
+window.addEventListener("gamepadconnected", function(e) {
+    console.log("Gamepad %d connected (%s).",
+        e.gamepad.index, e.gamepad.id);
+    controllerArray.push(e.gamepad);
+});
+  window.addEventListener("gamepaddisconnected", function(e) {
+    console.log("Gamepad: %d disconnected (%s)",
+        e.gamepad.index, e.gamepad.id);
+    controllerArray.splice(e.gamepad, 1);
+});
 
 //System suspend
 function suspendSystem(processesArray) {
@@ -285,20 +311,21 @@ function errorScreenDaemon () {
 
 //System suspend daemon. Responsible for suspending on inactivity/unfocused and with keyboard shortcut.
 var mouseInactivityTimer = 0;
+var systemKeySuspended = false;
 function suspendResponseDaemon() {
     //Inactivity suspend
     if(idleSuspend === true){
-        if(mouseArray.vectorX === 0 && mouseArray.vectorY === 0 && !keyIsPressed && !mouseIsPressed){
-            mouseInactivityTimer += systemLatency/1000;
+        if(mouseInfo.vectorX === 0 && mouseInfo.vectorY === 0 && !keyboardInfo.pressed && !mouseInfo.pressed){
+            mouseInactivityTimer += systemExecutionLatency/1000;
         }
-        if(focused){
+        if(document.hasFocus()){
             mouseInactivityTimer = 0;
             if(this.inactive === true){
                 resumeSystem(processes);
                 this.inactive = undefined;
             }
         }
-        if(mouseInactivityTimer > 30 && this.inactive === undefined || !focused && this.inactive === undefined){
+        if(mouseInactivityTimer > 30 && this.inactive === undefined || !document.hasFocus() && this.inactive === undefined){
             suspendSystem(processes);
             this.inactive = true;
         }
@@ -309,72 +336,44 @@ function suspendResponseDaemon() {
         this.suspended = true;
     }
     if (this.suspended && !keyboardArray[192]) {
-        fill(0);
-        rect(0, 0, width, height);
-        fill(255)
-        textSize(30);
-        text("Suspended", width / 2 - textWidth("Suspended") / 2, 100);
-        text("Press any key to resume", width / 2 - textWidth("Press any key to resume") / 2, height / 2);
-        if (keyIsPressed) {
+        systemKeySuspended = true;
+        if (keyboardInfo.pressed) {
             resumeSystem(processes);
             this.suspended = undefined;
-            textSize(12);
+            systemKeySuspended = false;
         }
     }
 }
 
-//Live display resizing
-function windowResized () {
-    resizeCanvas(windowWidth - 20, windowHeight - 21);
-}
 
-//FPS Display
-function fpsCounter() {
-    if (showFPS) {
-        fill(140, 140, 140);
-        rect(0, 0, 38, 30);
-        stroke(0);
-        fill(0);
-        textSize(14);
-        text(round(systemFps), 10, 19);
-        noStroke();
-    }
-}
-
-//Create process example:
-//createProcess(command, name, priority, processArray);
-//createProcess(foo, "foo", 1, processes);
+/* Create process example:
+createProcess(command, name, priority, processGroup, scheduler);
+createProcess(foo, "foo", 1, processes);
+var myProcessGroup = [];
+createProcess(foo, "foo", 0, myProcessGroup);
+createProcess(foo1, "foo1", 2, myProcessGroup);
+*/
 
 //Configure and run the kernel
-addProcessGroup(processesGroup);;
-function setup() {
-    createCanvas(windowWidth - 20, windowHeight - 21);
-    //Disable looping to allow the system to run without any speed restriction. Crucial for the scheduler.
-    noLoop();
-}
-function draw(){
+addProcessGroup(processesGroup, "Kernel Group");
+function executeKernel() {
+    var timeBefore = Date.now();
     //Suspend hotkey daemon
     suspendResponseDaemon();
-    //Mouse input
-    updateMouse();
-    //Update performance numbers
-    updatePerformanceIndicators();
-    //Run startup services
-    runStartups(startups);
     //Update processes
     updateSystem();
     //Run keyboard daemon
     keyboardConfigurationDaemon();
     //Error screen daemon
     errorScreenDaemon();
-    //FPS display
-    fpsCounter();
+    //Calculate and report latency
+    kernelLatencyReporter();
+    //Kernel clock
+    kernelClockDaemon();
 
-    //Redraw every x milliseconds because we are not using the draw loop's natural rate
-    if(limitFps === false){
-       setTimeout(redraw, 0);
-    }
-    if(limitFps === true){
-        setTimeout(redraw, 1000/(monitorFramerate*1.15));
-    }
+    //Report back kernel cycles per second
+    kernelExecutionCycleCount++;
+    //Report performance
+    systemExecutionLatency = Date.now() - timeBefore;
 }
+setInterval(executeKernel);//Run the kernel

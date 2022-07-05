@@ -159,7 +159,7 @@ Rayham.prototype.createWindow = function () {
   for (var i in kwmProcessesIDs) {
     suspend(kwmProcessesIDs[i]);
   }
-  createProcess(gameSystemUpdate, "rayhamburger", 0);
+  createGraphicalProcess(gameSystemUpdate, "rayhamburger", 0);
 }
 Rayham.prototype.iconFunction = function () {
   noStroke();
@@ -281,7 +281,7 @@ class deskPanel{
   init(){
     var panelProcesses = [];
     var self = this;
-    createProcess(function(){self.update()}, "panel process", 2, panelProcesses);
+    createGraphicalProcess(function(){self.update()}, "panel process", 2, panelProcesses);
     var panelWindow = new Window("panel", panelProcesses, false);
     panelWindow.x = this.x+this.w/2;
     panelWindow.y = this.y+this.h/2;

@@ -67,7 +67,7 @@ function ultistress() {
 function schedulerResillience() {
   print("Stressing scheduler with huge processes");
   for (let i = 0; i < 1000; i++) {
-    createProcess(largeProcessorStressTest, "stresstest");
+    createGraphicalProcess(largeProcessorStressTest, "stresstest");
   }
 }
 

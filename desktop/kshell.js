@@ -105,9 +105,15 @@ setCursor(renderMouseCursor);
 
 //Applications
 //Icon creation function
-function createIcon(iconFunction, x, y, size) {
+function createIcon(iconFunction, x, y, size, createWindowFunction) {
   var windowProcesses = [];
   windowProcess(iconFunction, windowProcesses, 1, "");
+  windowProcess(function(){
+    if(mouseArray.x > 0 && mouseArray.x < width && mouseArray.y > 0 && mouseArray.y < height && buttonClicked === false && mouseIsPressed){
+      buttonClicked = true;
+      createWindowFunction();
+    }
+  }, windowProcesses, 1, "");
   var icon = new Window("icon", windowProcesses, false);
   icon.x = x + size / 2;
   icon.y = y + size / 2;
@@ -156,10 +162,11 @@ class appDock{
       let iconX = width / 2 + (this.iconSize + this.iconPadding) * i - applications.length * this.iconSize / 2;
       let iconY = height - this.iconSize - this.iconPadding*2;
       var self = this;
-      setTimeout(function () { createIcon(applications[i].icon, iconX, iconY, self.iconSize) }, 500 + (100 * i));
+      setTimeout(function () { createIcon(applications[i].icon, iconX, iconY, self.iconSize,applications[i].handler) }, 500 + (100 * i));
     }
   }
   update () {
+    /*
     for (var i = 0; i < applications.length; i++) {
       var iconX = width / 2 + (this.iconSize + this.iconPadding) * i - applications.length * this.iconSize / 2;
       var iconY = height - this.iconSize - this.iconPadding*2;
@@ -172,6 +179,7 @@ class appDock{
     if (!mouseIsPressed) {
       this.pressed = false;
     }
+    */
   }
   drawDock () {
     //rect(width / 2 - this.iconSize * applications.length,height - this.iconSize - this.iconPadding*3,applications.length*this.iconSize, this.iconSize + this.iconPadding*2,40);
@@ -283,6 +291,3 @@ var kshellProcessGroup = [];
 
 //Create processes
 //Appdock
-createProcess(function(){appDockSystem.drawDock()}, "kshell", 2, kshellProcessGroup);
-createProcess(function(){appDockSystem.update()}, "kshell", 0, kshellProcessGroup);
-addProcessGroup(kshellProcessGroup);

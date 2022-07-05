@@ -8,6 +8,7 @@ var carbon = [
     "libraries/p5.js",
     //Kernel
     "kernel/octane.js",
+    "kernel/graphite.js",
     "kernel/tools.js",
     //Applications
     "desktop/jtk.js",
@@ -28,6 +29,7 @@ var carbonPropane = [
     "libraries/p5.js",
     //Kernel
     "kernel/octane.js",
+    "kernel/graphite.js",
     "kernel/tools.js",
     //Applications
     "desktop/jtk.js",
@@ -48,6 +50,7 @@ var octaneCore = [
     "libraries/p5.js",
     //Kernel
     "kernel/octane.js",
+    "kernel/graphite.js",
     "kernel/tools.js",
     //Stress Tools
     "kernel/stresstest.js",
@@ -56,10 +59,18 @@ var octaneCore = [
     ],
     "Octane Core"
 ];
+var bareOctane = [
+    [
+    //Kernel
+    "kernel/octane.js",
+    ],
+    "Bare octane"
+]
 kbSystems = [
     carbon,
     carbonPropane,
     octaneCore,
+    bareOctane,
 ]
 }
 kbInit();//Leave this at the end

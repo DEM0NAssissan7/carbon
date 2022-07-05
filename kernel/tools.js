@@ -64,3 +64,6 @@ function reloadKernel(){
         console.error("Kernel failed to reloaded.");
     }
 }
+function getTransition(size, time){
+    return (Math.abs(size) / kernelCyclesPerSecond) * (1000 / time);
+}

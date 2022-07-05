@@ -121,6 +121,6 @@ try{
       ttySystem.draw();
     }
     createProcess(updateTTY, "TTY", 0);
-    createProcess(drawTTY, "TTY", 1);
+    createGraphicalProcess(drawTTY, "TTY");
   }
 } catch(error){}
