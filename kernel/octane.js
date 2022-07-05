@@ -225,15 +225,16 @@ var keyboardKeyArray = [];
 var keyboardArray = [];
 var keyboardInfo = function() {
     this.pressed = false;
+    this.keyCode = 0;
 };
 document.onkeydown = function (event) {
     keyboardArray[event.keyCode] = true;
     keyboardKeyArray.push(event.key);
-    keyboardInfo.pressed = true;
+    keyboardInfo = event;
 };
 document.onkeyup = function(event) {
     keyboardArray[event.keyCode] = false;
-    keyboardInfo.pressed = false;
+    keyboardInfo = event;
 };
 function keyboardConfigurationDaemon() {
     keyboardKeyArray = [];
@@ -286,6 +287,12 @@ function resetSystem(processesArray){
     return groupBuffer;
 }
 
+//Graphics
+/*let canvas = document.getElementById('canvas');
+canvas.width = window.innerWidth - 20;
+canvas.height = window.innerHeight - 21;
+let graphics = canvas.getContext('2d');
+*/
 //Error screen daemon
 function octaneError (process, processError) {
     var killConfirmation = confirm("Process " + process.PID + " encountered an error: --> " + processError + " <-- Attempting to kill the errored process.");
