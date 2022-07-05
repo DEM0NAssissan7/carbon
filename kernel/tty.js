@@ -61,12 +61,12 @@ class TTY {
         }
         this.keyPressed = true;
       }
-      if (keyCode !== 40 && !this.keyPressed) {
-        if (keyCode !== 38) {
+      if (keyboardInfo.keyCode !== 40 && !this.keyPressed) {
+        if (keyboardInfo.keyCode !== 38) {
           this.textOrder = 0;
         }
       }
-      if (!keyIsPressed) {
+      if (!keyboardInfo.keyIsPressed) {
         this.keyPressed = false;
       }
       for (var i in keyboardKeyArray) {
