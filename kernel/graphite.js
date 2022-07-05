@@ -1,5 +1,6 @@
 var monitorFramerate = 60;
 var showFPS = false;
+var kernelPriority = true;
 
 //System Performance Indicators
 let latencyCalculationBufferSize = Math.floor(monitorFramerate/10);//Every x frames, count average FPS
@@ -44,6 +45,9 @@ function schedulerPriorityProcessPerformance(self){
 function schedulerSystemPerformance(){
     return systemLatency/targetLatency;
 }
+function basicScheduler(){
+    return 1;
+}
 
 //FPS Display
 function fpsCounter() {
@@ -84,7 +88,7 @@ function suspendScreenDisplayDaemon() {
 //Graphical Processes
 var graphicalProcesses = [];
 function createGraphicalProcess(command, name, priority, group, scheduler) {
-    var currentScheduler = schedulerSolidPrioritySystemPerformance;
+    var currentScheduler = basicScheduler;
     if(scheduler !== undefined){
         currentScheduler = scheduler;
     }
@@ -120,7 +124,7 @@ function draw(){
 
     //Redraw every x milliseconds because we are not using the draw loop's natural rate
     if(limitFps === false){
-       setTimeout(redraw, kernelCycleLatency);
+        setTimeout(redraw, kernelCycleLatency);
     }
     if(limitFps === true){
         setTimeout(redraw, Math.max(1000/(monitorFramerate*1.15), kernelCycleLatency));
