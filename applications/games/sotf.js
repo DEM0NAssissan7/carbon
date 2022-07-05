@@ -2,6 +2,29 @@
 function customRandom(min, max){
   return Math.random() * (max + Math.abs(min)) - Math.abs(min);
 }
+function fillPlayerNumber(number){
+  if(!number){
+    fill(170, 170, 170);
+  }else{
+    switch(number){
+      case 0:
+        fill(170, 170, 170);
+        break;
+      case 1:
+        fill(100,100,255);
+        break;
+      case 2:
+        fill(255,100,100);
+        break;
+      case 3:
+        fill(100,255,100);
+        break;
+      case 4:
+        fill(255,255,100);
+        break;
+    }
+  }
+}
 class SOTF {
   constructor() {
     this.players = [];
@@ -46,7 +69,7 @@ class SOTF {
       this.fireCooldown = 0;
     }
     Gun.prototype.pistol = function () {
-      this.name = 'Pistol';
+      this.name = 'pistol';
       this.art = function (direction) {
         noStroke();
         fill(50, 50, 50);
@@ -85,6 +108,28 @@ class SOTF {
       this.automatic = true;
       this.fireRate = 50;
       this.spread = 30;
+    }
+    Gun.prototype.broken = function () {
+      this.name = 'broken';
+      this.art = function (direction) {
+        noStroke();
+        fill(255, 0, 0);
+        if (direction === 'left') {
+          translate(-self.playerSize / 2 + 2, self.playerSize / 2 - 6)
+          rect(0, 0, 14, 6);
+          rect(8, 5, 6, 7);
+        }
+        if (direction === 'right') {
+          translate(self.playerSize - 1, self.playerSize / 2 - 6)
+          rect(0, 0, 14, 6);
+          rect(0, 5, 6, 7);
+        }
+      };
+      this.cost = 0;
+      this.damage = 50;
+      this.automatic = true;
+      this.fireRate = 40;
+      this.spread = 20;
     }
     Gun.prototype.m16 = function () {
       this.name = 'M16';
@@ -149,13 +194,14 @@ class SOTF {
       this.jumping = false;
 
       this.gun = new Gun();
-      this.gun.m16();
+      this.gun.broken();
       this.direction = 'left';
       this.gunFired = false;
       this.gunCooldownCounter = 0;
       this.gunShotCount = 0;
 
       this.damageDone = 0;
+      this.points = 0;
     }
     //Function for shooting
     function findIntersection(x1,y1,x2,y2,x3,y3,x4,y4){
@@ -232,8 +278,10 @@ class SOTF {
       }else{
         stroke(255,0,0);
       }
+      strokeWeight(2);
       line(x - self.camX, y - self.camY, (x - self.camX) + (dirX * width), (y - self.camY) + (dirY * height));
       noStroke();
+      strokeWeight(1);
     }
     //Update player logic
     let screenEdgeDeadzone = 50;
@@ -299,7 +347,7 @@ class SOTF {
         if (!this.controllerUp && this.jumping === true) {
           this.jumpKeyReleased = true;
         }
-        if (this.controllerLeftStickY > self.controllerDeadzone) {
+        if (this.controllerLeftStickY > 0.9) {
           this.gravity += verticalMovementSpeed;
         }
         //Horizontal
@@ -412,23 +460,7 @@ class SOTF {
         fill(255, 50, 50);
         translate(this.x - self.camX, this.y - self.camY);
         rect(0, -10, this.health/100 * self.playerSize, 5);
-        switch(this.number){
-          case 0:
-            fill(100, 100, 100);
-            break;
-          case 1:
-            fill(100,100,255);
-            break;
-          case 2:
-            fill(255,100,100);
-            break;
-          case 3:
-            fill(100,255,100);
-            break;
-          case 4:
-            fill(255,255,100);
-            break;
-        }
+        fillPlayerNumber(this.number);
         rect(0, 0, self.playerSize, self.playerSize);
         this.gun.art(this.direction);
         pop();
@@ -471,13 +503,13 @@ class SOTF {
               if (this.horizontalVelocity > 0 && this.x + self.enemySize > currentWorldLevelX) {
                 this.x = currentWorldLevelX - self.enemySize;
                 this.horizontalVelocity = 0;
-                this.gravity -= verticalMovementSpeed;
+                this.gravity -= verticalMovementSpeed * this.geneticVariation;
                 this.jumping = true;
               }
               if (this.horizontalVelocity < 0 && this.x < currentWorldLevelX + self.groundStepWidth) {
                 this.x = currentWorldLevelX + self.groundStepWidth;
                 this.horizontalVelocity = 0;
-                this.gravity -= verticalMovementSpeed;
+                this.gravity -= verticalMovementSpeed * this.geneticVariation;
                 this.jumping = true;
               }
             }
@@ -612,23 +644,7 @@ class SOTF {
       }
       for(let i = 0; i < this.playerBuffer.length; i++){
         push();
-        switch(this.playerBuffer[i].number){
-          case 0:
-            fill(100, 100, 100);
-            break;
-          case 1:
-            fill(100,100,255);
-            break;
-          case 2:
-            fill(255,100,100);
-            break;
-          case 3:
-            fill(100,255,100);
-            break;
-          case 4:
-            fill(255,255,100);
-            break;
-        }
+        fillPlayerNumber(this.playerBuffer[i].number);
         if(this.playerBuffer[i].controller.buttons[0].pressed){
           fill(255);
         }
@@ -760,6 +776,13 @@ class SOTF {
         }
       }
     }
+    function capEnemyCount() {
+      if(self.enemies.length > self.levelKillGoal - self.enemiesKilled && self.enemies.length > 0){
+        for(var i = self.enemies.length; i >= (self.levelKillGoal - self.enemiesKilled); i--){
+          self.enemies.splice(i, 1);
+        }
+      }
+    }
     //World Generation
     function generateWorld() {
       var newGenerationHeight;
@@ -788,9 +811,20 @@ class SOTF {
       push();
       fill(100);
       rect(width/2, 0, width/2, 20);
+
       fill(255);
+      textSize(12);
       text("Level: " + self.level, width/2 + 6, 14);
       text("Enemies Left: " + Math.max(self.levelKillGoal - self.enemiesKilled, 0), width/2 + 70, 14);
+
+      //Scoreboard
+      noStroke();
+      for(var i = 0; i < self.players.length; i++){
+        fillPlayerNumber(self.players[i].number);
+        rect(width - 200, 20 * i, 200, 20);
+        fill(0);
+        text("$" + self.players[i].points + " | " + self.players[i].damageDone + " damage", width - 195, 14 + (20*i));
+      }
       pop();
     }
     function updateGameLogic() {
@@ -812,6 +846,7 @@ class SOTF {
     //World
     createProcess(generateWorld, "World Generation", 1, self.processes);
     //Enemies
+    createProcess(capEnemyCount, "Enemy Cap", 0, self.processes);
     createProcess(updateEnemies, "Enemies", 3, self.processes);
     createProcess(updateEnemyWorlds, "Enemy Worlds", 1, self.processes);
     //Players
