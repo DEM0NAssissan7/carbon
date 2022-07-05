@@ -5,11 +5,18 @@ function createScriptElement(fileName) {
   script.src = fileName;
   return script;
 }
+/*
+function createCanavsElement() {
+  var canvas = document.createElement("canvas");
+  canvas.id = 'canvas';
+  document.body.appendChild(canvas);
+}*/
 function kbLoadSystem(systemArray){
   let systemScripts = systemArray[0];
   var systemName = systemArray[1];
   console.warn("Loading " + systemName + "...");
   document.title = systemName;
+  //createCanavsElement();
   setTimeout(function () {
     for (let i = 0; i < systemScripts.length; i++) {
       setTimeout(function(){
