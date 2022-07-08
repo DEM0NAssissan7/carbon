@@ -18,17 +18,21 @@ createStartup(function (){
         textColor,
     ];
 });
-function centerText(buttonText, x, y, w, h, textsize) {
+function centerText(displayText, textX, textY, textW, textH, textsize) {
+    var currentTextsize = 12;
     if (textsize) {
-        this.textsize = textsize;
-    } else {
-        this.textsize = 12;
+        currentTextsize = textsize;
     }
-    textSize(this.textsize);
-    var buttonTextLength = (textWidth(buttonText) / 2);
-    if(x >= -((w / 2) - buttonTextLength) && y >= -((h / 2) + (this.textsize / 3))){
-        text(buttonText, x + ((w / 2) - buttonTextLength), y + ((h / 2) + (this.textsize / 3)));
+    textSize(currentTextsize);
+    var buttonTextLength = (textWidth(displayText) / 2);
+    var textDisplayX = textX + ((textW / 2) - buttonTextLength);
+    var textDisplayY = textY + ((textH / 2) + (currentTextsize / 3));
+    if(textDisplayX > 0 && textDisplayX + buttonTextLength < width){
+        text(displayText, textDisplayX, textDisplayY);
     }
+}
+function simpleCenterText(displayText, textX, textY){
+    text(displayText, textX - textWidth(displayText)/2, textY);
 }
 function blankButton(x, y, w, h, func){
     if (mouseArray.x > x && mouseArray.x < x + w && mouseArray.y > y && mouseArray.y < y + h && mouseInfo.clicked && buttonClicked === false) {

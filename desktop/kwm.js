@@ -2,9 +2,9 @@
 var displayScaling = false;
 
 /* The window manager should scale when the resolution is larger than 1080p*/
-if(displayScaling === true){
-  var systemScale = Math.max(1, ((width/1920) + (height/1080))/2);
-}else{
+if (displayScaling === true) {
+  var systemScale = Math.max(1, ((width / 1920) + (height / 1080)) / 2);
+} else {
   var systemScale = 1;
 }
 
@@ -19,7 +19,7 @@ function windowScheduler(self) {
 //Window Manager
 var windows = [];
 class Window {
-  constructor(name, windowProcesses, hasTopBar){
+  constructor(name, windowProcesses, hasTopBar, logicProcesses) {
     if (name) {
       this.windowName = name;
       this.displayName = name;
@@ -31,25 +31,32 @@ class Window {
 
     this.targetHeight = 400 * systemScale;
     this.targetWidth = 500 * systemScale;
-    if(hasTopBar === undefined){
+    if (hasTopBar === undefined) {
       this.hasTopBar = true;
     } else {
       this.hasTopBar = hasTopBar;
     }
-    if(this.hasTopBar === true){
+    if (this.hasTopBar === true) {
       this.width = 0;
       this.height = 0;
     }
-    if(this.hasTopBar === false){
+    if (this.hasTopBar === false) {
       this.width = 0;
-      this.height = 0;  
+      this.height = 0;
     }
     this.x = (window.innerWidth / 2);
-    this.y = (window.innerHeight / 2) - ((this.height - this.topBarHeight) / 2);
+    if (this.hasTopBar) {
+      this.y = ((window.innerHeight - 20) / 2) - ((this.height - this.topBarHeight) / 2);
+    } else {
+      this.y = ((window.innerHeight - 21) / 2);
+    }
 
     this.fadeFill = 255;
 
     this.processes = windowProcesses;
+    this.logicProcesses = logicProcesses;
+    this.frametime = 0;
+    this.logicFrametime = 0;
 
     this.dead = false;
     this.started = false;
@@ -59,21 +66,21 @@ class Window {
 
     this.maximize = false;
   }
-  updateDragStatus () {
-  if (mouseArray.x >= this.x && mouseArray.x <= this.x + this.width && mouseArray.y <= this.y && mouseArray.y >= this.y - this.topBarHeight && mouseIsPressed && !this.isDragged && this.hasFocus) {
-    this.offsetMousePlacementX = mouseArray.x - this.x;
-    this.offsetMousePlacementY = mouseArray.y - this.y;
-    this.isDragged = true;
+  updateDragStatus() {
+    if (mouseArray.x >= this.x && mouseArray.x <= this.x + this.width && mouseArray.y <= this.y && mouseArray.y >= this.y - this.topBarHeight && mouseIsPressed && !this.isDragged && this.hasFocus) {
+      this.offsetMousePlacementX = mouseArray.x - this.x;
+      this.offsetMousePlacementY = mouseArray.y - this.y;
+      this.isDragged = true;
+    }
+    if (this.isDragged && !this.died && !this.maximize) {
+      this.x = mouseArray.x - this.offsetMousePlacementX + mouseArray.vectorX;
+      this.y = mouseArray.y - this.offsetMousePlacementY + mouseArray.vectorY;
+    }
+    if (!mouseIsPressed && this.isDragged) {
+      this.isDragged = false;
+    }
   }
-  if (this.isDragged && !this.died && !this.maximize) {
-    this.x = (mouseArray.x - this.offsetMousePlacementX + mouseArray.vectorX);
-    this.y = (mouseArray.y - this.offsetMousePlacementY + mouseArray.vectorY);
-  }
-  if (!mouseIsPressed && this.isDragged) {
-    this.isDragged = false;
-  }
-}
-  drawTopBar () {
+  drawTopBar() {
     noStroke();
     //Top Bar
     textSize(12);
@@ -89,11 +96,11 @@ class Window {
     fill(0, 255, 0);
     rect(width - (this.topBarHeight) - (this.topBarHeight / 2), - (this.topBarHeight) + (this.topBarHeight / 4), this.topBarHeight / 2, this.topBarHeight / 2);
   }
-  draw () {
+  draw() {
     //Add top bar process to the local process group
-    if(this.hasTopBar === true && this.topBarInit === undefined){
+    if (this.hasTopBar === true && this.topBarInit === undefined) {
       var self = this;
-      windowProcess(function(){self.drawTopBar();}, this.processes, 1, "top bar");
+      windowProcess(function () { self.drawTopBar(); }, this.processes, 1, "top bar");
       this.topBarInit = true;
     }
     //Window animations
@@ -108,7 +115,7 @@ class Window {
       this.y -= animateAcceleration(this.height, this.targetHeight, startCloseAnimationTime) / 2;
       this.height += animateAcceleration(this.height, this.targetHeight, startCloseAnimationTime);
 
-      if(this.hasTopBar){
+      if (this.hasTopBar) {
         this.topBarHeight += animateAcceleration(this.topBarHeight, targetTopBarHeight, startCloseAnimationTime);
       }
 
@@ -116,7 +123,7 @@ class Window {
         this.started = true;
         this.width = this.targetWidth;
         this.height = this.targetHeight;
-        if(this.hasTopBar){
+        if (this.hasTopBar) {
           this.topBarHeight = targetTopBarHeight;
         }
       }
@@ -136,7 +143,7 @@ class Window {
       this.x += animateAcceleration(this.x, 0, animationTime);
       this.y += animateAcceleration(this.y, this.topBarHeight * systemScale + 1, animationTime);
 
-      if(this.hasTopBar){
+      if (this.hasTopBar) {
         this.topBarHeight += animateAcceleration(this.topBarHeight, targetTopBarHeight, animationTime);
       }
 
@@ -148,7 +155,7 @@ class Window {
         this.y = this.topBarHeight * systemScale;
         this.width = width;
         this.height = height - targetTopBarHeight;
-        if(this.hasTopBar){
+        if (this.hasTopBar) {
           this.topBarHeight = targetTopBarHeight;
         }
       }
@@ -164,8 +171,8 @@ class Window {
       this.height += animateAcceleration(this.height, targetHeight, startCloseAnimationTime);
 
       this.windowName = '';
-      
-      if(this.hasTopBar){
+
+      if (this.hasTopBar) {
         this.topBarHeight += animateAcceleration(this.topBarHeight, 0, startCloseAnimationTime);
       }
 
@@ -174,7 +181,7 @@ class Window {
       }
     }
   }
-  updateLogic () {
+  updateLogic() {
     if (this.hasTopBar) {
       if (mouseArray.x > this.width + this.x - (this.topBarHeight / 2) - (this.topBarHeight / 5) && mouseArray.y > this.y - (this.topBarHeight) + (this.topBarHeight / 4) && mouseArray.x < (this.width + this.x - (this.topBarHeight / 2) - (this.topBarHeight / 5)) + this.topBarHeight / 2 && mouseArray.y < (this.y - (this.topBarHeight) + (this.topBarHeight / 4)) + this.topBarHeight / 2 && mouseIsPressed && this.hasFocus && !this.isDragged) {
         this.died = true;
@@ -196,15 +203,15 @@ class Window {
       this.died = true;
     }
   }
-  run = function () {
+  run() {
     //Set up virtual program environment
     //Graphics
     push();
     translate(this.x, this.y);
     var originalWidth = width;
     var originalHeight = height;
-    width = this.width/systemScale;
-    height = this.height/systemScale;
+    width = this.width / systemScale;
+    height = this.height / systemScale;
     scale(systemScale);
     //Inputs
     mouseArray.x -= this.x;
@@ -215,14 +222,16 @@ class Window {
       var keyboardKeyArrayBuffer = keyboardKeyArray;
       keyboardArray = [];
       keyboardKeyArray = [];
-      if(this.hasTopBar){
+      if (this.hasTopBar) {
         var mousePressedBuffer = mouseIsPressed;
         mouseIsPressed = false;
       }
     }
 
     //Run processes
+    var timeBefore = Date.now();
     updateProcesses(this.processes);
+    this.frametime = Date.now() - timeBefore;
 
     //Reset system back
     //Graphics
@@ -236,14 +245,21 @@ class Window {
     } else {
       keyboardArray = keyboardArrayBuffer;
       keyboardKeyArray = keyboardKeyArrayBuffer;
-      if(this.hasTopBar){
+      if (this.hasTopBar) {
         mouseIsPressed = mousePressedBuffer;
       }
     }
   }
+  runLogic() {
+    if(this.logicProcesses){
+      var timeBefore = Date.now();
+      updateProcesses(this.logicProcesses);
+      this.logicFrametime = Date.now() - timeBefore;
+    }
+  }
 }
 //Cursor rendering
-function kwmDefaultCursor(){
+function kwmDefaultCursor() {
   stroke(0);
   fill(255);
   strokeWeight(1);
@@ -264,11 +280,11 @@ function kwmDefaultCursor(){
   endShape();
 }
 var kwmCursor = kwmDefaultCursor;//Set cursor to kwmDefaultCursor by default. You can change this with setCursor()
-function setCursor (cursorFunction){
+function setCursor(cursorFunction) {
   kwmCursor = cursorFunction;
 }
-function drawCursor(){
-  if(mouseInfo.x && mouseInfo.y){
+function drawCursor() {
+  if (mouseInfo.x && mouseInfo.y) {
     push();
     translate(mouseArray.x, mouseArray.y);
     scale(systemScale);
@@ -283,7 +299,7 @@ var cursorProcess;
   createGraphicalProcess(drawCursor, "mouse cursor", 1, tempCursorProcessGroup);
   cursorProcess = tempCursorProcessGroup[0];
 }
-function updateCursorProcess(){
+function updateCursorProcess() {
   cursorProcess.update();
 }
 
@@ -295,8 +311,13 @@ function updateWindowSystemLogic() {
     var currentWindow = windows[i];
     currentWindow.updateLogic();
     if (currentWindow.dead) {
-      for(var l = 0; l < currentWindow.processes.length; l++){
+      for (var l = 0; l < currentWindow.processes.length; l++) {
         kill(currentWindow.processes[l].PID, true);
+      }
+      if(currentWindow.logicProcesses){
+        for (var l = 0; l < currentWindow.logicProcesses.length; l++) {
+          kill(currentWindow.logicProcesses[l].PID, true);
+        }
       }
       windows.splice(i, 1);
       break;
@@ -326,22 +347,22 @@ function updateWindowSystemLogic() {
   }
 }
 //Window compositer --fixes issues with flashing--
-function runCompositer(){
+function runCompositer() {
   //Find maximum exec ratio and cycle count
   var maxExecRatio = 0;
   var maxCycleCount = 0;
-  for(var i = 0; i < windows.length; i++){
-    for(var l = 0; l < windows[i].processes.length; l++){
+  for (var i = 0; i < windows.length; i++) {
+    for (var l = 0; l < windows[i].processes.length; l++) {
       var currentProcess = windows[i].processes[l];
       maxExecRatio = Math.max(maxExecRatio, currentProcess.execRatio / Math.max(1, currentProcess.priority));
       maxCycleCount = Math.max(maxCycleCount, currentProcess.cycleCount / Math.max(1, currentProcess.priority));
     }
   }
   //Apply the max values
-  for(var i = 0; i < windows.length; i++){
-    for(var l = 0; l < windows[i].processes.length; l++){
+  for (var i = 0; i < windows.length; i++) {
+    for (var l = 0; l < windows[i].processes.length; l++) {
       var currentProcess = windows[i].processes[l];
-      if(currentProcess.disableScheduler === false){
+      if (currentProcess.disableScheduler === false) {
         currentProcess.execRatio = maxExecRatio * currentProcess.priority;
         currentProcess.cycleCount = maxCycleCount * currentProcess.priority;
       }
@@ -358,8 +379,14 @@ function runWindows() {
     windows[i].run();
   }
 }
+//Window logic runner
+function runWindowsLogic() {
+  for (var i = 0; i < windows.length; i++) {
+    windows[i].runLogic();
+  }
+}
 //Draw window (animations)
-function drawWindows(){
+function drawWindows() {
   for (var i = 0; i < windows.length; i++) {
     windows[i].draw();
   }
@@ -371,8 +398,8 @@ function closeAllWindows() {
   }
 }
 //Window functions
-function createWindow(name, windowProcesses) {
-  windows.push(new Window(name, windowProcesses));
+function createWindow(name, graphicalWindowProcesses, hasTopBar, logicalWindowProcesses) {
+  windows.push(new Window(name, graphicalWindowProcesses, hasTopBar, logicalWindowProcesses));
 }
 function windowProcess(command, windowProcesses, priority, name, scheduler) {
   // var currentScheduler = windowScheduler;
@@ -380,17 +407,28 @@ function windowProcess(command, windowProcesses, priority, name, scheduler) {
   //   currentScheduler = scheduler;
   // }
   var currentName = "window process";
-  if(name !== undefined){
+  if (name !== undefined) {
     currentName = name;
   }
   createGraphicalProcess(command, currentName, priority, windowProcesses, scheduler);
+}
+function windowLogicProcess(command, windowProcesses, priority, name, scheduler) {
+  // var currentScheduler = windowScheduler;
+  // if (scheduler) {
+  //   currentScheduler = scheduler;
+  // }
+  var currentName = "window process";
+  if (name !== undefined) {
+    currentName = name;
+  }
+  createProcess(command, currentName, priority, windowProcesses, scheduler);
 }
 function simpleWindow(name, command) {
   var windowProcesses = [];
   createGraphicalProcess(command, name, 1, windowProcesses);
   createWindow(name, windowProcesses);
 }
-function imageWindow(filePath){
+function imageWindow(filePath) {
   let img = loadImage(filePath);
   simpleWindow("Image - " + filePath, function () {
     image(img, 0, 0);
@@ -407,6 +445,7 @@ createStartup(function () {
 
 //Create window manager processes
 createProcess(updateWindowSystemLogic, "kwm", 0);
+createProcess(runWindowsLogic, "kwm", 0);
 createGraphicalProcess(drawWindows, "kwm", 0);
 //createGraphicalProcess(runCompositer, "kwm", 0);
 createGraphicalProcess(runWindows, "kwm", 1);

@@ -10,36 +10,37 @@ var systemExecutionLatency = 0;
 var kernelExecutionCycleCount = 0;
 var kernelCycleLatency = 0;
 var kernelCyclesPerSecond = 0;
-var performanceSampleSize = Math.floor(targetCyclesPerSecond/10);
+var performanceSampleSize = Math.floor(targetCyclesPerSecond / 10);
 let kernelClock = 0;
 function kernelClockDaemon() {
-    if(kernelCycleLatency){
+    if (kernelCycleLatency) {
         kernelClock += kernelCycleLatency;
     }
 }
 function kernelLatencyReporter() {
     var dividedCycleCounter = kernelExecutionCycleCount % (performanceSampleSize * 2);
-    if(dividedCycleCounter === 0){
+    if (dividedCycleCounter === 0) {
         this.time1 = Date.now();
     }
-    if(dividedCycleCounter === performanceSampleSize){
+    if (dividedCycleCounter === performanceSampleSize) {
         this.time2 = Date.now();
     }
     kernelCycleLatency = Math.abs(this.time1 - this.time2) / performanceSampleSize;
-    kernelCyclesPerSecond = Math.floor(1000/kernelCycleLatency);
+    kernelCyclesPerSecond = Math.floor(1000 / kernelCycleLatency);
 }
 
 //Scheduler
-var targetKernelLatency = 1000/targetCyclesPerSecond
-function schedulerSolidPriorityKernelPerformance(self){
+var targetKernelLatency = 1000 / targetCyclesPerSecond
+function schedulerSolidPriorityKernelPerformance(self) {
     return (kernelCycleLatency / targetKernelLatency) * self.priority;
     //R = (L/t)*p
 }
 
 //Process class
 let processes = [];
+let systemSuspend = false;
 class Process {
-    constructor (command, name, priority, processesArray, scheduler) {
+    constructor(command, name, priority, processesArray, scheduler) {
         //Essential process traits
         this.command = command;
         this.processesArray = processesArray;
@@ -63,7 +64,7 @@ class Process {
         }
         this.priority = priority;
     }
-    update () {
+    update() {
         if (this.suspend === false && this.manualSuspend === false) {
             this.cycleCount++;
             if (this.cycleCount > this.execRatio) {
@@ -79,7 +80,7 @@ class Process {
                 //Scheduler
                 if (this.disableScheduler === false) {
                     this.execRatio = this.scheduler(this);
-                    if(this.execRatio < 1){
+                    if (this.execRatio < 1) {
                         this.execRatio = 1;
                     }
                 }
@@ -110,9 +111,9 @@ function createProcess(command, name, priority, group, scheduler) {
     }
     //Scheduler
     let currentScheduler;
-    if(scheduler === undefined){
+    if (scheduler === undefined) {
         currentScheduler = schedulerSolidPriorityKernelPerformance;
-    }else{
+    } else {
         currentScheduler = scheduler;
     }
     var process = new Process(command, name, currentPriority, processes, currentScheduler);
@@ -126,7 +127,7 @@ function kill(PID, quiet) {
             processes[i].dead = true;
             processes[0].prioritySum -= processes[i].priority;
             processes.splice(i, 1);
-            if(quiet !== true){
+            if (quiet !== true) {
                 console.warn("Process " + PID + " killed");
             }
         }
@@ -134,35 +135,37 @@ function kill(PID, quiet) {
 }
 let systemError = [];
 function updateProcesses(processGroup) {
-    for (let i = 0; i < processGroup.length; i++) {
-        if(processGroup[i].dead === true){
-            processGroup.splice(i, 1);
-            break;
-        }
-        try {
-            processGroup[i].update();
-        } catch (error) {
-            console.error("Process with PID " + processGroup[i].PID + " encountered an error.");
-            console.error(error);
-            systemError = [true, processGroup[i], error];
+    if (systemSuspend === false) {
+        for (let i = 0; i < processGroup.length; i++) {
+            if (processGroup[i].dead === true) {
+                processGroup.splice(i, 1);
+                break;
+            }
+            try {
+                processGroup[i].update();
+            } catch (error) {
+                console.error("Process with PID " + processGroup[i].PID + " encountered an error.");
+                console.error(error);
+                systemError = [true, processGroup[i], error];
+            }
         }
     }
 }
-function ProcessGroup(groupProcesses, groupName){
+function ProcessGroup(groupProcesses, groupName) {
     this.processes = groupProcesses;
     this.name = groupName;
     this.frametime = 0;
 }
-ProcessGroup.prototype.update = function(){
+ProcessGroup.prototype.update = function () {
     var timeBefore = Date.now();
     updateProcesses(this.processes);
     this.frametime = Date.now() - timeBefore;
 }
-function addProcessGroup(processGroup, name){
+function addProcessGroup(processGroup, name) {
     processGroups.push(new ProcessGroup(processGroup, name));
 }
-function updateSystem(){
-    for(var i = 0; i < processGroups.length; i++){
+function updateSystem() {
+    for (var i = 0; i < processGroups.length; i++) {
         processGroups[i].update();
     }
 }
@@ -174,7 +177,7 @@ function suspend(PID) {
         }
     }
 }
-function resume(PID) {
+function resume(PID, quiet) {
     for (let i = 0; i < processes.length; i++) {
         if (processes[i].PID === PID) {
             processes[i].manualSuspend = false;
@@ -186,12 +189,12 @@ function resume(PID) {
 
 //Startup processes
 var startups = [];
-function createStartup(command){
-    startups.push(function () {command();});
+function createStartup(command) {
+    startups.push(function () { command(); });
 }
-function runStartups(startupArray){
-    for(var i = 0; i < startupArray.length; i++){
-        if(startupArray[i].started === undefined){
+function runStartups(startupArray) {
+    for (var i = 0; i < startupArray.length; i++) {
+        if (startupArray[i].started === undefined) {
             startupArray[i]();
             startupArray[i].started = true;
         }
@@ -208,22 +211,22 @@ var mouseInfo = function () {
     this.clicked = false;
 };
 var mouseArray = mouseInfo;//Depricated
-document.onmousemove = function (event){
+document.onmousemove = function (event) {
     mouseInfo.vectorX = mouseInfo.x - event.pageX;
     mouseInfo.vectorY = mouseInfo.y - event.pageY;
     mouseInfo.x = event.pageX;
     mouseInfo.y = event.pageY;
 };
-document.onmousedown = function(){
+document.onmousedown = function () {
     mouseInfo.clicked = true;
 };
-document.onmouseup = function(){
+document.onmouseup = function () {
     mouseInfo.clicked = false;
 };
 //Keyboard
 var keyboardKeyArray = [];
 var keyboardArray = [];
-var keyboardInfo = function() {
+var keyboardInfo = function () {
     this.pressed = false;
     this.keyCode = 0;
 };
@@ -232,7 +235,7 @@ document.onkeydown = function (event) {
     keyboardKeyArray.push(event.key);
     keyboardInfo = event;
 };
-document.onkeyup = function(event) {
+document.onkeyup = function (event) {
     keyboardArray[event.keyCode] = false;
     keyboardInfo = event;
 };
@@ -241,33 +244,37 @@ function keyboardConfigurationDaemon() {
 }
 //Controllers
 var controllerArray = [];
-window.addEventListener("gamepadconnected", function(e) {
+window.addEventListener("gamepadconnected", function (e) {
     console.log("Gamepad %d connected (%s).",
         e.gamepad.index, e.gamepad.id);
     controllerArray.push(e.gamepad);
 });
-  window.addEventListener("gamepaddisconnected", function(e) {
+window.addEventListener("gamepaddisconnected", function (e) {
     console.log("Gamepad: %d disconnected (%s)",
         e.gamepad.index, e.gamepad.id);
     controllerArray.splice(e.gamepad, 1);
 });
 
 //System suspend
-function suspendSystem(processesArray) {
+function suspendSystem(processesArray, quiet) {
     for (let i = 0; i < processesArray.length; i++) {
         processesArray[i].suspend = true;
     }
-    console.warn("System has been suspended.");
+    if(quiet !== true){
+        console.warn("System has been suspended.");
+    }
 }
-function resumeSystem(processesArray) {
+function resumeSystem(processesArray, quiet) {
     for (let i = 0; i < processesArray.length; i++) {
         processesArray[i].suspend = false;
     }
-    console.warn("System has been resumed.");
+    if(quiet !== true){
+        console.warn("System has been resumed.");
+    }
 }
 
 //Kernel panic
-function panic () {
+function panic() {
     noLoop();
     remove();
     suspendSystem(processes);
@@ -278,9 +285,9 @@ function panic () {
 }
 
 //Kernel reset
-function resetSystem(processesArray){
+function resetSystem(processesArray) {
     let groupBuffer = [];
-    for(let i = 0; i < processesArray.length; i++){
+    for (let i = 0; i < processesArray.length; i++) {
         let currentProcess = processesArray[i];
         groupBuffer.push(new Process(currentProcess.command, currentProcess.processName, currentProcess.priority, groupBuffer, currentProcess.scheduler));
     }
@@ -294,24 +301,24 @@ canvas.height = window.innerHeight - 21;
 let graphics = canvas.getContext('2d');
 */
 //Error screen daemon
-function octaneError (process, processError) {
+function octaneError(process, processError) {
     var killConfirmation = confirm("Process " + process.PID + " encountered an error: --> " + processError + " <-- Attempting to kill the errored process.");
-    if(killConfirmation === false){
-        try{
+    if (killConfirmation === false) {
+        try {
             process.command();
         } catch (error) {
             alert("Process " + process.PID + " failed to run again. Killing process.");
             console.log(error);
             kill(process.PID);
         }
-    }else{
+    } else {
         kill(process.PID);
     }
     systemError = [];
 }
 let errorScreenFunction = octaneError;
-function errorScreenDaemon () {
-    if(systemError[0] === true){
+function errorScreenDaemon() {
+    if (systemError[0] === true) {
         errorScreenFunction(systemError[1], systemError[2]);
     }
 }
@@ -321,31 +328,31 @@ var mouseInactivityTimer = 0;
 var systemKeySuspended = false;
 function suspendResponseDaemon() {
     //Inactivity suspend
-    if(idleSuspend === true){
-        if(mouseInfo.vectorX === 0 && mouseInfo.vectorY === 0 && !keyboardInfo.pressed && !mouseInfo.pressed){
-            mouseInactivityTimer += systemExecutionLatency/1000;
+    if (idleSuspend === true) {
+        if (mouseInfo.vectorX === 0 && mouseInfo.vectorY === 0 && !keyboardInfo.pressed && !mouseInfo.pressed) {
+            mouseInactivityTimer += systemExecutionLatency / 1000;
         }
-        if(document.hasFocus()){
+        if (document.hasFocus()) {
             mouseInactivityTimer = 0;
-            if(this.inactive === true){
-                resumeSystem(processes);
+            if (this.inactive === true) {
+                systemSuspend = false;
                 this.inactive = undefined;
             }
         }
-        if(mouseInactivityTimer > 30 && this.inactive === undefined || !document.hasFocus() && this.inactive === undefined){
-            suspendSystem(processes);
+        if (mouseInactivityTimer > 30 && this.inactive === undefined || !document.hasFocus() && this.inactive === undefined) {
+            systemSuspend = true;
             this.inactive = true;
         }
     }
     //Suspend keyboard shortcut
     if (keyboardArray[192] && this.suspended === undefined) {
-        suspendSystem(processes);
+        systemSuspend = true;
         this.suspended = true;
     }
     if (this.suspended && !keyboardArray[192]) {
         systemKeySuspended = true;
         if (keyboardInfo.pressed) {
-            resumeSystem(processes);
+            systemSuspend = false;
             this.suspended = undefined;
             systemKeySuspended = false;
         }

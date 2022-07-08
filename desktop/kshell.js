@@ -204,13 +204,11 @@ RenderRainbow = function () {
 }
 function BandaiNamco () {
   this.resolutionScale = 50;
-  this.fiveTenOverHeight = 510 / height;
-  this.currentWidth = width;
   noStroke();
   for (var i = 0; i < height; i += this.resolutionScale) {
-    var heightScale = i * this.fiveTenOverHeight;
-    fill(255 - (heightScale / 2), 0, 255);
-    rect(0, i, this.currentWidth, this.resolutionScale * 2);
+    var heightScale = i * (510 / height);
+    fill((heightScale / 2), 100 - (heightScale / 2), 255 - (heightScale / 2));
+    rect(0, i, width, this.resolutionScale * 2);
   }
 }
 
