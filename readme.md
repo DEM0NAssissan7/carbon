@@ -36,10 +36,11 @@
 ## Problems (without current solution)
   - Scheduler currently under-executes processes and does not properly account for the load of realtime processes.
   - Windows will spontaneously and constantly switch between other when being clicked and overlapping each other.
+  - Kernel will stop executing when the computer is suspended and awakened
 
 ## Long term
+- [ ] Get rid of p5.js
 - [ ] Optimize scheduler to perfection.
 - [ ] Create JShell `jsh` (as an adaptation/clone of sh) to interface with the system in a Unix-like command line
 - [ ] Finish **Survival of the Fittest**
 - [ ] Finish **Horizon**
-
