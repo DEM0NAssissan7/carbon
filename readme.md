@@ -11,16 +11,11 @@
 
 ## High Priority
 - [x] Make `errorScreen` programmable
-
 - [ ] Convert everything to classes
-
 - [x] Change project name to `carbon`
-
 - [ ] Let `maximize` be toggleable
-
 - [ ] Live `windowWidth`/`windowHeight` resizing
-
-[x] Allow bootstrapper to be able to choose between different systems (jskernel core, JsOS shell, etc.) and make it easy for devs to add a system to the menu.
+- [x] Allow bootstrapper to be able to choose between different systems (jskernel core, JsOS shell, etc.) and make it easy for devs to add a system to the menu.
 
 ## Low priority
 - [ ] Make `stress()` use a list format that executes each stresstest in a for loop from an array.
@@ -39,7 +34,7 @@
   - Kernel will stop executing when the computer is suspended and awakened
 
 ## Long term
-- [ ] Get rid of p5.js
+- [ ] Get rid of `p5.js`
 - [ ] Optimize scheduler to perfection.
 - [ ] Create JShell `jsh` (as an adaptation/clone of sh) to interface with the system in a Unix-like command line
 - [ ] Finish **Survival of the Fittest**
