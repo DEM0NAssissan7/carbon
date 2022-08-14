@@ -1,63 +1,52 @@
 class Settings {
-    update (){
-        var self = this;
+    update (canvas, graphics){
         //App background
-        fill(0);
-        rect(0,0,width,height);
+        graphics.fillStyle = "black";
+        graphics.fillRect(0,0,canvas.width,canvas.height);
 
-        fill(40);
+        graphics.fillStyle = "#282828";
         //Settings
-        showFPS = booleanToggleButton(showFPS, "Turn on FPS display", "Turn off FPS display", 10, 10, width-20, 30);
-        trackPerformance = booleanToggleButton(trackPerformance, "Track processes performance", "Untrack processes performance", 10, 50, width-20, 30, reloadKernel);
-        disableScheduler = booleanToggleButton(disableScheduler, "Disable scheduler", "Enable scheduler", 10, 90, width-20, 30, reloadKernel);
-        limitFps = booleanToggleButton(limitFps, "Enable FPS limiter", "Disable FPS limiter", 10, 130, width-20, 30);
-        idleSuspend = booleanToggleButton(idleSuspend, "Suspend at idle", "Do not suspend at idle", 10, 170, width-20, 30);
-        displayScaling = booleanToggleButton(displayScaling, "Scale display", "Do not scale display", 10, 210, width-20, 30);
-        cursorShape = listSelector(cursorShape, [
+        showPerformanceInfo = booleanToggleButton(graphics, showPerformanceInfo, "Turn on FPS display", "Turn off FPS display", 10, 10, canvas.width-20, 30);
+        trackPerformance = booleanToggleButton(graphics, trackPerformance, "Track processes performance", "Untrack processes performance", 10, 50, canvas.width-20, 30, reloadKernel);
+        preemptiveKernel = booleanToggleButton(graphics, preemptiveKernel, "Disable preemptive scheduler", "Enable preemptive scheduler", 10, 90, canvas.width-20, 30, reloadKernel);
+        // limitFps = booleanToggleButton(graphics, limitFps, "Enable FPS limiter", "Disable FPS limiter", 10, 130, canvas.width-20, 30);
+        idleSuspend = booleanToggleButton(graphics, idleSuspend, "Suspend at idle", "Do not suspend at idle", 10, 170, canvas.width-20, 30);
+        // displayScaling = booleanToggleButton(graphics, displayScaling, "Scale display", "Do not scale display", 10, 210, canvas.width-20, 30);
+        cursorShape = listSelector(graphics, cursorShape, [
             [simpleCursor, "Simple"],
             [winCursor, "Windows"],
             [winCursorOG, "Windows OG"],
             [macCursor, "Mac"],
             [kCursor, "kCursor"],
-        ], 10, 250, width-20, 30, "Cursor Shape");
-        cursorColor = listSelector(cursorColor, [
+        ], 10, 250, canvas.width-20, 30, "Cursor Shape");
+        cursorColor = listSelector(graphics, cursorColor, [
             [colorWhiteCursor, "White"],
             [colorBlackCursor, "Black"],
-        ], 10, 290, width-20, 30, "Cursor Color");
+        ], 10, 290, canvas.width-20, 30, "Cursor Color");
     }
 
-    iconFunction(){
-        push();
-        noStroke();
-        fill(100);
-        rect(0,0,width,height, 20);
-        translate(width/2, height/2);
-        var widthBuffer = width;
-        var heightBuffer = height;
+    iconFunction(canvas, graphics){
+        graphics.fillStyle = '#646464';
+        graphics.fillRect(0,0,canvas.width,canvas.height, 20);
+        graphics.translate(canvas.width/2, canvas.height/2);
         var gearSizeCoefficient = 0.9;
-        width = width * gearSizeCoefficient;
-        height = height * gearSizeCoefficient;
-        fill(255);
-        ellipse(0,0,width/1.5);
+        var scaledWidth = canvas.width * gearSizeCoefficient;
+        var scaledHeight = canvas.height * gearSizeCoefficient;
+        graphics.fillStyle = "white";
+        graphics.ellipse(0,0,scaledWidth/1.5, scaledHeight/1.5, 0, 0, 0);
         //Spokes
         var spokeCount = 20;
         var spokeLengthOffset = 7;
-        angleMode(DEGREES);
         for(var i = 0; i < 360; i+=360/spokeCount){
-            push();
-            rotate(i);
-            rect(-(width/spokeCount)/2, -height/2 + spokeLengthOffset, width/spokeCount, height/2 - spokeLengthOffset, 10);
-            pop();
+            graphics.rotate(i * Math.PI / 180);
+            graphics.fillRect(-(scaledWidth/spokeCount)/2, -scaledHeight/2 + spokeLengthOffset, scaledWidth/spokeCount, scaledHeight/2 - spokeLengthOffset, 10);
+            graphics.rotate(-i * Math.PI / 180);
         }
-        width = widthBuffer;
-        height = heightBuffer;
-        pop();
+        graphics.resetTransform();
     }
 
     createWindow (){
-        var windowProcesses = [];
         var settingsSystem = new Settings();
-        windowProcess(settingsSystem.update, windowProcesses);
-        createWindow("Settings", windowProcesses);
+        quickWindow((canvas,graphics) => {settingsSystem.update(canvas,graphics)}, "Settings");
     }
 }

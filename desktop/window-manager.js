@@ -1,0 +1,468 @@
+//Option variables
+let cheapGraphics = false;
+let dynamicTripleBuffering = false;
+let monitorRefreshRate = 60;
+const showWmPerformanceInfo = true;
+const useBuffering = true;
+const useLevels = true;
+
+//Buffering
+let firstFrameBuffer, firstFrameBufferGraphics;
+let secondFrameBuffer, secondFrameBufferGraphics;
+if(useBuffering === true){
+    firstFrameBuffer = document.createElement("canvas");
+    firstFrameBuffer.width = canvas.width;
+    firstFrameBuffer.height = canvas.height;
+    firstFrameBuffer.visible = false;
+    secondFrameBuffer = document.createElement("canvas");
+    secondFrameBuffer.width = canvas.width;
+    secondFrameBuffer.height = canvas.height;
+    secondFrameBuffer.visible = false;
+
+    firstFrameBufferGraphics = firstFrameBuffer.getContext("2d");
+    secondFrameBufferGraphics = secondFrameBuffer.getContext("2d");
+} else {
+    firstFrameBuffer = canvas;
+    firstFrameBufferGraphics = graphics;
+}
+
+//Background buffer
+let wmBackground = document.createElement("canvas");
+wmBackground.width = canvas.width;
+wmBackground.height = canvas.height;
+wmBackground.visible = false;
+let wmBackgroundGraphics = wmBackground.getContext("2d");
+
+//Middleground buffer
+let wmMiddleground = document.createElement("canvas");
+wmMiddleground.width = canvas.width;
+wmMiddleground.height = canvas.height;
+wmMiddleground.visible = false;
+let wmMiddlegroundGraphics = wmMiddleground.getContext("2d");
+
+let wmForeground = document.createElement("canvas");
+wmForeground.width = canvas.width;
+wmForeground.height = canvas.height;
+wmForeground.visible = false;
+let wmForegroundGraphics = wmForeground.getContext("2d");
+
+let windows = [];
+const windowButtonPadding = 8;
+const windowMoveAnimationScale = 8;
+class GraphiteWindow {
+    constructor(windowProcesses, name) {
+        this.x = canvas.width / 2;
+        this.y = canvas.height / 2;
+        this.width = 400;
+        this.height = 400;
+        this.topBarHeight = 40;
+
+        this.focusable = true;
+        this.virtual = false;
+
+        this.level = "middleground";
+
+        this.dragged = false;
+        
+        this.processes = [];
+        this.processesBuffer = windowProcesses;
+        this.originalProcesses = windowProcesses;
+
+        this.canvas = document.createElement("canvas");
+        this.canvas.width = this.width;
+        this.canvas.height = this.height;
+        this.graphics = this.canvas.getContext('2d');
+
+        this.fadeFill = 0;
+        this.shadowLength = 10;
+
+        this.windowName = "window";
+        if (name !== undefined) {
+            this.windowName = name;
+        }
+    }
+    close() {
+        if(cheapGraphics === false){
+            this.dying = true;
+        } else {
+            this.dead = true;
+        }
+    }
+    topBar(graphics, positionX, positionY) {
+        if (this.topBarHeight > 0) {
+            graphics.translate(positionX, positionY);
+            graphics.fillStyle = "#222222";
+            graphics.fillRect(0, -this.topBarHeight + 1, this.width, this.topBarHeight);
+
+            graphics.fillStyle = "white";
+            graphics.font = "12px Monospace";
+            // graphics.fillText(this.windowName, this.width/2, this.height/2);
+            graphics.fillText(this.windowName, this.width/2 - (graphics.measureText(this.windowName).width / 2), (12 / 3) - this.topBarHeight/2);
+            //Close button
+            graphics.fillStyle = "red";
+            graphics.fillRect(this.width - windowButtonPadding - (this.topBarHeight - windowButtonPadding * 2),
+                windowButtonPadding - (this.topBarHeight - 1),
+                this.topBarHeight - windowButtonPadding * 2,
+                this.topBarHeight - windowButtonPadding * 2);
+            graphics.resetTransform();
+        }
+    }
+    drawDecor(graphics, positionX, positionY) {
+        graphics.save();
+
+        graphics.translate(positionX, positionY - this.topBarHeight + 1);
+        graphics.lineWidth = this.shadowLength * 2;
+        let pointsMultiplier = this.shadowLength;
+        function createShadowPattern(x1, y1, x2, y2, reverse) {
+            let gradient = graphics.createLinearGradient(x1 *  pointsMultiplier, y1 * pointsMultiplier, x2 * pointsMultiplier, y2 * pointsMultiplier);
+            if(reverse === true){
+                gradient.addColorStop(0, "rgba(0, 0, 0, 0)");
+                gradient.addColorStop(1, "rgba(0, 0, 0, 0.2)");
+            }
+            if(reverse === false){
+                gradient.addColorStop(0, "rgba(0, 0, 0, 0.2)");
+                gradient.addColorStop(1, "rgba(0, 0, 0, 0)");
+            }
+            graphics.strokeStyle = gradient;
+        }
+
+        const windowBottom = this.height + (this.topBarHeight - 1);
+        graphics.translate(0, -this.shadowLength);
+        createShadowPattern(0, 1, 0, 0, false);
+        graphics.beginPath();
+        graphics.lineTo(0, 0);
+        graphics.lineTo(this.width, 0);
+        graphics.fill();
+        graphics.translate(0, this.shadowLength);
+
+        graphics.translate(this.shadowLength, 0);
+        createShadowPattern(0, 0, 1, 0, false);
+        graphics.beginPath();
+        graphics.lineTo(this.width, 0);
+        graphics.lineTo(this.width, windowBottom);
+        graphics.fill();
+        graphics.translate(-this.shadowLength, 0);
+
+        graphics.translate(0, this.shadowLength);
+        createShadowPattern(0, 1, 0, 0, true);
+        graphics.beginPath();
+        graphics.lineTo(this.width, windowBottom);
+        graphics.lineTo(0, this.height);
+        graphics.fill();
+        graphics.translate(0, -this.shadowLength);
+
+        graphics.translate(-this.shadowLength, 0);
+        createShadowPattern(1, 0, 0, 0, false);
+        graphics.beginPath();
+        graphics.lineTo(0, windowBottom);
+        graphics.lineTo(0, 0);
+        graphics.fill(); 
+
+        graphics.restore();
+
+
+    }
+    drawOnBackground() {
+        wmBackgroundGraphics.drawImage(this.canvas, this.x, this.y);
+    }
+    draw() {
+        let drawSurfaceGraphics;
+        if(useLevels === true){
+            switch(this.level){
+                case "background":
+                    drawSurfaceGraphics = wmBackgroundGraphics;
+                    break;
+                case "middleground":
+                    drawSurfaceGraphics = wmMiddlegroundGraphics;
+                    break;
+                case "foreground":
+                    drawSurfaceGraphics = wmForegroundGraphics;
+                    break;
+            }
+        } else {
+            drawSurfaceGraphics = firstFrameBufferGraphics;
+        }
+        if (this.fadeFill < 1) {
+            drawSurfaceGraphics.save();
+
+            drawSurfaceGraphics.globalAlpha = this.fadeFill;
+            const fadeFillScaled = 1 / this.fadeFill * this.width;
+
+            drawSurfaceGraphics.translate((this.x + this.width / 2) - (this.width / 2 * this.fadeFill), (this.y + this.height / 2) - (this.height / 2 * this.fadeFill));
+            drawSurfaceGraphics.scale(this.fadeFill, this.fadeFill);
+
+            // this.drawDecor(drawSurfaceGraphics, 0, 0);
+            // drawSurfaceGraphics.clearRect(0, 0, this.width, this.height);
+            drawSurfaceGraphics.drawImage(this.canvas, 0, 0);
+            this.topBar(drawSurfaceGraphics, 0, 0);
+
+            drawSurfaceGraphics.restore();
+        } else {
+            // this.drawDecor(drawSurfaceGraphics, this.x, this.y);
+            // drawSurfaceGraphics.clearRect(this.x, this.y , this.width, this.height);
+            drawSurfaceGraphics.drawImage(this.canvas, this.x, this.y);
+            this.topBar(drawSurfaceGraphics, this.x, this.y);
+        }
+    }
+    initProcesses() {
+        for (let i = 0; i < this.processesBuffer.length; i++) {
+            let windowProcess = () => {
+                let originalMouseX = devices.mouse.x;
+                let originalMouseY = devices.mouse.y;
+                devices.mouse.x -= this.x;
+                devices.mouse.y -= this.y;
+
+                this.processesBuffer[i].command(this.canvas, this.graphics);
+
+                devices.mouse.x = originalMouseX;
+                devices.mouse.y = originalMouseY;
+            };
+            let processBuffer = new Process(windowProcess, this.processesBuffer[i].priority);
+            processBuffer.processName = this.processesBuffer[i].processName;
+            this.processes.push(processBuffer);
+            processes.push(processBuffer);
+        }
+    }
+    init() {
+        this.x = this.x - this.width / 2;
+        this.y = this.y - this.height / 2;
+    }
+    updateLogic() {
+        this.canvas.width = this.width;
+        this.canvas.height = this.height;
+        //Focus
+        if(devices.mouse.x > this.x && devices.mouse.x < this.x + this.width && devices.mouse.y > this.y - this.topBarHeight && devices.mouse.y < this.y + this.height && this.focusable && devices.mouse.pressed){
+            this.requestFocus = true;
+        }
+        //Window dragging and top bar interaction
+        if(this.hasFocus){
+            if (devices.mouse.x > this.x + this.width - windowButtonPadding - (this.topBarHeight - windowButtonPadding * 2) &&
+            devices.mouse.y > this.y + windowButtonPadding - (this.topBarHeight - 1) &&
+            devices.mouse.x < this.x + this.width - windowButtonPadding &&
+            devices.mouse.y < this.y + (windowButtonPadding - (this.topBarHeight - 1)) + (this.topBarHeight - windowButtonPadding * 2) && devices.mouse.pressed && this.dragged === false) {
+            this.close();
+            return;
+            }
+            if (devices.mouse.x > this.x && devices.mouse.x < this.x + this.width && devices.mouse.y > this.y - this.topBarHeight && devices.mouse.y < this.y && devices.mouse.pressed && this.dragged === false && this.hasFocus) {
+                this.initialDrag = {
+                    mouseX: devices.mouse.x,
+                    mouseY: devices.mouse.y,
+                    windowX: this.x,
+                    windowY: this.y
+                }
+                this.previousState = this;
+                this.dragged = true;
+            }
+            if (this.dragged === true) {
+                if (!devices.mouse.pressed) {
+                    this.dragged = false;
+                }
+                this.x = (devices.mouse.x - this.initialDrag.mouseX) + this.initialDrag.windowX;
+                this.y = (devices.mouse.y - this.initialDrag.mouseY) + this.initialDrag.windowY;
+            }
+        }
+        //Animations
+        if(cheapGraphics !== true){
+            if(this.dying !== true){
+                if (Math.round(this.fadeFill*100)/100 < 1) {
+                    this.fadeFill += (getTransition(1, 500) - (getTransition(this.fadeFill, 500))) * 2;
+                } else {
+                    this.fadeFill = 1;
+                }    
+            }else {
+                if(this.fadeFill > 0){
+                    this.fadeFill -= (getTransition(1, 500) - (getTransition(1-this.fadeFill, 500))) * 2;
+                }else{
+                    this.fadeFill = 0;
+                    this.dead = true;
+                }
+            }
+        }else{
+            this.fadeFill = 1;
+        }
+        if(this.dying === true && this.dead === true){
+            //Kill all processes linked to the window
+            for (let i = 0; i < this.processes.length; i++) {
+                for (let l = 0; l < processes.length; l++) {
+                    if (processes[l].PID === this.processes[i].PID) {
+                        processes.splice(l, 1);
+                    }
+                }
+            }
+        }
+    }
+}
+
+function createWindow(windowProcesses, name) {
+    let currentWindow = new GraphiteWindow(windowProcesses, name);
+    currentWindow.init();
+    currentWindow.initProcesses();
+    windows.push(currentWindow);
+}
+function quickWindow(command, name) {
+    let currentWindow = new GraphiteWindow([new Process(command)], name);
+    currentWindow.init();
+    currentWindow.initProcesses();
+    windows.push(currentWindow);
+}
+
+//Mouse cursor
+let cursorHandler = function () { };
+var cursorFunction = function () { };
+function setCursor(cursorDrawHandler) {
+    cursorHandler = cursorDrawHandler;
+    let cursorOffscreenCanvas = document.createElement("canvas");
+    cursorOffscreenCanvas.width = 32;
+    cursorOffscreenCanvas.height = 32;
+    let cursorOffscreenGraphics = cursorOffscreenCanvas.getContext("2d");
+    if(cheapGraphics === false){
+        cursorOffscreenGraphics.filter = "drop-shadow(6px 4px 1px rgba(0,0,0,0.5))";
+    }
+    cursorDrawHandler(cursorOffscreenGraphics);
+    cursorFunction = () => {
+        firstFrameBufferGraphics.drawImage(cursorOffscreenCanvas, devices.mouse.x, devices.mouse.y);
+    }
+}
+setCursor(graphics => {//Default graphite wm cursor
+    graphics.strokeStyle = 'black';
+    graphics.fillStyle = 'white';
+    graphics.lineWidth = 1;
+    graphics.beginPath();
+    //Base (left)
+    graphics.moveTo(0, 0);
+    graphics.lineTo(0, 13);
+    //Handle (left)
+    graphics.lineTo(3, 10);
+    //Handle base (l/r)
+    graphics.lineTo(5, 15);
+    graphics.lineTo(8, 14);
+    //Handle (right)
+    graphics.lineTo(6, 9);
+    //Base (right)
+    graphics.lineTo(10, 9);
+    graphics.lineTo(0, 0);
+
+    graphics.fill();
+    graphics.stroke();
+});
+
+//Manage the window manager
+function resetWindow(window){
+    let currentWindowBuffer = new GraphiteWindow(window.originalProcesses, window.windowName);
+    currentWindowBuffer.x = window.x;
+    currentWindowBuffer.y = window.y;
+    currentWindowBuffer.width = window.width;
+    currentWindowBuffer.height = window.height;
+    currentWindowBuffer.focusable = window.focusable;
+    currentWindowBuffer.topBarHeight = window.topBarHeight;
+    currentWindowBuffer.fadeFill = window.fadeFill;
+    currentWindowBuffer.hasFocus = window.hasFocus;
+
+    window.close();
+
+    currentWindowBuffer.initProcesses();
+    return currentWindowBuffer;
+}
+function reloadWindowManager(){
+    let windowsBuffer = [];
+    for(let i = 0; i < windows.length; i++){
+        windowsBuffer[i] = resetWindow(windows[i]);
+    }
+    setCursor(cursorHandler);
+    windows = windowsBuffer;
+}
+
+//Hide system cursor to replace with wm cursor
+document.body.style.cursor = 'none';
+//Generic background
+graphics.fillStyle = 'gray';
+graphics.fillRect(0, 0, canvas.width, canvas.height);
+
+{
+    function windowManagerDraw() {
+        // createThread(() => {wmMiddlegroundGraphics.clearRect(0, 0, wmMiddleground.width, wmMiddleground.height);});
+        // wmMiddlegroundGraphics.clearRect(0, 0, wmMiddleground.width, wmMiddleground.height);
+        for (let i = 0; i < windows.length; i++) {
+            function drawWindow() {
+                if(windows[i]){
+                    windows[i].draw();
+                }
+            };
+            // drawWindow();
+            createThread(drawWindow, 1);
+        }
+    }
+    createProcess(windowManagerDraw);
+}
+
+function windowManagerLogic() {
+    var requestedWindowIndex = -1;
+    for (let i = 0; i < windows.length; i++) {
+        windows[i].updateLogic();
+        if (windows[i].dead === true) {
+            windows.splice(i, 1);
+            break;
+        }
+        if(windows[i].requestFocus === true && requestedWindowIndex === -1){
+            requestedWindowIndex = i;
+        }
+    }
+    if(requestedWindowIndex !== -1){
+        let focusedWindow = windows[requestedWindowIndex];
+        focusedWindow.hasFocus = true;
+        windows.splice(requestedWindowIndex, 1);
+        windows.push(focusedWindow);
+    }
+}
+createProcess(windowManagerLogic, 4);
+// createProcess(windowManagerDraw, -1);
+
+if(useLevels === true){
+    function renderWmLevels() {
+        firstFrameBufferGraphics.drawImage(wmBackground, 0, 0);
+        firstFrameBufferGraphics.drawImage(wmMiddleground, 0, 0);
+        wmMiddlegroundGraphics.clearRect(0, 0, wmMiddleground.width, wmMiddleground. height);
+        firstFrameBufferGraphics.drawImage(wmForeground, 0, 0);
+        cursorFunction();
+    }
+    createProcess(renderWmLevels);
+}
+
+if(useBuffering === true){
+    function drawFrameBuffer() {
+        if(dynamicTripleBuffering){
+            if(false){
+                graphics.drawImage(firstFrameBuffer, 0, 0);
+            }else{
+                createThread(() => {
+                    secondFrameBufferGraphics.drawImage(firstFrameBuffer, 0, 0);
+                });
+                graphics.drawImage(secondFrameBuffer, 0, 0);
+                // console.log("hi");
+            }
+        }else{
+            graphics.drawImage(firstFrameBuffer, 0, 0);
+        }
+    }
+    createProcess(drawFrameBuffer, -2);
+}
+
+if(showWmPerformanceInfo === true){
+    let wmLatency = 1;
+    let latencyTimer = performance.now();
+    function displayWmPerformance(){
+        wmLatency = performance.now() - latencyTimer;
+        latencyTimer = performance.now();
+        
+        graphics.save();
+        graphics.translate(76,0)
+        graphics.fillStyle = '#7777FF';
+        graphics.fillRect(0, 0, 38, 30);
+        graphics.strokeStyle = 'black';
+        graphics.fillStyle = 'black';
+        graphics.font = '14px Monospace';
+        graphics.fillText(Math.round(1000/ wmLatency), 10, 19);
+        graphics.restore();
+    }
+    createProcess(displayWmPerformance);
+}

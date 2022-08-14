@@ -1,4 +1,14 @@
 //Survival of the Fittest
+/* New features list:
+x- Create shop icons
+- Fix camera
+- Make death screen more useful (with player stats, time alive, etc)
+- Ability to aim (with right stick on controller)
+- A boss every X rounds
+- Fix controller bug where disconnecting just makes your character a potato
+- Allow reliable joining mid-game (and have them be revived)
+- Day/night cycle (and clouds)
+*/
 function customRandom(min, max) {
   return Math.random() * (max + Math.abs(min)) - Math.abs(min);
 }
@@ -42,7 +52,7 @@ class SOTF {
     //Every 20px is one meter ingame
     this.gravityForce = 9.8;
     this.playerSize = 30;
-    this.enemySize = this.playerSize / 2;
+    this.enemySize = this.playerSize / 1.8;
 
     this.groundStepHeight = 0.2;
     this.groundStepWidth = 10;
@@ -54,7 +64,7 @@ class SOTF {
     this.deadPlayers = [];
 
     this.level = 1;
-    this.levelKillGoal = 5;
+    this.levelKillGoal = 2;
     this.enemiesKilled = 0;
     this.transitionNextLevel = false;
     this.nextLevelTransitionCounter = 0;
@@ -66,7 +76,7 @@ class SOTF {
     //Guns
     function Gun() {
       this.name = '';
-      this.art = () => {};
+      this.art = () => { };
       this.damage = 0;
       this.spread = 0;
       this.special = false;
@@ -75,8 +85,8 @@ class SOTF {
     }
     Gun.prototype.pistol = function () {
       this.name = 'pistol';
-      this.art = (direction) => {
-        noStroke();
+      this.art = direction => {
+        //Do not stroke here;
         fill(50, 50, 50);
         if (direction === 'left') {
           translate(-self.playerSize / 2 + 2, self.playerSize / 2 - 6)
@@ -99,41 +109,43 @@ class SOTF {
       this.automatic = false;
       this.fireCooldown = 0;
     }
-    Gun.prototype.broken = function () {
-      this.name = 'broken';
-      this.art = (direction) => {
-        noStroke();
-        fill(255, 0, 0);
-        if (direction === 'left') {
-          translate(-self.playerSize / 2 + 2, self.playerSize / 2 - 6)
-          rect(0, 0, 14, 6);
-          rect(8, 5, 6, 7);
-        }
-        if (direction === 'right') {
-          translate(self.playerSize - 1, self.playerSize / 2 - 6)
-          rect(0, 0, 14, 6);
-          rect(0, 5, 6, 7);
-        }
-      };
-      this.damage = 100;
-      this.automatic = true;
-      this.fireRate = 40;
-      this.spread = 20;
-    }
     Gun.prototype.smg = function () {
       this.name = 'smg';
-      this.art = (direction) => {
-        noStroke();
-        fill(255, 255, 255);
+      this.art = direction => {
+        //Do not stroke here;
         if (direction === 'left') {
-          translate(-self.playerSize / 2 + 2, self.playerSize / 2 - 6)
-          rect(0, 0, 14, 6);
-          rect(8, 5, 6, 7);
+          translate(-self.playerSize / 2 + 15, self.playerSize / 2 - 3);
+          scale(0.6)
+          fill(87, 76, 76);
+          rect(0, 0, -50, 10);
+          fill(110, 101, 101);
+          rect(-30, 10, -7, 28);
+          fill(176, 157, 157);
+          rect(-50, 3, -5, 3);
+          fill(112, 49, 0);
+          rect(-5, 10, -8, 21);
         }
         if (direction === 'right') {
-          translate(self.playerSize - 1, self.playerSize / 2 - 6)
-          rect(0, 0, 14, 6);
-          rect(0, 5, 6, 7);
+          translate(self.playerSize / 2 + 15, self.playerSize / 2 - 3);
+          scale(0.6)
+          fill(87, 76, 76);
+          rect(0, 0, 50, 10);
+          fill(110, 101, 101);
+          rect(30, 10, 7, 28);
+          fill(176, 157, 157);
+          rect(50, 3, 5, 3);
+          fill(112, 49, 0);
+          rect(5, 10, 8, 21);
+        }
+        if (!direction) {
+          fill(87, 76, 76);
+          rect(0, 0, 50, 10);
+          fill(110, 101, 101);
+          rect(30, 10, 7, 28);
+          fill(176, 157, 157);
+          rect(50, 3, 5, 3);
+          fill(112, 49, 0);
+          rect(5, 10, 8, 21);
         }
       };
       this.damage = 13;
@@ -144,21 +156,64 @@ class SOTF {
     }
     Gun.prototype.assault = function () {
       this.name = 'assault';
-      this.art = (direction) => {
-        noStroke();
-        fill(255, 255, 255);
+      this.art = direction => {
+        //Do not stroke here;
+        scale(0.5);
         if (direction === 'left') {
-          translate(-self.playerSize / 2 + 2, self.playerSize / 2 - 6)
-          rect(0, 0, 14, 6);
-          rect(8, 5, 6, 7);
+          translate(self.playerSize - 21, self.playerSize / 2 + 10);
+          fill(30);
+          rect(0, 0, -50, 10);
+          fill(135, 71, 2);
+          rect(-20, 10, -7, 20);
+          fill(30);
+          rect(-50, 1, -25, 7);
+          fill(135, 71, 2);
+          rect(-5, 10, -7, 15);
+          rect(25, 0, -25, 6);
+          rect(25, 0, -3, 20);
+          fill(50);
+          rect(-10, -4, -6, 4);
+          fill(20);
+          rect(-75, 3, -10, 3);
+          rect(-85, 2, -6, 5);
         }
         if (direction === 'right') {
-          translate(self.playerSize - 1, self.playerSize / 2 - 6)
-          rect(0, 0, 14, 6);
-          rect(0, 5, 6, 7);
+          translate(self.playerSize + 20, self.playerSize / 2 + 10);
+          fill(30);
+          rect(0, 0, 50, 10);
+          fill(135, 71, 2);
+          rect(20, 10, 7, 20);
+          fill(30);
+          rect(50, 1, 25, 7);
+          fill(135, 71, 2);
+          rect(5, 10, 7, 15);
+          rect(-25, 0, 25, 6);
+          rect(-25, 0, 3, 20);
+          fill(50);
+          rect(10, -4, 6, 4);
+          fill(20);
+          rect(75, 3, 10, 3);
+          rect(85, 2, 6, 5);
+        }
+        if (!direction) {
+          fill(30);
+          rect(0, 0, 50, 10);
+          fill(135, 71, 2);
+          rect(20, 10, 7, 20);
+          fill(30);
+          rect(50, 1, 25, 7);
+          fill(135, 71, 2);
+          rect(5, 10, 7, 15);
+          rect(-25, 0, 25, 6);
+          rect(-25, 0, 3, 20);
+          fill(50);
+          rect(10, -4, 6, 4);
+          fill(20);
+          rect(75, 3, 10, 3);
+          rect(85, 2, 6, 5);
         }
       };
-      this.damage = 33;
+      this.damage = 29;
       this.automatic = true;
       this.special = false;
       this.fireRate = 12;
@@ -166,18 +221,40 @@ class SOTF {
     }
     Gun.prototype.shotgun = function () {
       this.name = 'shotgun';
-      this.art = (direction) => {
-        noStroke();
-        fill(255, 255, 255);
+      this.art = direction => {
+        scale(0.5)
+        stroke(0);
         if (direction === 'left') {
-          translate(-self.playerSize / 2 + 2, self.playerSize / 2 - 6)
-          rect(0, 0, 14, 6);
-          rect(8, 5, 6, 7);
+          translate(self.playerSize, self.playerSize / 2 + 10)
+          fill(40);
+          rect(0, 0, -48, 16);
+          rect(-114, 1, 60, 5);
+          rect(-48, 1, -19, 6);
+          rect(-103, 9, 55, 5);
+          rect(10, 0, -10, 30);
+          fill(30);
+          rect(-61, 6, -32, 11);
         }
         if (direction === 'right') {
-          translate(self.playerSize - 1, self.playerSize / 2 - 6)
-          rect(0, 0, 14, 6);
-          rect(0, 5, 6, 7);
+          translate(self.playerSize, self.playerSize / 2 + 10)
+          fill(40);
+          rect(0, 0, 48, 16);
+          rect(114, 1, -60, 5);
+          rect(48, 1, 19, 6);
+          rect(103, 9, -55, 5);
+          rect(-10, 0, 10, 30);
+          fill(30);
+          rect(61, 6, 32, 11);
+        }
+        if (!direction) {
+          fill(40);
+          rect(0, 0, 48, 16);
+          rect(114, 1, -60, 5);
+          rect(48, 1, 19, 6);
+          rect(103, 9, -55, 5);
+          rect(-10, 0, 10, 30);
+          fill(30);
+          rect(61, 6, 32, 11);
         }
       };
       this.cost = 0;
@@ -187,18 +264,49 @@ class SOTF {
     }
     Gun.prototype.sniper = function () {
       this.name = 'sniper';
-      this.art = (direction) => {
-        noStroke();
-        fill(50, 50, 50);
+      this.art = direction => {
+        //Do not stroke here;
+        scale(0.2);
         if (direction === 'left') {
-          translate(-self.playerSize / 2 + 2, self.playerSize / 2 - 6)
-          rect(0, 0, 14, 6);
-          rect(8, 5, 6, 7);
+          translate(self.playerSize - 30, self.playerSize / 2 + 50);
+          fill(100);
+          rect(0, 0, -200, 20);
+          rect(-200, 7, -100, 7);
+          rect(60, 0, -80, 6);
+          rect(70, 0, -10, 30, 70, 0, 0, 0);
+          fill(0);
+          rect(-80, -17, -50, 18);
+          rect(0, 20, -15, 20);
+          rect(-60, 20, -10, 10);
+          fill(70);
+          rect(-300, 4, -15, 14);
         }
         if (direction === 'right') {
-          translate(self.playerSize - 1, self.playerSize / 2 - 6)
-          rect(0, 0, 14, 6);
-          rect(0, 5, 6, 7);
+          translate(self.playerSize + 120, self.playerSize / 2 + 50);
+          fill(100);
+          rect(0, 0, 200, 20);
+          rect(200, 7, 100, 7);
+          rect(-60, 0, 80, 6);
+          rect(-70, 0, 10, 30, 70, 0, 0, 0);
+          fill(0);
+          rect(80, -17, 50, 18);
+          rect(0, 20, 15, 20);
+          rect(60, 20, 10, 10);
+          fill(70);
+          rect(300, 4, 15, 14);
+        }
+        if (!direction) {
+          fill(100);
+          rect(0, 0, 200, 20);
+          rect(200, 7, 100, 7);
+          rect(-60, 0, 80, 6);
+          rect(-70, 0, 10, 30, 70, 0, 0, 0);
+          fill(0);
+          rect(80, -17, 50, 18);
+          rect(0, 20, 15, 20);
+          rect(60, 20, 10, 10);
+          fill(70);
+          rect(300, 4, 15, 14);
         }
       }
       this.damage = 35;
@@ -323,9 +431,9 @@ class SOTF {
       } else {
         stroke(255, 0, 0);
       }
-      strokeWeight(2);
-      line(x - self.camX, y - self.camY, (x - self.camX) + (dirX * width), (y - self.camY) + (dirY * height));
-      noStroke();
+      strokeWeight(3);
+      line(x - self.camX, y - self.camY, (x - self.camX) + (dirX * canvas.width), (y - self.camY) + (dirY * canvas.height));
+      //Do not stroke here;
       strokeWeight(1);
     }
     //Shop logic
@@ -335,16 +443,16 @@ class SOTF {
       this.originalPrice = cost;
       this.compoundRate = compoundRate;
     }
-    ShopItem.prototype.award = function(player){
-      if (player.points >= this.cost){
+    ShopItem.prototype.award = function (player) {
+      if (player.points >= this.cost) {
         player.points -= this.cost;
         this.handler(player);
-        if(this.compoundRate){
+        if (this.compoundRate) {
           this.cost = Math.floor(this.cost * this.compoundRate);
         }
       }
     }
-    ShopItem.prototype.resetPrice = function(){
+    ShopItem.prototype.resetPrice = function () {
       this.cost = this.originalPrice;
     }
     //Add shop items
@@ -361,23 +469,23 @@ class SOTF {
       })]);
     //Shop items
     this.shopItems.push([
-      new ShopItem(15, player => { player.gun.smg(); }),//Up
-      new ShopItem(60, player => { player.gun.assault(); }),//Right
-      new ShopItem(100, player => { player.gun.shotgun(); }),//Down
-      new ShopItem(800, player => { player.gun.sniper(); }),//Left
+      new ShopItem(12, player => { player.gun.smg(); }),//Up
+      new ShopItem(100, player => { player.gun.assault(); }),//Right
+      new ShopItem(400, player => { player.gun.shotgun(); }),//Down
+      new ShopItem(1000, player => { player.gun.sniper(); }),//Left
     ]);
     this.shopItems.push([
-      new ShopItem(100, player => { player.damageAdder++; }, 1.2),
-      new ShopItem(125, player => { player.maxHealth += 10;}, 1.45),
-      new ShopItem(200, player => { player.speedMultiplier += 0.2;}, 1.8),
-      new ShopItem(255, player => { player.shotMultiplier++;}, 2),
+      new ShopItem(50, player => { player.damageAdder++; }, 2.2),
+      new ShopItem(130, player => { player.maxHealth += 10; player.health += 10; }, 1.5),
+      new ShopItem(200, player => { player.speedMultiplier += 0.08; }, 1.9),
+      new ShopItem(500, player => { player.shotMultiplier++; }, 2.8),
     ]);
     //Revive logic
     if (this.deadPlayers.length >= 1) {
       for (let i = 0; i < this.deadPlayers.length; i++) {
         this.shopItems[3][i] = new ShopItem(Math.floor(Math.pow(10, (self.level - 1) / 10 + 1)), () => {
           var currentDeadPlayer = self.deadPlayers[i];
-          var newPlayerBody = new Player(self.camX + width / 2, self.camY - self.playerSize * 2, currentDeadPlayer.controller, currentDeadPlayer.number);
+          var newPlayerBody = new Player(self.camX + canvas.width / 2, self.camY - self.playerSize * 2, currentDeadPlayer.controller, currentDeadPlayer.number);
           newPlayerBody.kills = currentDeadPlayer.kills;
           newPlayerBody.damageDone = currentDeadPlayer.damageDone;
           newPlayerBody.points = Math.floor(currentDeadPlayer.points / 4);
@@ -447,20 +555,20 @@ class SOTF {
     }
     //Update player logic
     let horizontalScreenEdgeDeadzone = 200;
-    let verticalScreenEdgeDeadzone = height/2 - (self.playerSize * 3);
+    let verticalScreenEdgeDeadzone = canvas.height / 2 - (self.playerSize * 3);
     Player.prototype.update = function () {
       this.currentGravityForce = getTransition(self.gravityForce, 1000);
       let verticalMovementSpeed = this.currentGravityForce * 4;
       let playerMovementSpeed = this.currentGravityForce * 3 * this.speedMultiplier;
       if (!this.controller) {
         //Define control systems for internal use
-        this.keyboardShop = keyboardArray[88];//X
+        this.keyboardShop = devices.keyboard.keyCodes[88];//X
         if (!(this.keyboardShop && this.hasShop)) {
-          this.keyboardUp = keyboardArray[38];
-          this.keyboardDown = keyboardArray[40];
-          this.keyboardLeft = keyboardArray[37];
-          this.keyboardRight = keyboardArray[39];
-          this.keyboardShoot = keyboardArray[90];//Z
+          this.keyboardUp = devices.keyboard.keyCodes[38];
+          this.keyboardDown = devices.keyboard.keyCodes[40];
+          this.keyboardLeft = devices.keyboard.keyCodes[37];
+          this.keyboardRight = devices.keyboard.keyCodes[39];
+          this.keyboardShoot = devices.keyboard.keyCodes[90];//Z
         }
 
         if (this.falling) {
@@ -491,17 +599,15 @@ class SOTF {
           this.direction = 'left';
         }
 
-        shopLogic(this, this.keyboardShop, keyboardArray[38], keyboardArray[40], keyboardArray[37], keyboardArray[39]);
+        shopLogic(this, this.keyboardShop, devices.keyboard.keyCodes[38], devices.keyboard.keyCodes[40], devices.keyboard.keyCodes[37], devices.keyboard.keyCodes[39]);
       }
       if (this.controller) {
         //Define control systems for internal use
         this.controllerShop = this.controller.buttons[4].pressed;//L1
-        if (!(this.controllerShop && this.hasShop)) {
-          this.controllerUp = this.controller.buttons[0].pressed;//X
-          this.controllerLeftStickY = this.controller.axes[1];//Right-down stick
-          this.controllerLeftStickX = this.controller.axes[0];
-          this.controllerShoot = this.controller.buttons[3].pressed;//Square
-        }
+        this.controllerUp = this.controller.buttons[0].pressed;//X
+        this.controllerLeftStickY = this.controller.axes[1];//Right-down stick
+        this.controllerLeftStickX = this.controller.axes[0];
+        this.controllerShoot = this.controller.buttons[3].pressed;//Square
 
         if (this.falling) {
           this.gravity += this.currentGravityForce;
@@ -539,14 +645,14 @@ class SOTF {
       if (this.x - self.camX <= screenDeadzone) {
         this.x += self.camX - (this.x - screenDeadzone);
       }
-      if (this.x + self.playerSize - self.camX >= width- screenDeadzone) {
-        this.x += (self.camX + (width - screenDeadzone)) - (this.x + self.playerSize);
+      if (this.x + self.playerSize - self.camX >= canvas.width - screenDeadzone) {
+        this.x += (self.camX + (canvas.width - screenDeadzone)) - (this.x + self.playerSize);
       }
       if (this.y - self.camY <= screenDeadzone) {
         this.y += self.camY - (this.y - screenDeadzone);
       }
-      if (this.y + self.playerSize - self.camY >= height - screenDeadzone) {
-        this.y += (self.camY + (height - screenDeadzone)) - (this.y + self.playerSize);
+      if (this.y + self.playerSize - self.camY >= canvas.height - screenDeadzone) {
+        this.y += (self.camY + (canvas.height - screenDeadzone)) - (this.y + self.playerSize);
       }
 
       //Apply gravities
@@ -594,14 +700,14 @@ class SOTF {
     }
     Player.prototype.moveCamera = function () {
       //Move camera when approaching the end of the screen
-      if (this.x - self.camX + self.playerSize + this.horizontalVelocity > width - horizontalScreenEdgeDeadzone) {
-        self.camX += (this.x - self.camX + self.playerSize) - (width - horizontalScreenEdgeDeadzone);
+      if (this.x - self.camX + self.playerSize + this.horizontalVelocity > canvas.width - horizontalScreenEdgeDeadzone) {
+        self.camX += (this.x - self.camX + self.playerSize) - (canvas.width - horizontalScreenEdgeDeadzone);
       }
       if (this.x - self.camX + this.horizontalVelocity < horizontalScreenEdgeDeadzone) {
         self.camX += (this.x - self.camX) - horizontalScreenEdgeDeadzone;
       }
-      if (this.y - self.camY + self.playerSize + this.gravity > height - verticalScreenEdgeDeadzone) {
-        self.camY += (this.y - self.camY + self.playerSize) - (height - verticalScreenEdgeDeadzone);
+      if (this.y - self.camY + self.playerSize + this.gravity > canvas.height - verticalScreenEdgeDeadzone) {
+        self.camY += (this.y - self.camY + self.playerSize) - (canvas.height - verticalScreenEdgeDeadzone);
       }
       if (this.y - self.camY + this.gravity < verticalScreenEdgeDeadzone) {
         self.camY += (this.y - self.camY) - verticalScreenEdgeDeadzone;
@@ -648,8 +754,8 @@ class SOTF {
     }
     //Draw player
     Player.prototype.draw = function () {
-      if (this.x - self.camX >= 0 && this.y - self.camY >= 0 && this.x - self.camX + self.playerSize <= width && this.y - self.camY + self.playerSize <= height) {
-        push();
+      if (this.x - self.camX >= 0 && this.y - self.camY >= 0 && this.x - self.camX + self.playerSize <= canvas.width && this.y - self.camY + self.playerSize <= canvas.height) {
+        graphics.save();
         stroke(0);
         fill(255, 50, 50);
         translate(this.x - self.camX, this.y - self.camY);
@@ -659,9 +765,11 @@ class SOTF {
 
         if (this.shopOpened === true) {
           //Shop menu
-          push();
+          graphics.save();
+          var shopScale = 1.3;
+          translate(self.playerSize / 2, -65 * shopScale);
+          scale(shopScale);
           fill(230, 230, 230);
-          translate(self.playerSize / 2, -65);
           ellipse(0, 0, 70, 70);
           stroke(0);
           line(-20, -20, 20, 20);
@@ -671,30 +779,30 @@ class SOTF {
           var displayGun = new Gun();
           function displayPrice(price, side) {
             if (thisPlayer.points < price) {
-              fill(255, 0, 0);
+              fill(255, 70, 70);
             } else {
-              fill(0, 255, 0);
+              fill(0, 225, 0);
             }
             var textAlignment;
             switch (side) {
               case 'left':
-                textAlignment = [-47, 5];
+                textAlignment = [-51, 5];
                 break;
               case 'right':
-                textAlignment = [47, 5];
+                textAlignment = [51, 5];
                 break;
               case 'bottom':
                 textAlignment = [0, 47];
                 break;
               case 'top':
-                textAlignment = [0, -47];
+                textAlignment = [0, -44];
                 break;
             }
             simpleCenterText("$" + price, textAlignment[0], textAlignment[1]);
           }
           if (this.shopMenu === "main") {
             //Health
-            noStroke();
+            //Do not stroke here;
             displayPrice(self.shopItems[0][0].cost, 'left');
             fill(255, 30, 30);
             rect(-22.5, 0, 5, 5);
@@ -707,11 +815,11 @@ class SOTF {
             rect(-2, 12, 6, 16);
 
             //Gun
-            push();
+            graphics.save();
             translate(13, -11 / 2);
             displayGun.pistol();
             displayGun.art();
-            pop();
+            graphics.restore();
 
             //Revive
             fill(70, 200, 70)
@@ -720,7 +828,7 @@ class SOTF {
 
           }
           function displayShopPrices(shopItemList) {
-            noStroke();
+            //Do not stroke here;
             for (var i = 0; i < shopItemList.length; i++) {
               var displaySide;
               switch (i) {
@@ -742,41 +850,118 @@ class SOTF {
           }
           if (this.shopMenu === "guns") {
             //SMG
-            push();
-            translate(0, -28);
+            graphics.save();
+            translate(-12, -28);
+            scale(0.5);
             displayGun.smg();
             displayGun.art();
-            pop();
+            graphics.restore();
 
             //Assault Rifle
-            push();
-            translate(13, -11 / 2);
+            graphics.save();
+            translate(11, -2);
+            scale(0.48);
             displayGun.assault();
             displayGun.art();
-            pop();
+            graphics.restore();
 
             //Shotgun
-            push();
-            translate(0, 28);
+            graphics.save();
+            translate(-10, 17);
+            scale(0.4);
             displayGun.shotgun();
             displayGun.art();
-            pop();
+            graphics.restore();
 
             //Sniper
-            push();
-            translate(-13, 0);
-            displayGun.assault();
+            graphics.save();
+            translate(-28, -1);
+            scale(0.5);
+            displayGun.sniper();
             displayGun.art();
-            pop();
+            graphics.restore();
 
             displayShopPrices(self.shopItems[1]);
           }
           if (this.shopMenu === "perks") {
+            graphics.save();
+            //Bullet damage
+            scale(0.5);
+            //Do not stroke here;
+            graphics.save();
+            translate(-18, -50);
+            fill(125, 125, 125);
+            rect(12,0,11,10,10);
+            rect(0,0,18,10,1);
+
+            fill(255, 64, 64);
+            var xOffset = 23;
+            var yOffset = 1;
+            rect(-5.5 + xOffset, 17 + yOffset, 17, 6);
+            rect(0 + xOffset, 12 + yOffset, 6, 16);
+            graphics.restore();
+
+            //More max health
+            graphics.save();
+            translate(35, 0);
+            scale(2);
+            //Do not stroke here;
+            fill(255, 200, 40);
+            rect(0, 0, 5, 5);
+            rect(3, -3.5, 5, 5);
+            rect(-3, -3.5, 5, 5);
+            graphics.restore();
+
+            //Speed
+            graphics.save();
+            translate(-14, 30);
+            scale(0.7);
+            fill(40, 220, 225);
+            stroke(0);
+
+            beginShape();
+            vertex(0,-5);
+            vertex(20,-5);
+            vertex(16,-15);
+            vertex(34,0);
+            vertex(16,15);
+            vertex(20,5);
+            vertex(0,5);
+            vertex(0,-5);
+            endShape();
+
+            translate(17,26);
+            
+            beginShape();
+            vertex(0,-5);
+            vertex(20,-5);
+            vertex(16,-15);
+            vertex(34,0);
+            vertex(16,15);
+            vertex(20,5);
+            vertex(0,5);
+            vertex(0,-5);
+            endShape();
+            graphics.restore();
+
+            //More Bullets
+            graphics.save();
+            translate(-60, -13);
+            fill(125, 125, 125);
+            rect(12,0,11,10,10);
+            rect(0,0,18,10,1);
+
+            rect(21,17,11,10,10);
+            rect(9,17,18,10,1);
+            graphics.restore();
+
+            graphics.restore();
+
             displayShopPrices(self.shopItems[2]);
           }
           if (this.shopMenu === "revive") {
             for (var i = 0; i < self.deadPlayers.length; i++) {
-              push();
+              graphics.save();
               switch (i) {
                 case 0:
                   displayPrice(self.shopItems[3][i].cost, 'top');
@@ -797,14 +982,15 @@ class SOTF {
               }
               fillPlayerNumber(self.deadPlayers[i].number);
               rect(-8, -8, 16, 16);
-              pop();
+              graphics.restore();
             }
           }
-          pop();
+          graphics.restore();
         } else if (this.hasShop === true) {
           //Shop hint
           fill(255);
-          noStroke();
+          //Do not stroke here;
+          textSize(16);
           if (this.controller) {
             simpleCenterText("Hold L1 to open the shop", self.playerSize / 2, -20);
           } else {
@@ -813,18 +999,18 @@ class SOTF {
         }
 
         this.gun.art(this.direction);
-        pop();
+        graphics.restore();
       }
     }
     //Enemies
     function Enemy(enemy) {
       if (enemy !== undefined) {
         this.x = enemy.x + customRandom(-self.enemySize * 2, self.enemySize * 2);
-        this.y = enemy.y - Math.random() * 10;
+        this.y = enemy.y - 2;
         this.gravity = enemy.gravity;
         this.horizontalVelocity = enemy.horizontalVelocity;
       } else {
-        this.x = self.camX + Math.random() * width;
+        this.x = self.camX + Math.random() * canvas.width;
         this.y = -self.enemySize + self.camY;
         this.gravity = 0;
         this.horizontalVelocity = 0;
@@ -833,13 +1019,13 @@ class SOTF {
       this.health = 100;
 
       this.falling = true;
-      this.geneticVariation = Math.random();
+      this.geneticVariation = Math.random() + 0.5;
     }
     //Update enemy world interaction logic
     Enemy.prototype.updateWorld = function () {
       //Deal with ground collision and jumping
       var fallingVariableBuffer = true;
-      var verticalMovementSpeed = self.groundStepHeight / 6;
+      var verticalMovementSpeed = self.enemySize / 5;
       for (var i = -1; i < Math.floor(self.enemySize / self.groundStepWidth + 2); i++) {
         let currentWorld = self.world[Math.abs(i + Math.floor(this.x / self.groundStepWidth))];
         if (currentWorld) {
@@ -895,7 +1081,7 @@ class SOTF {
           }
         }
         if (!targetPlayer) {
-          targetPlayer = new Player(width / 2, 0);
+          targetPlayer = new Player(this.x, 0);
         }
 
         //Horizontal
@@ -913,20 +1099,20 @@ class SOTF {
       this.suspend = false;
     }
     Enemy.prototype.draw = function () {
-      if (this.x - self.camX > 0 && this.y - self.camY > 0 && this.x - self.camX + self.enemySize < width && this.y - self.camY + self.enemySize < height) {
+      if (this.x - self.camX > 0 && this.y - self.camY > 0 && this.x - self.camX + self.enemySize < canvas.width && this.y - self.camY + self.enemySize < canvas.height) {
         fill(255, (this.health / 100) * 130, (this.health / 100) * 130);
         rect(this.x - self.camX, this.y - self.camY, self.enemySize, self.enemySize);
       }
     }
-    self.world[0] = [height / 2, false, false];
+    self.world[0] = [canvas.height / 2, false, false];
 
     //Menu system
     if (this.menuState === "start") {
       fill(150, 205, 150);
-      rect(0, 0, width, height);
+      rect(0, 0, canvas.width, canvas.height);
 
       fill(0);
-      centerText("SOTF", width / 2 - 20, height / 2 - 20, 40, 40, 75);
+      centerText("SOTF", canvas.width / 2 - 20, canvas.height / 2 - 20, 40, 40, 75);
       this.startupScreenTimer -= getAnimationExpansionRate(72, 2500);
       if (this.startupScreenTimer <= 0) {
         this.menuState = "menu";
@@ -934,30 +1120,30 @@ class SOTF {
     }
     if (this.menuState === "menu") {
       fill(127);
-      rect(0, 0, width, height);
+      rect(0, 0, canvas.width, canvas.height);
       fill(255);
-      centerText("Survival of the Fittest", width / 2 - 20, 30, 40, 40, 75);
+      centerText("Survival of the Fittest", canvas.width / 2 - 20, 30, 40, 40, 75);
 
       //Start Game button
       function singlePlayerMenuState() {
         self.menuState = "game";
         resumeSystem(self.logicProcesses, true);
-        self.players.push(new Player(width / 2, 60));
+        self.players.push(new Player(canvas.width / 2, 60));
         self.enemies.push(new Enemy());
       }
       function multiplayerMenuState() {
         self.menuState = "multiplayer";
       }
       fill(30);
-      labledButton(100, 150, width - 200, 100, singlePlayerMenuState, "Single Player", 30);
+      labledButton(100, 150, canvas.width - 200, 100, singlePlayerMenuState, "Single Player", 30);
       fill(30);
-      labledButton(100, 300, width - 200, 100, multiplayerMenuState, "Multiplayer", 30);
+      labledButton(100, 300, canvas.width - 200, 100, multiplayerMenuState, "Multiplayer", 30);
     }
     if (this.menuState === "multiplayer") {
       fill(127);
-      rect(0, 0, width, height);
+      rect(0, 0, canvas.width, canvas.height);
       fill(255);
-      centerText("To join, press X on your controller.", width / 2 - 20, 50, 40, 40, 32);
+      centerText("To join, press X on your controller.", canvas.width / 2 - 20, 50, 40, 40, 32);
       function startMultiplayerGame() {
         self.players = self.playerBuffer;
         self.menuState = "game";
@@ -969,7 +1155,7 @@ class SOTF {
         self.playerBuffer = [];
       }
       if (this.playerBuffer.length > 0) {
-        labledButton(100, 400, width - 200, 40, startMultiplayerGame, "All players are ready", 20);
+        labledButton(100, 400, canvas.width - 200, 40, startMultiplayerGame, "All players are ready", 20);
       }
       for (var i = 0; i < controllerArray.length; i++) {
         if (controllerArray[i].buttons[0].pressed) {
@@ -980,7 +1166,7 @@ class SOTF {
             }
           }
           if (controllerHasPlayer === false) {
-            this.playerBuffer.push(new Player(width / 2, 60, controllerArray[i], this.playerBuffer.length));
+            this.playerBuffer.push(new Player(canvas.width / 2, 60, controllerArray[i], this.playerBuffer.length));
           }
         }
         if (controllerArray[i].buttons[1].pressed) {
@@ -995,16 +1181,16 @@ class SOTF {
         }
       }
       for (let i = 0; i < this.playerBuffer.length; i++) {
-        push();
+        graphics.save();
         fillPlayerNumber(this.playerBuffer[i].number);
         if (this.playerBuffer[i].controller.buttons[0].pressed) {
           fill(255);
         }
-        rect(200 + (width - 200) * (i / this.playerBuffer.length), 200, self.playerSize, self.playerSize);
-        blankButton(200 + (width - 200) * (i / this.playerBuffer.length), 200, self.playerSize, self.playerSize, () => {
+        rect(200 + (canvas.width - 200) * (i / this.playerBuffer.length), 200, self.playerSize, self.playerSize);
+        blankButton(200 + (canvas.width - 200) * (i / this.playerBuffer.length), 200, self.playerSize, self.playerSize, () => {
           self.playerBuffer.splice(i, 1);
         });
-        pop();
+        graphics.restore();
       }
     }
 
@@ -1022,13 +1208,13 @@ class SOTF {
         this.transitionNextLevel = false;
         this.nextLevelTransitionCounter = 0;
       } else {
-        push();
-        fill(150, 255, 150);
-        centerText("Level Complete!", width / 2 - 40, 100, 40, 40, 20);
-        fill(200);
+        graphics.save();
+        fill(50, 155, 50);
+        centerText("Level Complete!", canvas.width / 2 - 40, 100, 40, 40, 20);
+        fill(35);
         textSize(18)
         text("Next level beginning in " + timeLeft + " seconds...", 100, 100);
-        pop();
+        graphics.restore();
       }
     }
 
@@ -1043,24 +1229,24 @@ class SOTF {
         self.level = 1;
         self.camX = 0;
         self.camY = 0;
-        self.levelKillGoal = 5;
+        self.levelKillGoal = 2;
         self.enemiesKilled = 0;
-        for(var i = 0; i < self.shopItems.length; i++){
-          for(var l = 0; l < self.shopItems[i].length; l++){
+        for (var i = 0; i < self.shopItems.length; i++) {
+          for (var l = 0; l < self.shopItems[i].length; l++) {
             self.shopItems[i][l].resetPrice();
           }
         }
         suspendSystem(self.logicProcesses, true);
       }
-      push();
+      graphics.save();
       fill(255, 0, 0);
-      centerText("Loser Cruiser", width / 2 - 20, 100, 40, 40, 40);
+      centerText("Loser Cruiser", canvas.width / 2 - 20, 100, 40, 40, 40);
 
       fill(30);
-      Button(width / 2 - 150, height / 2 - 100, 300, 200, revertMenuState);
+      Button(canvas.width / 2 - 150, canvas.height / 2 - 100, 300, 200, revertMenuState);
       fill(255)
-      centerText("Main Menu", width / 2 - 20, height / 2 - 20, 40, 40, 20);
-      pop();
+      centerText("Main Menu", canvas.width / 2 - 20, canvas.height / 2 - 20, 40, 40, 20);
+      graphics.restore();
     }
   }
   updateGameProcesses() {
@@ -1069,7 +1255,7 @@ class SOTF {
     }
   }
   updateLogic() {
-    if (this.enemiesKilled >= Math.round(this.levelKillGoal) && this.menuState === "game") {
+    if (this.enemiesKilled >= Math.round(this.levelKillGoal) && this.menuState === "game" && this.transitionNextLevel === false) {
       this.transitionNextLevel = true;
       this.enemies = [];
       for (var i = 0; i < this.players.length; i++) {
@@ -1077,60 +1263,50 @@ class SOTF {
         if (this.players[i].health > this.players[i].maxHealth) {
           this.players[i].health = this.players[i].maxHealth;
         }
-        this.players[i].points += this.level - 1;
+        this.players[i].points += this.level;
       }
     }
     if (this.players.length === 0) {
       this.menuState = "no players";
     }
   }
-  createWindow(fullscreen) {
+  createWindow(mode) {
     var self = new SOTF();
     //Functions for updating game mechanics
     function drawPlayers() {
-      push();
-      for (var i = 0; i < self.players.length; i++) {
+      graphics.save();
+      for (var i = self.players.length - 1; i >= 0; i--) {
+        self.players[i].moveCamera();
         self.players[i].draw();
       }
-      pop();
+      graphics.restore();
     }
     function updatePlayers() {
-      for (var i = self.players.length - 1; i >= 0; i--) {
+      for (var i = 0; i < self.players.length; i++) {
+        self.players[i].updateWorld();
         self.players[i].update();
-        self.players[i].moveCamera();
       }
-      // if (self.players.length > 0) {
-      // }
     }
-    function updatePlayerGuns() {
+    function updatePlayerShooting() {
       for (var i = 0; i < self.players.length; i++) {
         self.players[i].shoot();
       }
     }
-    function updatePlayerWorlds() {
-      for (var i in self.players) {
-        self.players[i].updateWorld();
-      }
-    }
     function drawEnemies() {
-      push();
+      graphics.save();
       stroke(0);
       for (var i in self.enemies) {
         self.enemies[i].draw();
       }
-      pop();
+      graphics.restore();
     }
     function updateEnemies() {
       for (var i = 0; i < self.enemies.length; i++) {
+        self.enemies[i].updateWorld();
         self.enemies[i].update();
         if (self.enemies.dead === true) {
           self.enemies.splice(i, 1);
         }
-      }
-    }
-    function updateEnemyWorlds() {
-      for (var i = 0; i < self.enemies.length; i++) {
-        self.enemies[i].updateWorld();
       }
     }
     function updateEnemyPlayerCollisions() {
@@ -1159,7 +1335,7 @@ class SOTF {
     function generateWorld() {
       var newGenerationHeight;
       var generationOverscan = (60 / self.groundStepWidth);
-      for (var i = 1; i < width / self.groundStepWidth + generationOverscan * 2; i++) {
+      for (var i = 1; i < canvas.width / self.groundStepWidth + generationOverscan * 2; i++) {
         var worldIndex = Math.abs(i + Math.floor(self.camX / self.groundStepWidth - generationOverscan));
         if (!self.world[worldIndex]) {
           if (worldIndex !== 0) {
@@ -1167,10 +1343,10 @@ class SOTF {
             for (var l = 1; previousWorld === undefined; l++) {
               previousWorld = self.world[worldIndex - l];
             }
-            if(self.worldGenerationNumber > 0){
-              self.worldGenerationNumber = Math.min(self.groundStepHeight * 10, self.worldGenerationNumber + customRandom(-self.groundStepHeight, self.groundStepHeight));
-            }else{
-              self.worldGenerationNumber = Math.max(-(self.groundStepHeight * 10), self.worldGenerationNumber + customRandom(-self.groundStepHeight, self.groundStepHeight));
+            if (self.worldGenerationNumber > 0) {
+              self.worldGenerationNumber = Math.min(self.groundStepHeight * 15, self.worldGenerationNumber + customRandom(-self.groundStepHeight, self.groundStepHeight));
+            } else {
+              self.worldGenerationNumber = Math.max(-(self.groundStepHeight * 15), self.worldGenerationNumber + customRandom(-self.groundStepHeight, self.groundStepHeight));
             }
             newGenerationHeight = previousWorld[0] + self.worldGenerationNumber;
           }
@@ -1180,15 +1356,15 @@ class SOTF {
       }
     }
     function renderWorld() {
-      push();
-      noStroke();
+      graphics.save();
+      //Do not stroke here;
       fill(100, 255, 100);
       var adjustedCamX = self.camX / self.groundStepWidth;
-      for (var i = Math.floor(adjustedCamX); i < width / self.groundStepWidth + adjustedCamX; i++) {
+      for (var i = Math.floor(adjustedCamX); i < canvas.width / self.groundStepWidth + adjustedCamX; i++) {
         let worldBlock = self.world[Math.abs(i)];
         if (worldBlock) {
           translate(i * self.groundStepWidth - self.camX, worldBlock[0] - self.camY);
-          rect(0, 0, self.groundStepWidth, Math.max(height - (worldBlock[0] - self.camY), 0));
+          rect(0, 0, self.groundStepWidth, Math.max(canvas.height - (worldBlock[0] - self.camY), 0));
           if (worldBlock[2] === true) {
             fill(100, 255, 100);
             rect(self.groundStepWidth / 2 - 1, -3, 2, 3);
@@ -1197,7 +1373,7 @@ class SOTF {
             fill(100, 255, 100);
           }
           if (worldBlock[1] === true) {
-            push();
+            graphics.save();
             scale(0.5);
             translate(0, -148);
             fill(210, 40, 40);
@@ -1211,110 +1387,122 @@ class SOTF {
             rect(25, 102, 30, 46);
             fill(127, 127, 127);
             ellipse(50, 122, 5, 5);
-            pop();
+            graphics.restore();
           }
           translate(-(i * self.groundStepWidth - self.camX), -(worldBlock[0] - self.camY));
         }
       }
-      pop();
+      graphics.restore();
     }
     function renderHud() {
-      push();
+      graphics.save();
+      var hudScale = 1.5;
+      graphics.scale(hudScale);
       fill(100);
-      rect(width / 2, 0, width / 2, 20);
+      rect(canvas.width / 2, 0, canvas.width / 2, 20);
 
       fill(255);
       textSize(12);
-      text("Level: " + self.level, width / 2 + 6, 14);
-      text("Enemies Left: " + Math.max(self.levelKillGoal - self.enemiesKilled, 0), width / 2 + 70, 14);
+      text("Level: " + self.level, canvas.width / 2 + 6, 14);
+      text("Enemies Left: " + Math.max(self.levelKillGoal - self.enemiesKilled, 0), canvas.width / 2 + 70, 14);
 
       //Scoreboard
-      noStroke();
+      //Do not stroke here;
       for (var i = 0; i < self.players.length; i++) {
         var currentPlayer = self.players[i];
         fillPlayerNumber(currentPlayer.number);
-        rect(width - 200, 20 * i, 200, 20);
+        rect(canvas.width - 200, 20 * i, 200, 20);
         fill(0);
         var killMessage = currentPlayer.kills + " kills | ";
-        if(currentPlayer.kills === 1){
+        if (currentPlayer.kills === 1) {
           killMessage = currentPlayer.kills + " kill | ";
         }
-        text("$" + currentPlayer.points + " | " + killMessage + currentPlayer.damageDone + " damage", width - 195, 14 + (20 * i));
+        text("$" + currentPlayer.points + " | " + killMessage + currentPlayer.damageDone + " damage", canvas.width - 195, 14 + (20 * i));
       }
-      pop();
+      graphics.restore();
     }
     function updateGameLogic() {
       self.updateLogic();
     }
     function drawBackground() {
       //Sky
-      var resolutionScale = 40;
-      noStroke();
-      for(var i = 0; i < height; i+= resolutionScale){
-        var scaledBackground = i * (255 / width);
-        fill(scaledBackground, 255-scaledBackground, 255);
-        rect(0, i, width, resolutionScale);
+      var resolutionScale = 30;
+      //Do not stroke here;
+      for (var i = 0; i < canvas.height; i += resolutionScale) {
+        var scaledBackground = i * (255 / canvas.height);
+        fill(100 + scaledBackground, 150, 255 - scaledBackground / 4);
+        rect(0, i, canvas.width, resolutionScale + 1);
       }
       //Clouds
 
       /* Emo black background
       fill(0, 0, 0);
-      rect(0, 0, width, height);
+      rect(0, 0, canvas.width, canvas.height);
       */
     }
     function updateGame() {
       self.update();
     }
-    var windowProcesses = [];
     //Processes
-
-    //World
-    windowProcess(generateWorld, self.logicProcesses, 1, "World Generation");
-    //Enemies
-    windowProcess(capEnemyCount, self.logicProcesses, 0, "Enemy Cap");
-    windowProcess(updateEnemies, self.logicProcesses, 3, "Enemies");
-    windowProcess(updateEnemyWorlds, self.logicProcesses, 1, "Enemy Worlds");
-    //Players
-    windowProcess(updatePlayerWorlds, self.logicProcesses, 0, "Player Worlds");
-    windowProcess(updatePlayers, self.logicProcesses, 1, "Players");
-    //Update player-enemy collissions
-    windowProcess(updateEnemyPlayerCollisions, self.logicProcesses, 4, "Collisions");
-    //Game logic (levels)
-    windowProcess(updateGameLogic, self.logicProcesses, 1, "Game Processes");
-
-    //Drawing things
-    windowProcess(drawBackground, windowProcesses, 3, "Background");
-    windowProcess(renderWorld, windowProcesses, 2, "World Rendering");
-    windowProcess(drawEnemies, windowProcesses, 3, "Draw Enemies");
-    //Update player guns (the reason this is here is because bullets would not appear)
-    windowProcess(updatePlayerGuns, windowProcesses, 0, "Player Guns");
-    windowProcess(drawPlayers, windowProcesses, 1, "Draw Players");
-    windowProcess(renderHud, windowProcesses, 3, "Draw Players");
-
-    //Add game processes to the window manager
-    windowProcess(updateGame, windowProcesses, 0, "Game Core Updater");
-
-
-    if(fullscreen){
-      var sotfWindow = new Window("Survival of the Fittest", windowProcesses, false, self.logicProcesses);
-      sotfWindow.x = width / 2;
-      sotfWindow.y = height / 2;
-      sotfWindow.targetWidth = width;
-      sotfWindow.targetHeight = height;
-    }else{
-      var sotfWindow = new Window("Survival of the Fittest", windowProcesses, true, self.logicProcesses);
-      sotfWindow.maximize = true;
+    let logicProcesses = [
+      //World
+      new Process(generateWorld, 0),
+      //Enemies
+      new Process(capEnemyCount, 2),
+      new Process(updateEnemies, 1, self.logicProcesses),
+      //Players
+      new Process(updatePlayers, 4, self.logicProcesses),
+      //Update player-enemy collissions
+      new Process(updateEnemyPlayerCollisions, 0, self.logicProcesses),
+      //Game logic (levels)
+      new Process(updateGameLogic, 2, self.logicProcesses),
+    ]
+    let logicProcessesPIDs = [];
+    for(let i = 0; i < logicProcesses.length; i++){
+      let logicProcess = new Process(logicProcesses[i].command, logicProcesses[i].priority);
+      logicProcess.name = logicProcesses[i].name;
+      logicProcessesPIDs.push(logicProcess.PID);
+      processes.push(logicProcess);
     }
-    suspendSystem(self.logicProcesses);
-    windows.push(sotfWindow);
+
+    //Create processes to pass into the window manager
+    let windowProcesses = [
+      new Process(drawBackground, 1),
+      new Process(renderWorld, 0),
+      new Process(drawEnemies, -3),
+      new Process(updatePlayerShooting, 2),
+      new Process(drawPlayers, 2),
+      new Process(renderHud, 1),
+      new Process(updateGame, 3),
+    ]
+
+    if (mode === "fullscreen") {
+      var sotfWindow = new GraphiteWindow("Survival of the Fittest", windowProcesses, false, self.logicProcesses);
+      sotfWindow.x = canvas.width / 2;
+      sotfWindow.y = canvas.height / 2;
+      sotfWindow.targetWidth = canvas.width;
+      sotfWindow.targetHeight = canvas.height;
+      windows.push(sotfWindow);
+    } else if(mode === "standalone"){
+      for(let i = 0; i < windowProcesses.length; i++){
+        graphicalProcesses.push(windowProcesses[i]);
+      }
+      addProcessGroup(self.logicProcesses);
+    }else {
+      //Add game processes to the window manager
+      var sotfWindow = new GraphiteWindow(windowProcesses, "Survival of the Fittest");
+      sotfWindow.maximize = true;
+      sotfWindow.initProcesses();
+      windows.push(sotfWindow);
+    }
+    suspendSystem(self.logicProcesses, true);
   }
-  iconFunction() {
-    noStroke();
-    fill(80, 200, 80);
-    rect(0, 0, width, height, 3);
-    fill(255, 255, 255);
-    textSize(width / 3.2);
-    text("SOTF", width / 10, height / 2.5);
-    rect(width / 10, height * 0.7, width * 0.8, height / 5);
+  iconFunction(canvas, graphics) {
+    graphics.fillStyle = "#50c850";
+    graphics.fillRect(0, 0, canvas.width, canvas.height, 3);
+    graphics.fillStyle = "white";
+    graphics.font = (canvas.width / 5) + "pt Arial";
+    graphics.fillText("SOTF", canvas.width / 10, canvas.height / 2.5);
+    graphics.fillRect(canvas.width / 10, canvas.height * 0.7, canvas.width * 0.8, canvas.height / 5);
   }
 }

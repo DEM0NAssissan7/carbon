@@ -8,11 +8,11 @@
 # To do for 1.0 Release
 
 ## High Priority
-[-] Make `errorScreen` programmable
+[x] Make `errorScreen` programmable
 [-] Convert everything to classes
 [x] Change project name to `carbon`
 [ ] Let `maximize` be toggleable
-[-] Live `windowWidth`/`windowHeight` resizing
+[c] Live `windowWidth`/`windowHeight` resizing
 [x] Allow bootstrapper to be able to choose between different systems (jskernel core, JsOS shell, etc.) and make it easy for devs to add a system to the menu.
 
 ## Low priority

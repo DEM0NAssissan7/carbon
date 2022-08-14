@@ -7,15 +7,23 @@ class CookieClicker{
         this.spacebarPressed = false;
 
         let self = this;
-        function Shop (price, cps, title) {
+        function Shop (price, cps, title, customFunction) {
             this.price = price;
             this.cps = cps;
             this.title = title;
+            this.custom = (customFunction !== undefined);
+            this.customFunction = customFunction;
         }
         function createShop (cps, title) {
             self.shops.push(new Shop(Math.pow(cps, 0.9) * 100, cps, title));
         }
         //Create shops
+        let powerClickShop = new Shop(10, 0, "Power Click", () => {});
+        powerClickShop.customFunction = () => {
+            powerClickShop.price = powerClickShop.price * 20;
+            this.clickPower *= 2;
+        }
+        self.shops.push(powerClickShop);
         createShop(0.1, "Slave");
         createShop(1, "Granny");
         createShop(5, "Farmer");
@@ -27,55 +35,56 @@ class CookieClicker{
         createShop(50000, "Multiverse");
         createShop(100000, "Dimension");
     }
-    update(){
-        let self = this;
+    update(canvas, graphics){
         //Background
-        noStroke();
-        fill(255);
-        rect(0, 0, width, height);
+        graphics.strokeStyle = "";
+        graphics.fillStyle = "white";
+        graphics.fillRect(0, 0, canvas.width, canvas.height);
 
         //Draw shops
         for(var i = 0; i < this.shops.length; i++){
             let currentButton = this.shops[i];
-            labledButton(5, 5 + i*35, width/2, 30, function(){
-                if(self.money >= currentButton.price){
-                    self.money -= currentButton.price;
-                    self.cps += currentButton.cps;
-                    currentButton.price = currentButton.price * 1.2;
+            labledButton(graphics, 5, 5 + i*35, canvas.width/2, 30, () => {
+                if(this.money >= currentButton.price){
+                    this.money -= currentButton.price;
+                    if(currentButton.custom !== true){
+                        this.cps += currentButton.cps;
+                        currentButton.price = currentButton.price * 1.2;
+                    }else{
+                        currentButton.customFunction();
+                    }
                 }
             }, currentButton.title + "- " + currentButton.cps + " CPS, $" + Math.round(currentButton.price));
         }
 
         //Draw cookie
-        fill(150, 80, 0);
-        ellipse(width/4 + width/2, height/2, height/3, height/3);
-        if(keyIsPressed && this.keyPressed === false){
-            self.money += self.clickPower;
+        graphics.fillStyle = "#005096";
+        graphics.ellipse(canvas.width/4 + canvas.width/2, canvas.height/2, canvas.height/3, canvas.height/3, 0, 0, 0, false);
+        if(devices.mouse.pressed && this.keyPressed === false){
+            this.money += this.clickPower;
             this.keyPressed = true;
         }
-        if(!keyIsPressed){
+        if(!devices.mouse.pressed){
             this.keyPressed = false;
         }
-        blankButton(width/4 + width/2 - height/6, height/2 - height/6, height/3, height/3, function(){self.money += self.clickPower});
+        blankButton(canvas.width/4 + canvas.width/2 - canvas.height/6, canvas.height/2 - canvas.height/6, canvas.height/3, canvas.height/3, () => {this.money += this.clickPower});
 
         //Draw money
-        push();
-        fill(0);
-        centerText("$" + Math.floor(this.money), width/4 + width/2, 30, 0, 0, 30);
-        centerText("CPS: " + this.cps, width/4 + width/2, height - 30, 0, 0, 20);
-        pop();
+        graphics.fillStyle = "black";
+        centerText(graphics, "$" + Math.floor(this.money), canvas.width/4 + canvas.width/2, 30, 0, 0, 30);
+        centerText(graphics, "CPS: " + (Math.floor(this.cps*10)/10), canvas.width/4 + canvas.width/2, canvas.height - 30, 0, 0, 20);
 
-        this.money += getAnimationExpansionRate(this.cps, 1000);
+        this.money += getTransition(this.cps, 1000);
     }
     createWindow(){
         var self = new CookieClicker();
-        simpleWindow("Cookie Clicker", function(){self.update()});
+        quickWindow((canvas, graphics) => {self.update(canvas, graphics)}, "Cookie Clicker");
     }
-    iconFunction(){
-        noStroke();
-        fill(150, 75, 0);
-        rect(0, 0, width, height, 10);
-        fill(150, 90, 10);
-        ellipse(width/2, height/2, width - 15, height - 15);
+    iconFunction(canvas, graphics){
+        graphics.fillStyle = "#964b00";
+        graphics.fillRect(0, 0, canvas.width, canvas.height, 10);
+        graphics.fillStyle = "#965a0a";
+        graphics.ellipse(100, 100, 50, 75, Math.PI / 4, 0, 2 * Math.PI);
+        graphics.ellipse(canvas.width/2, canvas.height/2, Math.max(canvas.width - 15, 0), Math.max(canvas.height - 15, 0), 0, 2 * Math.PI, 0);
     }
 }
