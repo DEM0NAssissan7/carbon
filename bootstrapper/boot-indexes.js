@@ -11,6 +11,7 @@ var graphite = [
     "desktop/toolkit.js",
     "applications/system/settings.js",
     "applications/games/sotf.js",
+    "applications/development/octane.js",
     "applications/games/cookieclicker.js",
     "applications/utilities/autoclick.js",
     "kernel/interface/tty.js",
@@ -40,6 +41,23 @@ var graphiteGui2 = [
     ],
     "Graphite GUI2"
 ];
+var sotfLaunch = [
+    [
+    //Kernel
+    "kernel/core/kernel.js",
+    "kernel/extra/tools.js",
+    //Applications
+    "desktop/toolkit.js",
+    "applications/games/sotf.js",
+    "applications/utilities/autoclick.js",
+    "kernel/interface/tty.js",
+    //Desktop
+    "desktop/window-manager.js",
+    "desktop/app-manager.js",
+    "desktop/gui2.js",
+    ],
+    "Survival of the Fittest"
+];
 var graphiteCore = [
     [
     //Kernel
@@ -62,6 +80,7 @@ var bareKernel = [
 kbSystems = [
     graphite,
     graphiteGui2,
+    sotfLaunch,
     graphiteCore,
     bareKernel,
 ]
