@@ -55,7 +55,7 @@ function trackPerformance(command) {
 //Track realtime performance
 let kernelRealtimeLatency = 0;
 function trackRealtimePerformance() {
-    if (!this.init) {
+    if(!this.init){
         this.init = true;
         this.timer = performance.now();
     }
@@ -123,10 +123,10 @@ class Process {
         this.command = command;
         this.PID = PIDs;
         this.processName = command.name;
+        this.type = "process";
         //Performance Tracking
         this.frametime = 0;
         this.cycleCount = 0;
-        this.runCount = 0;
         //Suspend
         this.suspend = false;
         this.manualSuspend = false;
@@ -141,31 +141,25 @@ class Process {
         this.dead = false;
         PIDs++;
     }
-    run() {
+    update() {
         if (this.suspend === false && this.manualSuspend === false) {
-            if (this.priority >= 0) {
-                this.frametime = trackPerformance(this.command);
-                this.runCount++;
-            } else if (this.priority < 0 && this.cycleCount % Math.abs(this.priority) === 0) {//Halftime execution
-                this.frametime = trackPerformance(this.command);
-                this.runCount++;
-            }
+            this.frametime = trackPerformance(this.command);
             this.cycleCount++;
         }
     }
 };
-let threads = [];
 class Thread {
     constructor(command) {
         //Essential process traits
         this.command = command;
         //Identification
         this.threadName = command.name;
+        this.type = "thread";
         //Misc
         this.ran = false;
     }
     run() {
-        if (this.ran === false) {
+        if(this.ran === false){
             this.command();
             this.ran = true;
         }
@@ -174,8 +168,10 @@ class Thread {
 function createProcess(command, priority) {
     processes.push(new Process(command, priority));
 }
-function createThread(command) {
-    threads.push(new Thread(command));
+function createThread(command, priority) {
+    processes.push(new Thread(command, priority));
+    // processes.splice(kernelProcessLoopIndex, 0, new Thread(command, priority));
+    // kernelProcessLoopIndex++;
 }
 function kill(PID) {
     for (let i = 0; i < processes.length; i++) {
@@ -213,7 +209,7 @@ function resume(PID) {
 let systemError = [];
 function runProcess(process) {
     try {
-        process.run();
+        process.update();
     } catch (error) {
         console.error("Process with PID " + process.PID + " encountered an error.");
         console.error(error);
@@ -225,140 +221,128 @@ function runThread(thread) {
     try {
         thread.run();
     } catch (error) {
-        console.error("A Thread encountered an error.");
+        console.error("Thread with TID " + thread.TID + " encountered an error.");
         console.error(error);
-        kernelLog("A Thread encountered an error.");
+        kernelLog("Thread with TID " + thread.TID + " encountered an error: " + error, "error");
     }
 }
-
-let kernelProcessesLoopsPerSecond = 0;
-let kernelProcessesExecutionCount = 0;
-
+let kernelProcessLoopIndex = 0;
 let kernelProcessExecutionLatency = targetKernelLatency;
-
-let previousThreadLatency = 0;
-let priorityTasks = [];
-let schedulerIndex = 0;
-let schedulerLatency = 0;
-let schedulerLatencyTimer = performance.now();
-function trackSchedulerPerformance(){
-    const performanceCache = performance.now();
-    schedulerLatency = performanceCache - schedulerLatencyTimer;
-    schedulerLatencyTimer = performanceCache;
-}
-createProcess(trackSchedulerPerformance);
-function scheduler(){
-    const startTime = performance.now();
-    const adjustedTargetLatency = targetKernelLatency - (kernelRealtimeLatency - kernelProcessExecutionLatency);
-    const targetEndTime = adjustedTargetLatency + startTime;
-    
-    //Main process loop
-    for(let c = 0; c < processes.length && performance.now() < targetEndTime; c++){
-        if(!(schedulerIndex < processes.length)){//Index management
-            schedulerIndex = 0;
-        }
-
-        if (priorityTasks[schedulerIndex] !== undefined) {//Run priority tasks
-            for (let i = 0; i < priorityTasks[schedulerIndex].length && performance.now() < targetEndTime; i++) {
-                runProcess(priorityTasks[schedulerIndex][i]);
-            }
-            priorityTasks.splice(schedulerIndex, 1);
-        }
-
-        //Thread runner
-        while(threads.length > 0 && performance.now() < targetEndTime){
-            runThread(threads[0]);
-            threads.splice(0, 1);
-        }
-        
-        //Process runner
-        if(performance.now() < targetEndTime){
-            let process = processes[schedulerIndex];
-            if(process.dead === true){
-                processes.splice(schedulerIndex, 1);
-            } else {
-                runProcess(process);
-                for (let i = 0; i < process.priority - 1; i++) {//Priority
-                    let index = (Math.round(((processes.length) / process.priority) * i) + (schedulerIndex + 1)) % (processes.length);
-                    if (priorityTasks[index] === undefined) {
-                        priorityTasks[index] = [];
-                    }
-                    priorityTasks[index].push(process);
-                }
-            }
-        }else{
-            break;
-        }
-        schedulerIndex++;//Index management
+let kernelProcessesIndexes = [];
+let kernelProcessesLoopsPerSecond = 0;
+function sortKernelProcesses() {
+    kernelProcessesIndexes = [];
+    for (let i = 0; i < processes.length; i++) {
+        kernelProcessesIndexes[i] = {
+            index: i,
+            priority: processes[i].priority
+        };
+    }
+    kernelProcessesIndexes = kernelProcessesIndexes.sort((a, b) => (b.priority - a.priority));
+    for (let i = 0; i < kernelProcessesIndexes.length; i++) {
+        kernelProcessesIndexes[i] = kernelProcessesIndexes[i].index;
     }
 }
-
+let kernelProcessesExecutionCount = 0;
+let previousThreadLatency = 0;
+let priorityCountdown = 0;
 function updateKernelProcesses() {
+    /* Scheduler
+    Executioner idea: 
+    - Run processes until the time that the while loop has been running is greater than or equal to the target loop cycle rate.
+    - Give each process a "chunk" of the frametime and give higher priority processes bigger chunks. Do this by pausing and resuming tasks when the time is right.
+    - Determine how much "chunk" each process should get based on priority.
+    - Only call the scheduler when it is needed and update variables only when necessary
+    - Progress through each process as the seconds carry on.
+    Prioritize tasks: 
+    - Higher number = better
+    - Any range of numbers work.
+    */
     if (systemSuspend === false && systemError[0] !== true && processes.length > 0) {
         let timeBefore = performance.now();
         //Sort processes by priority depending on if the kernel is preemtive
         if (preemptiveKernel === true) {
-            scheduler();
-            /*
-            for (let loopCycleCount = 0; loopCycleCount < processes.length - 1 && frameEndTime > 0; loopCycleCount++) {
-                scheduler();
+            // if (kernelProcessesIndexes === undefined || kernelProcessesIndexes.length !== processes.length) {
+            //     sortKernelProcesses();
+            // }
+            let loopCycleCount = 0;
+            let loopCondition = true;
+            // const adjustedTargetLatency = Math.floor(targetKernelLatency) - (kernelRealtimeLatency - kernelProcessExecutionLatency);
+            const adjustedTargetLatency = targetKernelLatency - (kernelRealtimeLatency - kernelProcessExecutionLatency);
+            while (loopCondition === true) {
                 //Scheduler code
-                frameEndTime = adjustedTargetLatency - (performance.now() - timeBefore);
-                // Process running
-                if (priorityTasks[kernelProcessLoopIndex] !== undefined) {//Run priority tasks
-                    for (let i = 0; i < priorityTasks[kernelProcessLoopIndex].length && frameEndTime > 0; i++) {
-                        frameEndTime = adjustedTargetLatency - (performance.now() - timeBefore);
-                        runProcess(priorityTasks[kernelProcessLoopIndex][i]);
-                    }
-                    priorityTasks.splice(kernelProcessLoopIndex, 1);
+                const frameEndTime = adjustedTargetLatency - (performance.now() - timeBefore);
+                if (frameEndTime <= 0) {
+                    loopCondition = false;
+                    break;
                 }
-                if (kernelProcessLoopIndex < processes.length) {
-                    let currentProcess = processes[kernelProcessLoopIndex];
+                if (loopCycleCount >= processes.length) {
+                    loopCondition = false;
+                    break;
+                }
+                //Process running
+                let currentProcess = processes[kernelProcessLoopIndex];
+                if (currentProcess === undefined) {
+                    sortKernelProcesses();
+                    break;
+                }
+                if(currentProcess.type === "process"){
                     if (currentProcess.dead === true) {
                         processes.splice(kernelProcessLoopIndex, 1);
+                        break;
                     }
-                    runProcess(currentProcess);
-                    //Priority scheduling
-                    for (let i = 0; i < currentProcess.priority - 1; i++) {
-                        let nextPriorityExecutionIndex = (Math.round(((processes.length) / currentProcess.priority) * i) + (kernelProcessLoopIndex + 1)) % (processes.length);
-                        if (priorityTasks[nextPriorityExecutionIndex] === undefined) {
-                            priorityTasks[nextPriorityExecutionIndex] = [];
+                    if (currentProcess.frametime > frameEndTime) {//Predict if the next process is going to go over the frame
+                        if (loopCycleCount > 0) {
+                            break;
+                        } else {
+                            runProcess(currentProcess);
+                            if(currentProcess.priority > 1){
+                                processes.splice((Math.floor((processes.length - 1)/currentProcess.priority) + kernelProcessLoopIndex) % processes.length, 0, currentProcess);
+                            }
                         }
-                        priorityTasks[nextPriorityExecutionIndex].push(currentProcess);
+                    } else {
+                        runProcess(currentProcess);
+                        if(currentProcess.priority > 1){
+                            console.log((Math.floor((processes.length - 1)/currentProcess.priority) + kernelProcessLoopIndex) % processes.length, currentProcess.processName);
+                            // processes.splice((Math.floor((processes.length - 1)/currentProcess.priority) + kernelProcessLoopIndex) % processes.length, 0, currentProcess);
+                        }
+                    }
+                }else if(currentProcess.type === "thread"){
+                    if (previousThreadLatency > frameEndTime) {//Predict if the next thread is going to go over the target frame time
+                        if (loopCycleCount > 0) {
+                            break;
+                        } else {
+                            previousThreadLatency = trackPerformance(() => {runThread(currentProcess);});
+                            processes.splice(kernelProcessLoopIndex, 1);
+                        }
+                    } else {
+                        previousThreadLatency = trackPerformance(() => {runThread(currentProcess);});
+                        processes.splice(kernelProcessLoopIndex, 1);
                     }
                 }
-                //Run threads
-                for (var i = 0; i < threads.length && frameEndTime > 0; i++) {//Thread scheduler
-                    previousThreadLatency = trackPerformance(() => { runThread(threads[i]); });
-                    frameEndTime = adjustedTargetLatency - (performance.now() - timeBefore);
-                }
-                for (let l = 0; l < i; l++) {//Kill ran threads
-                    threads.splice(l, 1);
-                }
+                loopCycleCount++;
                 kernelProcessLoopIndex++;
-                if (!(kernelProcessLoopIndex < processes.length)) {
+                if (kernelProcessLoopIndex > processes.length - 1) {
                     kernelProcessLoopIndex = 0;
                 }
             }
-            if (processes.length === 0) {
-                for (let i = 0; i < threads.length && adjustedTargetLatency - (performance.now() - timeBefore) > 0; i++) {
-                    runThread(threads[i]);
-                    threads.splice(i, 1);
-                }
-            }
-            */
         } else {
             //Non-preemptive
-            while(threads.length > 0) {
-                runThread(threads[0]);
-                threads.splice(0, 1);
-            }
-            for (let i = 0; i < processes.length; i++) {
+            let processesLengthBuffer = processes.length;
+            for (let i = 0; i < processesLengthBuffer; i++) {
                 let currentProcess = processes[i];
+                if(currentProcess === undefined){
+                    break;
+                }
                 if (currentProcess.dead === true) {
                     processes.splice(i, 1);
-                }else{
+                    break;
+                }
+                if(currentProcess.type === "process"){
                     runProcess(currentProcess);
+                }else if(currentProcess.type === "thread"){
+                    runThread(currentProcess);
+                    processes.splice(i, 1);
                 }
             }
         }
@@ -611,25 +595,33 @@ function stopKernelLoop() {
     loopKernel = false;
 }
 function executeKernel() {
-    let timeBefore = performance.now();
-    //Suspend hotkey daemon
-    suspendResponseDaemon();
-    //Update processes
-    updateKernelProcesses();
-    //Error screen daemon
-    errorScreenDaemon();
-    //Run keyboard daemon
-    keyboardConfigurationDaemon();
+    try {
+        let timeBefore = performance.now();
+        //Suspend hotkey daemon
+        suspendResponseDaemon();
+        //Update processes
+        updateKernelProcesses();
+        //Error screen daemon
+        errorScreenDaemon();
+        //Run keyboard daemon
+        keyboardConfigurationDaemon();
 
-    //Calculate and report latency
-    kernelLatencyReporter();
-    //Report realtime performance
-    trackRealtimePerformance();
-    //Show performance info
-    performanceDisplay();
-    //Report performance
-    systemExecutionLatency = performance.now() - timeBefore;
-    //Set an asynchronous timeout so the kernel executes itself again
-    kernelLoopTimeoutId = setTimeout(executeKernel, Math.pow(2, kernelPowerState));
+        //Calculate and report latency
+        kernelLatencyReporter();
+        //Report realtime performance
+        trackRealtimePerformance();
+        //Show performance info
+        performanceDisplay();
+        //Report performance
+        systemExecutionLatency = performance.now() - timeBefore;
+        //Set an asynchronous timeout so the kernel executes itself again
+        kernelLoopTimeoutId = setTimeout(executeKernel, Math.pow(2, kernelPowerState));
+    } catch (error) {
+        console.error("Kernel encountered a fatal error: " + error);
+        clearTimeout(kernelLoopTimeoutId);
+        panic("Kernel encountered a fatal error. System unusable.");
+    }
 }
-executeKernel();//Run kernel
+if (loopKernel === true) {
+    executeKernel();//Run the kernel
+}

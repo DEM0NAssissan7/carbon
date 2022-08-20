@@ -109,21 +109,26 @@ setCursor(renderMouseCursor);
 //Icon creation function
 function createIcon(iconFunction, x, y, size, createWindowFunction) {
   var icon = new GraphiteWindow([], "icon");
-  let iconProcess = new Process((canvas, graphics) => {
+  let iconRender = new Process((canvas, graphics) => {
     graphics.clearRect(0, 0, canvas.width, canvas.height);
     iconFunction(canvas, graphics);
-    if(devices.mouse.x > 0 && devices.mouse.x < canvas.width && devices.mouse.y > 0 && devices.mouse.y < canvas.height && buttonClicked === false && devices.mouse.clicked){
-      createWindowFunction();
-      buttonClicked = true;
-    }
   });
   let iconKiller = new Process(() => {
     if(icon.fadeFill === 1){
       icon.dead = true;
     }
   });
-  icon.processesBuffer = [iconProcess, iconKiller];
-  icon.originalProcesses = [iconProcess, iconKiller];
+
+  let iconProcess = () => {
+    if(devices.mouse.x > x && devices.mouse.x < size + x && devices.mouse.y > y && devices.mouse.y < size + y && buttonClicked === false && devices.mouse.clicked){
+      createWindowFunction();
+      buttonClicked = true;
+    }
+  }
+  createProcess(iconProcess);
+
+  icon.processesBuffer = [iconRender, iconKiller];
+  icon.originalProcesses = [iconRender, iconKiller];
   icon.x = x;
   icon.y = y;
   icon.width = size;
@@ -154,6 +159,7 @@ rainbow.prototype.createWindow = function () {
 addApplicationFromClass(TTY);//JSTerm
 addApplicationFromClass(Settings);//Settings
 addApplicationFromClass(SOTF);//Survival of the Fittest
+addApplicationFromClass(Octane);//Cookie Clicker
 addApplicationFromClass(CookieClicker);//Cookie Clicker
 addApplicationFromClass(Autoclick);//Cookie Clicker
 //addApplicationFromClass(Rayham);//Raycast
@@ -171,7 +177,7 @@ class appDock{
       let iconY = canvas.height - this.iconSize - this.iconPadding*2;
       var self = this;
       setTimeout(() => { createIcon(applications[i].icon, iconX, iconY,
-        self.iconSize,applications[i].handler) }, 500 + (100 * i));
+        self.iconSize,applications[i].handler) }, 500 + (90 * i));
     }
   }
 }
@@ -284,8 +290,3 @@ appDockSystem.createIcons();
 function updateAppDockSystem() {
   appDockSystem.update();
 }
-//Create process group for kshell
-var kshellProcessGroup = [];
-
-//Create processes
-//Appdock

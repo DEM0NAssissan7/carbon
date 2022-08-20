@@ -25,14 +25,14 @@ function overhead() {
   console.log("Kernel overhead for creating " + processCount + " processes (in ms): " + creationTime);
   console.log("Kernel overhead for creating 1 processes (in ms): " + (creationTime / processCount));
 
-  const updateCount = 1;
+  const updateCount = 5;
   let totalUpdateTimes = 0;
   for (var i = 0; i < updateCount; i++) {
     let beforeUpdateTime = Date.now();
     for (let i = 0; i < processes.length; i++) {
-      processes[i].update();
+      processes[i].run();
     }
-    totalUpdateTimes = Date.now() - beforeUpdateTime;
+    totalUpdateTimes += Date.now() - beforeUpdateTime;
   }
   let updateTime = totalUpdateTimes / updateCount;
 
@@ -45,14 +45,14 @@ function overhead() {
   let rawUpdateTime = updateTime;
   for (var i = 0; i < updateCount; i++) {
     let beforeUpdateTime = Date.now();
-    updateSystem();
+    scheduler();
     totalUpdateTimes = Date.now() - beforeUpdateTime;
   }
   updateTime = totalUpdateTimes;
 
   console.log("- updateProcesses() function overhead test -");
-  console.log("Processes have ran using updateProcesses.");
-  console.log("Average kernel overhead for running " + processes.length + " processes with updateProcesses (in ms): " + updateTime);
+  console.log("Processes have ran using scheduler.");
+  console.log("Average kernel overhead for running " + processes.length + " processes with scheduler (in ms): " + updateTime);
   console.log("Kernel overhead for running 1 processes (in ms): " + (updateTime / processes.length));
   console.log("Using updateProcesses is " + Math.round(rawUpdateTime / updateTime * 100) + "% the speed of process.update()");
 }

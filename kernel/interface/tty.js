@@ -96,7 +96,7 @@ class TTY {
     var tty = new TTY();
   
     createWindow([
-      new Process(() => {tty.update();}),
+      new Process(() => {tty.update();}, 2),
       new Process((canvas, graphics) => {tty.draw(canvas, graphics);})
     ], "Terminal");
   }
@@ -117,7 +117,7 @@ try{
     function drawTTY() {
       ttySystem.draw(canvas, graphics);
     }
-    createProcess(updateTTY, 0);
+    createProcess(updateTTY, 2);
     createProcess(drawTTY);
   }
 } catch(error){}

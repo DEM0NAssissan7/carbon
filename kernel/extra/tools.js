@@ -73,7 +73,8 @@ function reloadKernel(){
     }
 }
 function getTransition(size, time){
-    return (Math.abs(size) / (1000 / kernelRealtimeLatency)) * (1000 / time);
+    // return (Math.abs(size) / (1000 / kernelRealtimeLatency)) * (1000 / time);
+    return (Math.abs(size) / (1000 / schedulerLatency)) * (1000 / time);
 }
 function downloadKernelState() {
     var hiddenElement = document.createElement('a');

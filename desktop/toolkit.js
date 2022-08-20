@@ -128,7 +128,7 @@ function listSelector(graphics, variable, options, x, y, w, h, text, textColor){
     return result;
 }
 //Reset button clicked status
-function jtk(){
+function toolkitClickMonitor(){
     if(devices.mouse.clicked === false){
         buttonClicked = false;
     }
@@ -146,4 +146,4 @@ function animateAcceleration(value, targetSize, time) {
     }
 }
 
-createProcess(jtk, -1);
+createProcess(toolkitClickMonitor, 5);

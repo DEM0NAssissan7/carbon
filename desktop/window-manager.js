@@ -1,30 +1,22 @@
 //Option variables
 let cheapGraphics = false;
-let dynamicTripleBuffering = false;
 let monitorRefreshRate = 60;
 const showWmPerformanceInfo = true;
-const useBuffering = true;
-const useLevels = true;
 
 //Buffering
 let firstFrameBuffer, firstFrameBufferGraphics;
 let secondFrameBuffer, secondFrameBufferGraphics;
-if(useBuffering === true){
-    firstFrameBuffer = document.createElement("canvas");
-    firstFrameBuffer.width = canvas.width;
-    firstFrameBuffer.height = canvas.height;
-    firstFrameBuffer.visible = false;
-    secondFrameBuffer = document.createElement("canvas");
-    secondFrameBuffer.width = canvas.width;
-    secondFrameBuffer.height = canvas.height;
-    secondFrameBuffer.visible = false;
+firstFrameBuffer = document.createElement("canvas");
+firstFrameBuffer.width = canvas.width;
+firstFrameBuffer.height = canvas.height;
+firstFrameBuffer.visible = false;
+secondFrameBuffer = document.createElement("canvas");
+secondFrameBuffer.width = canvas.width;
+secondFrameBuffer.height = canvas.height;
+secondFrameBuffer.visible = false;
 
-    firstFrameBufferGraphics = firstFrameBuffer.getContext("2d");
-    secondFrameBufferGraphics = secondFrameBuffer.getContext("2d");
-} else {
-    firstFrameBuffer = canvas;
-    firstFrameBufferGraphics = graphics;
-}
+firstFrameBufferGraphics = firstFrameBuffer.getContext("2d");
+secondFrameBufferGraphics = secondFrameBuffer.getContext("2d");
 
 //Background buffer
 let wmBackground = document.createElement("canvas");
@@ -59,6 +51,7 @@ class GraphiteWindow {
 
         this.focusable = true;
         this.virtual = false;
+        this.drawn = false;
 
         this.level = "middleground";
 
@@ -167,20 +160,16 @@ class GraphiteWindow {
     }
     draw() {
         let drawSurfaceGraphics;
-        if(useLevels === true){
-            switch(this.level){
-                case "background":
-                    drawSurfaceGraphics = wmBackgroundGraphics;
-                    break;
-                case "middleground":
-                    drawSurfaceGraphics = wmMiddlegroundGraphics;
-                    break;
-                case "foreground":
-                    drawSurfaceGraphics = wmForegroundGraphics;
-                    break;
-            }
-        } else {
-            drawSurfaceGraphics = firstFrameBufferGraphics;
+        switch(this.level){
+            case "background":
+                drawSurfaceGraphics = wmBackgroundGraphics;
+                break;
+            case "middleground":
+                drawSurfaceGraphics = wmMiddlegroundGraphics;
+                break;
+            case "foreground":
+                drawSurfaceGraphics = wmForegroundGraphics;
+                break;
         }
         if (this.fadeFill < 1) {
             drawSurfaceGraphics.save();
@@ -192,17 +181,16 @@ class GraphiteWindow {
             drawSurfaceGraphics.scale(this.fadeFill, this.fadeFill);
 
             // this.drawDecor(drawSurfaceGraphics, 0, 0);
-            // drawSurfaceGraphics.clearRect(0, 0, this.width, this.height);
             drawSurfaceGraphics.drawImage(this.canvas, 0, 0);
             this.topBar(drawSurfaceGraphics, 0, 0);
 
             drawSurfaceGraphics.restore();
         } else {
             // this.drawDecor(drawSurfaceGraphics, this.x, this.y);
-            // drawSurfaceGraphics.clearRect(this.x, this.y , this.width, this.height);
             drawSurfaceGraphics.drawImage(this.canvas, this.x, this.y);
             this.topBar(drawSurfaceGraphics, this.x, this.y);
         }
+        this.drawn = true;
     }
     initProcesses() {
         for (let i = 0; i < this.processesBuffer.length; i++) {
@@ -270,7 +258,7 @@ class GraphiteWindow {
                     this.fadeFill = 1;
                 }    
             }else {
-                if(this.fadeFill > 0){
+                if(Math.floor(this.fadeFill*100)/100 > 0){
                     this.fadeFill -= (getTransition(1, 500) - (getTransition(1-this.fadeFill, 500))) * 2;
                 }else{
                     this.fadeFill = 0;
@@ -280,7 +268,7 @@ class GraphiteWindow {
         }else{
             this.fadeFill = 1;
         }
-        if(this.dying === true && this.dead === true){
+        if(this.dead === true){
             //Kill all processes linked to the window
             for (let i = 0; i < this.processes.length; i++) {
                 for (let l = 0; l < processes.length; l++) {
@@ -379,9 +367,13 @@ graphics.fillStyle = 'gray';
 graphics.fillRect(0, 0, canvas.width, canvas.height);
 
 {
+    function clearCanvas(graphics){
+        graphics.clearRect(0, 0, graphics.canvas.width, graphics.canvas.height);
+    }
+    function drawCanvas(drawGraphics, targetCanvas){
+        drawGraphics.drawImage(targetCanvas, 0, 0);
+    }
     function windowManagerDraw() {
-        // createThread(() => {wmMiddlegroundGraphics.clearRect(0, 0, wmMiddleground.width, wmMiddleground.height);});
-        // wmMiddlegroundGraphics.clearRect(0, 0, wmMiddleground.width, wmMiddleground.height);
         for (let i = 0; i < windows.length; i++) {
             function drawWindow() {
                 if(windows[i]){
@@ -389,62 +381,45 @@ graphics.fillRect(0, 0, canvas.width, canvas.height);
                 }
             };
             // drawWindow();
-            createThread(drawWindow, 1);
+            createThread(drawWindow);
         }
+        createThread(() => {drawCanvas(firstFrameBufferGraphics, wmBackground);});
+        createThread(() => {drawCanvas(firstFrameBufferGraphics, wmMiddleground);});
+        createThread(() => {clearCanvas(wmMiddlegroundGraphics);});
+        createThread(() => {drawCanvas(firstFrameBufferGraphics, wmForeground);});
+        createThread(cursorFunction);
+        function drawFramebufer() {
+            // clearCanvas(graphics);
+            drawCanvas(graphics, firstFrameBuffer);
+        }
+        createThread(drawFramebufer);
+        // createProcess(drawFramebufer);
+        // createThread(() => {clearCanvas(firstFrameBufferGraphics);});
     }
     createProcess(windowManagerDraw);
 }
 
-function windowManagerLogic() {
-    var requestedWindowIndex = -1;
-    for (let i = 0; i < windows.length; i++) {
-        windows[i].updateLogic();
-        if (windows[i].dead === true) {
-            windows.splice(i, 1);
-            break;
-        }
-        if(windows[i].requestFocus === true && requestedWindowIndex === -1){
-            requestedWindowIndex = i;
-        }
-    }
-    if(requestedWindowIndex !== -1){
-        let focusedWindow = windows[requestedWindowIndex];
-        focusedWindow.hasFocus = true;
-        windows.splice(requestedWindowIndex, 1);
-        windows.push(focusedWindow);
-    }
-}
-createProcess(windowManagerLogic, 4);
-// createProcess(windowManagerDraw, -1);
-
-if(useLevels === true){
-    function renderWmLevels() {
-        firstFrameBufferGraphics.drawImage(wmBackground, 0, 0);
-        firstFrameBufferGraphics.drawImage(wmMiddleground, 0, 0);
-        wmMiddlegroundGraphics.clearRect(0, 0, wmMiddleground.width, wmMiddleground. height);
-        firstFrameBufferGraphics.drawImage(wmForeground, 0, 0);
-        cursorFunction();
-    }
-    createProcess(renderWmLevels);
-}
-
-if(useBuffering === true){
-    function drawFrameBuffer() {
-        if(dynamicTripleBuffering){
-            if(false){
-                graphics.drawImage(firstFrameBuffer, 0, 0);
-            }else{
-                createThread(() => {
-                    secondFrameBufferGraphics.drawImage(firstFrameBuffer, 0, 0);
-                });
-                graphics.drawImage(secondFrameBuffer, 0, 0);
-                // console.log("hi");
+{
+    function windowManagerLogic() {
+        var requestedWindowIndex = -1;
+        for (let i = 0; i < windows.length; i++) {
+            windows[i].updateLogic();
+            if (windows[i].dead === true) {
+                windows.splice(i, 1);
+                break;
             }
-        }else{
-            graphics.drawImage(firstFrameBuffer, 0, 0);
+            if(windows[i].requestFocus === true && requestedWindowIndex === -1){
+                requestedWindowIndex = i;
+            }
+        }
+        if(requestedWindowIndex !== -1){
+            let focusedWindow = windows[requestedWindowIndex];
+            focusedWindow.hasFocus = true;
+            windows.splice(requestedWindowIndex, 1);
+            windows.push(focusedWindow);
         }
     }
-    createProcess(drawFrameBuffer, -2);
+    createProcess(windowManagerLogic);
 }
 
 if(showWmPerformanceInfo === true){
