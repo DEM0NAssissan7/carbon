@@ -159,8 +159,6 @@ class Thread {
     constructor(command) {
         //Essential process traits
         this.command = command;
-        //Identification
-        this.threadName = command.name;
         //Misc
         this.ran = false;
     }
@@ -258,7 +256,8 @@ function scheduler(){
             schedulerIndex = 0;
         }
 
-        if (priorityTasks[schedulerIndex] !== undefined) {//Run priority tasks
+        //Run priority tasks
+        if (priorityTasks[schedulerIndex] !== undefined) {
             for (let i = 0; i < priorityTasks[schedulerIndex].length && performance.now() < targetEndTime; i++) {
                 runProcess(priorityTasks[schedulerIndex][i]);
             }
@@ -354,11 +353,24 @@ function updateKernelProcesses() {
                 threads.splice(0, 1);
             }
             for (let i = 0; i < processes.length; i++) {
-                let currentProcess = processes[i];
-                if (currentProcess.dead === true) {
+                if (priorityTasks[i] !== undefined) {//Run priority tasks
+                    for (let l = 0; l < priorityTasks[i].length; l++) {
+                        runProcess(priorityTasks[i][l]);
+                    }
+                    priorityTasks.splice(i, 1);
+                }
+                let process = processes[i];
+                if (process.dead === true) {
                     processes.splice(i, 1);
                 }else{
-                    runProcess(currentProcess);
+                    runProcess(process);
+                    for (let i = 0; i < process.priority - 1; i++) {//Priority
+                        let index = (Math.round(((processes.length) / process.priority) * i) + (schedulerIndex + 1)) % (processes.length);
+                        if (priorityTasks[index] === undefined) {
+                            priorityTasks[index] = [];
+                        }
+                        priorityTasks[index].push(process);
+                    }
                 }
             }
         }
