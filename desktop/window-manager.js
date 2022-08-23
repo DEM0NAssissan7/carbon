@@ -51,7 +51,6 @@ class GraphiteWindow {
 
         this.focusable = true;
         this.virtual = false;
-        this.drawn = false;
 
         this.level = "middleground";
 
@@ -190,7 +189,6 @@ class GraphiteWindow {
             drawSurfaceGraphics.drawImage(this.canvas, this.x, this.y);
             this.topBar(drawSurfaceGraphics, this.x, this.y);
         }
-        this.drawn = true;
     }
     initProcesses() {
         for (let i = 0; i < this.processesBuffer.length; i++) {

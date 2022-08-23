@@ -12,6 +12,7 @@ var graphite = [
     "applications/system/settings.js",
     "applications/games/sotf.js",
     "applications/development/octane.js",
+    "applications/testing/physics.js",
     "applications/games/cookieclicker.js",
     "applications/utilities/autoclick.js",
     "kernel/interface/tty.js",

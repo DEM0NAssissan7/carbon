@@ -159,9 +159,10 @@ rainbow.prototype.createWindow = function () {
 addApplicationFromClass(TTY);//JSTerm
 addApplicationFromClass(Settings);//Settings
 addApplicationFromClass(SOTF);//Survival of the Fittest
-addApplicationFromClass(Octane);//Cookie Clicker
+addApplicationFromClass(Octane);//Game Engine
+addApplicationFromClass(Physics);//Physics
 addApplicationFromClass(CookieClicker);//Cookie Clicker
-addApplicationFromClass(Autoclick);//Cookie Clicker
+addApplicationFromClass(Autoclick);//Autoclicker
 //addApplicationFromClass(Rayham);//Raycast
 addApplicationFromClass(rainbow);//Render Rainbow
 //App Dock
@@ -200,7 +201,7 @@ RenderRainbow = (canvas, graphics) => {
   graphics.fillText("(Not gay)", canvas.width/2 - graphics.measureText("(Not gay)").width/2, 80);
 }
 function BandaiNamco (canvas, graphics) {
-  this.resolutionScale = 50;
+  this.resolutionScale = 1;
   graphics.strokeStyle = 'white';
   for (var i = 0; i < canvas.height; i += this.resolutionScale) {
     var heightScale = i * (510 / canvas.height);
