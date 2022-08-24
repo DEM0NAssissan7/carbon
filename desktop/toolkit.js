@@ -52,11 +52,13 @@ function Button(graphics, x, y, w, h, func) {
     graphics.fillStyle = colorScheme.elementColors;
     
     graphics.beginPath();
+    graphics.moveTo(x,y);
     graphics.lineTo(x,y);
     graphics.lineTo(x+w, y);
     graphics.lineTo(x+w,y+h);
     graphics.lineTo(x,y+h);
     graphics.lineTo(x,y);
+    graphics.lineTo(x+w, y);
     graphics.fill();
     graphics.stroke();
     graphics.restore();
@@ -168,6 +170,7 @@ function setTheme(){
         b: b/(i/4),
         a: a/(i/4)
     }
+    // return result
 
     let primaryColor = Math.max(result.r, result.g, result.b);
     function scaleColor(color){
