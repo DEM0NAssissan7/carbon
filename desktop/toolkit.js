@@ -3,21 +3,13 @@ var buttonClicked = false;
 var listViewOpened = "";
 
 //Color scheme
-let colorScheme;
-{
-    let accent = '#466EFF';
-    let background = "#808080";
-    let dialogueBackground = "#1E1E1E";
-    let elementColors = "#1E1E1E";
-    let textColor = "white";
-    colorScheme = [
-        accent,
-        background,
-        dialogueBackground,
-        elementColors,
-        textColor,
-    ];
-}
+let colorScheme = {
+    accent: '#466EFF',
+    background: "#808080",
+    dialogueBackground: "#1E1E1E",
+    elementColors: "#1E1E1E",
+    textColor: "white",
+};
 
 function centerText(graphics, displayText, textX, textY, textW, textH, textStyle) {
     let currentTextStyle = 12;
@@ -41,7 +33,7 @@ function blankButton(x, y, w, h, func){
 function Button(graphics, x, y, w, h, func) {
     graphics.save();
     if (devices.mouse.x > x && devices.mouse.x < x + w && devices.mouse.y > y && devices.mouse.y < y + h) {
-        graphics.strokeStyle = colorScheme[0];
+        graphics.strokeStyle = colorScheme.accent;
         graphics.lineWidth = 1.8;
 
         if(devices.mouse.clicked && buttonClicked === false){
@@ -49,7 +41,7 @@ function Button(graphics, x, y, w, h, func) {
             buttonClicked = true;
         }
     }
-    graphics.fillStyle = colorScheme[3];
+    graphics.fillStyle = colorScheme.elementColors;
     
     graphics.beginPath();
     graphics.lineTo(x,y);
@@ -64,7 +56,7 @@ function Button(graphics, x, y, w, h, func) {
 function labledButton(graphics, x, y, w, h, func, buttonText, textStyle, textColor){
     if(!textColor){
         Button(graphics, x, y, w, h, func);
-        graphics.fillStyle = colorScheme[4];
+        graphics.fillStyle = colorScheme.textColor;
     }else{
         Button(graphics, x, y, w, h, func, false);
         graphics.fillStyle = textColor;
