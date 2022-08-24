@@ -1,16 +1,22 @@
 var animateSystem = true;
 var buttonClicked = false;
 var listViewOpened = "";
+let darkmode = false;
 
 //Color scheme
 let colorScheme = {
     accent: '#466EFF',
-    background: "#808080",
+    background: "black",
     dialogueBackground: "#1E1E1E",
     elementColors: "#1E1E1E",
     textColor: "white",
 };
 
+//GUI Elements
+function setBackground(canvas, graphics){
+    graphics.fillStyle = colorScheme.background;
+    graphics.fillRect(0, 0, canvas.width, canvas.height);
+}
 function centerText(graphics, displayText, textX, textY, textW, textH, textStyle) {
     let currentTextStyle = 12;
     if (textStyle) {
@@ -40,6 +46,8 @@ function Button(graphics, x, y, w, h, func) {
             func();
             buttonClicked = true;
         }
+    }else{
+        graphics.strokeStyle = colorScheme.elementColors;
     }
     graphics.fillStyle = colorScheme.elementColors;
     
@@ -104,12 +112,11 @@ function listSelector(graphics, variable, options, x, y, w, h, text, textColor){
         let menuClicked = false;
         for(var i = 0; i < options.length; i++){
             graphics.save();
-            graphics.fillStyle = 'white';
             labledButton(graphics, x, y + (h*i), w, h, () => {
                 result = options[i][0];
                 listViewOpened = "";
                 menuClicked = true;
-            }, options[i][1], 'black');
+            }, options[i][1]);
             graphics.restore();
         }
     }
@@ -125,6 +132,7 @@ function toolkitClickMonitor(){
         buttonClicked = false;
     }
 }
+createProcess(toolkitClickMonitor, 2);
 //Animation handler
 function animateAcceleration(value, targetSize, time) {
     if(animateSystem === true){
@@ -138,4 +146,55 @@ function animateAcceleration(value, targetSize, time) {
     }
 }
 
-createProcess(toolkitClickMonitor, 5);
+//Image tools
+function setTheme(){
+    let pictureData = wmBackgroundGraphics.getImageData(0, 0, wmBackground.width, wmBackground.height).data;
+
+    let a = 0;
+    let r = 0;
+    let g = 0;
+    let b = 0;
+    for(var i = 0; i < pictureData.length; i+=4){
+        r += pictureData[i];
+        g += pictureData[i+1];
+        b += pictureData[i+2];
+        a += pictureData[i+3];
+
+    }
+
+    let result = {
+        r: r/(i/4),
+        g: g/(i/4),
+        b: b/(i/4),
+        a: a/(i/4)
+    }
+
+    let primaryColor = Math.max(result.r, result.g, result.b);
+    function scaleColor(color){
+        if(darkmode === true){
+            return (color/primaryColor)*255
+        }else{
+            return (color/primaryColor)*128
+        }
+    }
+
+    let newAccent = "rgb(" + scaleColor(result.r) + ", " + scaleColor(result.g) + ", " + scaleColor(result.b) + ")";
+
+    if(darkmode === true){
+        colorScheme = {
+            accent: newAccent,
+            background: "black",
+            dialogueBackground: "#1E1E1E",
+            elementColors: "#1E1E1E",
+            textColor: "white",
+        };
+    }else{
+        colorScheme = {
+            accent: newAccent,
+            background: "white",
+            dialogueBackground: "#E1E1E1",
+            elementColors: "#E1E1E1",
+            textColor: "black",
+        };
+    }
+}

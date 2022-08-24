@@ -83,10 +83,12 @@ class GraphiteWindow {
     topBar(graphics, positionX, positionY) {
         if (this.topBarHeight > 0) {
             graphics.translate(positionX, positionY);
-            graphics.fillStyle = "#222222";
+            // graphics.fillStyle = "#222222";
+            graphics.fillStyle = colorScheme.elementColors;
             graphics.fillRect(0, -this.topBarHeight + 1, this.width, this.topBarHeight);
 
-            graphics.fillStyle = "white";
+            // graphics.fillStyle = "white";
+            graphics.fillStyle = colorScheme.textColor;
             graphics.font = "12px Monospace";
             // graphics.fillText(this.windowName, this.width/2, this.height/2);
             graphics.fillText(this.windowName, this.width/2 - (graphics.measureText(this.windowName).width / 2), (12 / 3) - this.topBarHeight/2);

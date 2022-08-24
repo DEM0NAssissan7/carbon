@@ -1,8 +1,7 @@
 class Settings {
     update (canvas, graphics){
         //App background
-        graphics.fillStyle = "black";
-        graphics.fillRect(0,0,canvas.width,canvas.height);
+        setBackground(canvas, graphics);
 
         graphics.fillStyle = "#282828";
         //Settings
@@ -11,6 +10,7 @@ class Settings {
         preemptiveKernel = booleanToggleButton(graphics, preemptiveKernel, "Disable preemptive scheduler", "Enable preemptive scheduler", 10, 90, canvas.width-20, 30, reloadKernel);
         // limitFps = booleanToggleButton(graphics, limitFps, "Enable FPS limiter", "Disable FPS limiter", 10, 130, canvas.width-20, 30);
         idleSuspend = booleanToggleButton(graphics, idleSuspend, "Suspend at idle", "Do not suspend at idle", 10, 170, canvas.width-20, 30);
+        darkmode = booleanToggleButton(graphics, darkmode, "Light mode", "Dark mode", 10, 210, canvas.width-20, 30, setTheme);
         // displayScaling = booleanToggleButton(graphics, displayScaling, "Scale display", "Do not scale display", 10, 210, canvas.width-20, 30);
         cursorShape = listSelector(graphics, cursorShape, [
             [simpleCursor, "Simple"],

@@ -78,10 +78,15 @@ class TTY {
     }
   }
   draw(canvas, graphics){
-    graphics.fillStyle = 'black';
-    graphics.fillRect(0, 0, canvas.width, canvas.height);
     graphics.font = '12px Monospace';
-    graphics.fillStyle = 'white';
+    if(!colorScheme){
+      graphics.fillStyle = 'black';
+      graphics.fillRect(0, 0, canvas.width, canvas.height);
+      graphics.fillStyle = 'white';
+    }else{
+      setBackground(canvas, graphics);
+      graphics.fillStyle = colorScheme.textColor;
+    }
     for (var i in this.textArray) {
       let currentPrompt = this.promptArray[i];
       if (currentPrompt === undefined) {

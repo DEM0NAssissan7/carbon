@@ -4,8 +4,7 @@ class Autoclick{
         this.clicking = false;
     }
     update(canvas, graphics){
-        graphics.fillStyle = "gray"
-        graphics.fillRect(0,0,canvas.width, canvas.height);
+        setBackground(canvas, graphics);
         this.clicking = booleanToggleButton(graphics, this.clicking, "Start autoclicker", "Stop autoclicker", 20, 20, canvas.width-40, canvas.height-40, () => {
             setTimeout(() => {
                 if(this.clicking){

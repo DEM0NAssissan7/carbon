@@ -37,9 +37,7 @@ class CookieClicker{
     }
     update(canvas, graphics){
         //Background
-        graphics.strokeStyle = "";
-        graphics.fillStyle = "white";
-        graphics.fillRect(0, 0, canvas.width, canvas.height);
+        setBackground(canvas, graphics);
 
         //Draw shops
         for(var i = 0; i < this.shops.length; i++){
@@ -70,7 +68,7 @@ class CookieClicker{
         blankButton(canvas.width/4 + canvas.width/2 - canvas.height/6, canvas.height/2 - canvas.height/6, canvas.height/3, canvas.height/3, () => {this.money += this.clickPower});
 
         //Draw money
-        graphics.fillStyle = "black";
+        graphics.fillStyle = colorScheme.textColor;
         centerText(graphics, "$" + Math.floor(this.money), canvas.width/4 + canvas.width/2, 30, 0, 0, 30);
         centerText(graphics, "CPS: " + (Math.floor(this.cps*10)/10), canvas.width/4 + canvas.width/2, canvas.height - 30, 0, 0, 20);
 
