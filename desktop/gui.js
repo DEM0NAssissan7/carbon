@@ -192,7 +192,7 @@ RenderRainbow = (canvas, graphics) => {
   gradient.addColorStop("0.5", "green");
   gradient.addColorStop("0.67" ,"blue");
   gradient.addColorStop("0.83" ,"indigo");
-  gradient.addColorStop("1.0", "violet");
+  gradient.addColorStop("1.0", "purple");
 
   graphics.fillStyle = gradient;
   graphics.fillRect(0, 0, canvas.width, canvas.height);
@@ -222,7 +222,7 @@ creasedJacket = (canvas, graphics) => {
 }
 
 GenericBackground = (canvas, graphics) => {
-  graphics.fillStyle = "white";
+  graphics.fillStyle = "gray";
   graphics.fillRect(0, 0, canvas.width, canvas.height);
   // console.log(graphics.fillStyle)
 }
@@ -238,7 +238,9 @@ createBackgroundWindow = () => {
   let backgroundCanvasGraphics = backgroundCanvas.getContext("2d");
   backgroundFunction(backgroundCanvas, backgroundCanvasGraphics);
 
+
   wmBackgroundGraphics.drawImage(backgroundCanvas, 0, 0);
+  setTheme();
 }
 
 function kshellErrorScreenDaemon (process, error) {
