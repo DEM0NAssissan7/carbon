@@ -83,9 +83,17 @@ class GraphiteWindow {
     topBar(graphics, positionX, positionY) {
         if (this.topBarHeight > 0) {
             graphics.translate(positionX, positionY);
+
+            //Actual top bar
             // graphics.fillStyle = "#222222";
-            graphics.fillStyle = colorScheme.elementColors;
+            graphics.fillStyle = colorScheme.background;
+            graphics.strokeStyle = colorScheme.elementColors;
+            graphics.lineWidth = 1;
             graphics.fillRect(0, -this.topBarHeight + 1, this.width, this.topBarHeight);
+            graphics.beginPath();
+            graphics.moveTo(0, 0);
+            graphics.lineTo(this.width, 0);
+            graphics.stroke();
 
             // graphics.fillStyle = "white";
             graphics.fillStyle = colorScheme.textColor;
