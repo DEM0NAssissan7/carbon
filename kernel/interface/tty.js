@@ -79,22 +79,24 @@ class TTY {
   }
   draw(canvas, graphics){
     graphics.font = '12px Monospace';
-    if(!colorScheme){
-      graphics.fillStyle = 'black';
-      graphics.fillRect(0, 0, canvas.width, canvas.height);
-      graphics.fillStyle = 'white';
-    }else{
+    try{
+      if(stress){
+        graphics.fillStyle = 'black';
+        graphics.fillRect(0, 0, canvas.width, canvas.height);
+        graphics.fillStyle = 'white';
+      }
+    } catch (e){
       setBackground(canvas, graphics);
       graphics.fillStyle = colorScheme.textColor;
     }
-    for (var i in this.textArray) {
+    for (var i = 0; i < this.textArray.length; i++) {
       let currentPrompt = this.promptArray[i];
       if (currentPrompt === undefined) {
         currentPrompt = "";
       }
-      graphics.fillText(currentPrompt + this.textArray[i], 2, i * 12 + 12)
+      graphics.fillText(currentPrompt + this.textArray[i], 2, i * 12 + 12);
     }
-    graphics.fillText(this.prompt + this.textBuffer, 2, this.textArray.length * 12 + 12)
+    graphics.fillText(this.prompt + this.textBuffer, 2, this.textArray.length * 12 + 12);
   }
   createWindow(){
     var windowProcesses = [];
