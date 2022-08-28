@@ -89,7 +89,7 @@ class GraphiteWindow {
             graphics.fillStyle = colorScheme.background;
             graphics.strokeStyle = colorScheme.elementColors;
             graphics.lineWidth = 1;
-            graphics.fillRect(0, -this.topBarHeight + 1, this.width, this.topBarHeight);
+            graphics.fillRect(0, -this.topBarHeight, this.width, this.topBarHeight);
             graphics.beginPath();
             graphics.moveTo(0, 0);
             graphics.lineTo(this.width, 0);
