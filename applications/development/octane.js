@@ -23,9 +23,8 @@ class Octane{
         }
 
         //GUI
-        graphics.fillStyle = "light blue";
+        graphics.fillStyle = "#7777FF";
         graphics.fillRect(0, 0, canvas.width, canvas.height);
-
     }
     iconFunction(canvas,graphics){
         graphics.fillStyle = '#AA22FF';
