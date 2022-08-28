@@ -348,16 +348,16 @@ function updateKernelProcesses() {
             */
         } else {
             //Non-preemptive
-            while(threads.length > 0) {
-                runThread(threads[0]);
-                threads.splice(0, 1);
-            }
             for (let i = 0; i < processes.length; i++) {
                 if (priorityTasks[i] !== undefined) {//Run priority tasks
                     for (let l = 0; l < priorityTasks[i].length; l++) {
                         runProcess(priorityTasks[i][l]);
                     }
                     priorityTasks.splice(i, 1);
+                }
+                while(threads.length > 0) {
+                    runThread(threads[0]);
+                    threads.splice(0, 1);
                 }
                 let process = processes[i];
                 if (process.dead === true) {
