@@ -63,15 +63,10 @@ function Button(graphics, x, y, w, h, func) {
     graphics.stroke();
     graphics.restore();
 }
-function labledButton(graphics, x, y, w, h, func, buttonText, textStyle, textColor){
-    if(!textColor){
-        Button(graphics, x, y, w, h, func);
-        graphics.fillStyle = colorScheme.textColor;
-    }else{
-        Button(graphics, x, y, w, h, func, false);
-        graphics.fillStyle = textColor;
-    }
-    centerText(graphics, buttonText, x, y, w, h, textStyle);
+function labledButton(graphics, x, y, w, h, func, buttonText){
+    Button(graphics, x, y, w, h, func);
+    graphics.fillStyle = colorScheme.textColor;
+    centerText(graphics, buttonText, x, y, w, h);
 }
 function booleanToggleButton(graphics, bool, textFalse, textTrue, x, y, w, h, customFunction, textColor){
     var self = this;
@@ -102,12 +97,16 @@ function booleanToggleButton(graphics, bool, textFalse, textTrue, x, y, w, h, cu
     graphics.restore();
     return result;
 }
-function listSelector(graphics, variable, options, x, y, w, h, text, textColor){
+function listSelector(graphics, variable, options, x, y, w, h, text, customFunction){
     let result = variable;
     function openMenu(){
         listViewOpened = text;
         this.mouseClickedX = devices.mouse.x;
         this.mouseClickedY = devices.mouse.y;
+    }
+    let _customFunction = () => {};
+    if(customFunction){
+        _customFunction = customFunction;
     }
     graphics.save();
     if(listViewOpened === text){
@@ -117,13 +116,14 @@ function listSelector(graphics, variable, options, x, y, w, h, text, textColor){
             labledButton(graphics, x, y + (h*i), w, h, () => {
                 result = options[i][0];
                 listViewOpened = "";
+                _customFunction();
                 menuClicked = true;
             }, options[i][1]);
             graphics.restore();
         }
     }
     if(listViewOpened.length < 1){
-        labledButton(graphics, x, y, w, h, openMenu, text, textColor);
+        labledButton(graphics, x, y, w, h, openMenu, text);
     }
     graphics.restore();
     return result;
