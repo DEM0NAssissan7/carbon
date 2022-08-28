@@ -162,6 +162,7 @@ addApplicationFromClass(SOTF);//Survival of the Fittest
 addApplicationFromClass(Octane);//Game Engine
 addApplicationFromClass(Physics);//Physics
 addApplicationFromClass(CookieClicker);//Cookie Clicker
+addApplicationFromClass(SystemMonitor);//Cookie Clicker
 addApplicationFromClass(Autoclick);//Autoclicker
 //addApplicationFromClass(Rayham);//Raycast
 addApplicationFromClass(rainbow);//Render Rainbow
