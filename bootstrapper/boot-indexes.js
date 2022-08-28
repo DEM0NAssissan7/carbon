@@ -13,6 +13,7 @@ var graphite = [
     "applications/games/sotf.js",
     "applications/development/octane.js",
     "applications/testing/physics.js",
+    "applications/system/monitor.js",
     "applications/games/cookieclicker.js",
     "applications/utilities/autoclick.js",
     "kernel/interface/tty.js",
@@ -55,7 +56,6 @@ var sotfLaunch = [
     //Desktop
     "desktop/window-manager.js",
     "desktop/app-manager.js",
-    "desktop/gui2.js",
     ],
     "Survival of the Fittest"
 ];
