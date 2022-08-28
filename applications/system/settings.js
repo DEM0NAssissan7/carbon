@@ -18,11 +18,23 @@ class Settings {
             [winCursorOG, "Windows OG"],
             [macCursor, "Mac"],
             [kCursor, "kCursor"],
-        ], 10, 250, canvas.width-20, 30, "Cursor Shape");
+        ], 10, 250, canvas.width-20, 30, "Cursor Shape", () => {
+            renderMouseCursor = graphics => {
+                cursorColor(graphics);
+                cursorShape(graphics);
+            }
+            setCursor(renderMouseCursor);
+        });
         cursorColor = listSelector(graphics, cursorColor, [
             [colorWhiteCursor, "White"],
             [colorBlackCursor, "Black"],
-        ], 10, 290, canvas.width-20, 30, "Cursor Color");
+        ], 10, 290, canvas.width-20, 30, "Cursor Color", () => {
+            renderMouseCursor = graphics => {
+                cursorColor(graphics);
+                cursorShape(graphics);
+            }
+            setCursor(renderMouseCursor)
+        });
     }
 
     iconFunction(canvas, graphics){
