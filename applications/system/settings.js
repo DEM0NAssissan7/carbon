@@ -7,7 +7,7 @@ class Settings {
         //Settings
         showPerformanceInfo = booleanToggleButton(graphics, showPerformanceInfo, "Turn on FPS display", "Turn off FPS display", 10, 10, canvas.width-20, 30);
         trackPerformance = booleanToggleButton(graphics, trackPerformance, "Track processes performance", "Untrack processes performance", 10, 50, canvas.width-20, 30, reloadKernel);
-        preemptiveKernel = booleanToggleButton(graphics, preemptiveKernel, "Disable preemptive scheduler", "Enable preemptive scheduler", 10, 90, canvas.width-20, 30, reloadKernel);
+        preemptiveKernel = booleanToggleButton(graphics, preemptiveKernel, "Enable preemptive scheduler", "Disable preemptive scheduler", 10, 90, canvas.width-20, 30, reloadKernel);
         // limitFps = booleanToggleButton(graphics, limitFps, "Enable FPS limiter", "Disable FPS limiter", 10, 130, canvas.width-20, 30);
         idleSuspend = booleanToggleButton(graphics, idleSuspend, "Suspend at idle", "Do not suspend at idle", 10, 170, canvas.width-20, 30);
         darkmode = booleanToggleButton(graphics, darkmode, "Light mode", "Dark mode", 10, 210, canvas.width-20, 30, setTheme);
