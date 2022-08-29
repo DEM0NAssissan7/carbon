@@ -69,7 +69,6 @@ function labledButton(graphics, x, y, w, h, func, buttonText){
     centerText(graphics, buttonText, x, y, w, h);
 }
 function booleanToggleButton(graphics, bool, textFalse, textTrue, x, y, w, h, customFunction, textColor){
-    var self = this;
     let currentCustomFunction = customFunction;
     if(!customFunction){
         currentCustomFunction = () => {};
