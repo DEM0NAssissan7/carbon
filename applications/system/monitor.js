@@ -18,10 +18,11 @@ class SystemMonitor{
             setBackground(canvas, graphics);
             graphics.strokeStyle = "red";
             graphics.lineWidth = 2;
+            this.precalculatedValue = canvas.height/(this.scaleFactor - this.minScaleFactor)
             graphics.beginPath();
         });
         for(let i = 0; i < this.data.length; i++){
-            createThread(() => {graphics.lineTo(i * this.graphSize, Math.round((this.data[i]/this.scaleFactor) * canvas.height + this.minScaleFactor));});
+            createThread(() => {graphics.lineTo(i * this.graphSize, (this.precalculatedValue * (this.data[i] - this.minScaleFactor)))});
         }
         createThread(() => {graphics.stroke();});
     }
