@@ -246,12 +246,11 @@ function trackSchedulerPerformance(){
 }
 createProcess(trackSchedulerPerformance);
 function scheduler(){
-    const startTime = performance.now();
-    const adjustedTargetLatency = targetKernelLatency - (kernelRealtimeLatency - kernelProcessExecutionLatency);
-    const targetEndTime = adjustedTargetLatency + startTime;
+    const targetEndTime = (targetKernelLatency - (kernelRealtimeLatency - kernelProcessExecutionLatency)) + performance.now();
     
+
     //Main process loop
-    for(let c = 0; c < processes.length && performance.now() < targetEndTime; c++){
+    for(let c = 0; c < processes.length; c++){
         if(!(schedulerIndex < processes.length)){//Index management
             schedulerIndex = 0;
         }
@@ -285,10 +284,10 @@ function scheduler(){
                     priorityTasks[index].push(process);
                 }
             }
+            schedulerIndex++;//Index management
         }else{
-            break;
+            break;//If the processes are going overtime, call the next frame and cancel the loop
         }
-        schedulerIndex++;//Index management
     }
 }
 
@@ -298,54 +297,6 @@ function updateKernelProcesses() {
         //Sort processes by priority depending on if the kernel is preemtive
         if (preemptiveKernel === true) {
             scheduler();
-            /*
-            for (let loopCycleCount = 0; loopCycleCount < processes.length - 1 && frameEndTime > 0; loopCycleCount++) {
-                scheduler();
-                //Scheduler code
-                frameEndTime = adjustedTargetLatency - (performance.now() - timeBefore);
-                // Process running
-                if (priorityTasks[kernelProcessLoopIndex] !== undefined) {//Run priority tasks
-                    for (let i = 0; i < priorityTasks[kernelProcessLoopIndex].length && frameEndTime > 0; i++) {
-                        frameEndTime = adjustedTargetLatency - (performance.now() - timeBefore);
-                        runProcess(priorityTasks[kernelProcessLoopIndex][i]);
-                    }
-                    priorityTasks.splice(kernelProcessLoopIndex, 1);
-                }
-                if (kernelProcessLoopIndex < processes.length) {
-                    let currentProcess = processes[kernelProcessLoopIndex];
-                    if (currentProcess.dead === true) {
-                        processes.splice(kernelProcessLoopIndex, 1);
-                    }
-                    runProcess(currentProcess);
-                    //Priority scheduling
-                    for (let i = 0; i < currentProcess.priority - 1; i++) {
-                        let nextPriorityExecutionIndex = (Math.round(((processes.length) / currentProcess.priority) * i) + (kernelProcessLoopIndex + 1)) % (processes.length);
-                        if (priorityTasks[nextPriorityExecutionIndex] === undefined) {
-                            priorityTasks[nextPriorityExecutionIndex] = [];
-                        }
-                        priorityTasks[nextPriorityExecutionIndex].push(currentProcess);
-                    }
-                }
-                //Run threads
-                for (var i = 0; i < threads.length && frameEndTime > 0; i++) {//Thread scheduler
-                    previousThreadLatency = trackPerformance(() => { runThread(threads[i]); });
-                    frameEndTime = adjustedTargetLatency - (performance.now() - timeBefore);
-                }
-                for (let l = 0; l < i; l++) {//Kill ran threads
-                    threads.splice(l, 1);
-                }
-                kernelProcessLoopIndex++;
-                if (!(kernelProcessLoopIndex < processes.length)) {
-                    kernelProcessLoopIndex = 0;
-                }
-            }
-            if (processes.length === 0) {
-                for (let i = 0; i < threads.length && adjustedTargetLatency - (performance.now() - timeBefore) > 0; i++) {
-                    runThread(threads[i]);
-                    threads.splice(i, 1);
-                }
-            }
-            */
         } else {
             //Non-preemptive
             for (let i = 0; i < processes.length; i++) {
@@ -600,7 +551,7 @@ function suspendResponseDaemon() {
         }
     }
     if (kernelPowerStateManuallySet === false && systemSuspend === true) {
-        kernelPowerState = 7;
+        kernelPowerState = 8;
     } else if (kernelPowerStateManuallySet === false) {
         kernelPowerState = 0;
     }
