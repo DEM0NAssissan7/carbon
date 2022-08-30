@@ -245,31 +245,48 @@ function trackSchedulerPerformance(){
 }
 createProcess(trackSchedulerPerformance);
 function scheduler(){
-    const targetEndTime = (targetKernelLatency - (kernelRealtimeLatency - kernelProcessExecutionLatency)) + performance.now();
-    
-
+    const adjustedTargetLatency = (targetKernelLatency - (kernelRealtimeLatency - kernelProcessExecutionLatency));
+    const targetEndTime = adjustedTargetLatency + Date.now();
+    const accurateTargetTime = adjustedTargetLatency + performance.now();
+    let stopLoop = false;
+    function checkOvertime(){
+        if(Date.now() > targetEndTime){
+            stopLoop = true;
+            return true;
+        }else{
+            return false;
+        }
+    }
     //Main process loop
-    for(let c = 0; c < processes.length; c++){
+    for(let c = 0; c < processes.length && performance.now() < accurateTargetTime; c++){
         if(!(schedulerIndex < processes.length)){//Index management
             schedulerIndex = 0;
         }
 
+        //Thread runner
+        while(threads.length > 0){
+            runThread(threads[0]);
+            threads.splice(0, 1);
+            if(checkOvertime()){
+                break;
+            }
+        }
+        if(stopLoop === true){
+            break;
+        }
+
         //Run priority tasks
         if (priorityTasks[schedulerIndex] !== undefined) {
-            for (let i = 0; i < priorityTasks[schedulerIndex].length && performance.now() < targetEndTime; i++) {
+            for (let i = 0; i < priorityTasks[schedulerIndex].length; i++) {
                 runProcess(priorityTasks[schedulerIndex][i]);
             }
             priorityTasks.splice(schedulerIndex, 1);
+            if(checkOvertime()){
+                break;
         }
-
-        //Thread runner
-        while(threads.length > 0 && performance.now() < targetEndTime){
-            runThread(threads[0]);
-            threads.splice(0, 1);
         }
         
         //Process runner
-        if(performance.now() < targetEndTime){
             let process = processes[schedulerIndex];
             if(process.dead === true){
                 processes.splice(schedulerIndex, 1);
@@ -284,9 +301,6 @@ function scheduler(){
                 }
             }
             schedulerIndex++;//Index management
-        }else{
-            break;//If the processes are going overtime, call the next frame and cancel the loop
-        }
     }
 }
 
@@ -299,15 +313,15 @@ function updateKernelProcesses() {
         } else {
             //Non-preemptive
             for (let i = 0; i < processes.length; i++) {
+                while(threads.length > 0) {
+                    runThread(threads[0]);
+                    threads.splice(0, 1);
+                }
                 if (priorityTasks[i] !== undefined) {//Run priority tasks
                     for (let l = 0; l < priorityTasks[i].length; l++) {
                         runProcess(priorityTasks[i][l]);
                     }
                     priorityTasks.splice(i, 1);
-                }
-                while(threads.length > 0) {
-                    runThread(threads[0]);
-                    threads.splice(0, 1);
                 }
                 let process = processes[i];
                 if (process.dead === true) {
