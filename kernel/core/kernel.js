@@ -476,7 +476,6 @@ let watchdogHangTimer = false;
 let kernelWatchdogTriggerCount = 0;
 function watchdog() {
     if (enableWatchdog === true) {
-        kernelDebug("Calling watchdog");
         if (kernelExecutionCycleCount === watchdogCycleCountBuffer && watchdogHangTimer === false) {
             kernelLog("Watchdog: Kernel watchdog timer triggered", "warning");
             watchdogSafetyTimer = Date.now();
