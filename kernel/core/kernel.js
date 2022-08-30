@@ -4,7 +4,7 @@
 /* Fully compatible with the JSOKS (Javascript Octane Kernel Structure) standard */
 
 //Option Variables
-const targetCyclesPerSecond = 60;
+const minimumCyclesPerSecond = 10;
 let preemptiveKernel = true;
 let idleSuspend = true;
 let showPerformanceInfo = true;
@@ -25,12 +25,12 @@ var Kernel = {
 
 //Performance numbers
 const startupTime = Date.now();
-const targetKernelLatency = 1000 / targetCyclesPerSecond;
+const targetKernelLatency = 1000 / minimumCyclesPerSecond;
 let systemExecutionLatency = targetKernelLatency;
 let kernelExecutionCycleCount = 0;
 let kernelCycleLatency = 0;
 let kernelCyclesPerSecond = 0;
-const performanceSampleSize = Math.max(Math.round(targetCyclesPerSecond / 10), 1);
+const performanceSampleSize = Math.max(Math.round(minimumCyclesPerSecond / 10), 1);
 function kernelLatencyReporter() {
     const dividedCycleCounter = kernelExecutionCycleCount % (performanceSampleSize * 2);
     if (dividedCycleCounter === 0) {
