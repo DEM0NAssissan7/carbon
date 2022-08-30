@@ -569,14 +569,14 @@ function suspendResponseDaemon() {
             mouseInactivityTimer = 0;
             if (this.inactive === true) {
                 systemSuspend = false;
-                kernelLog("System has been resumed from inactivity.", "info");
+                kernelDebug("System was resumed");
                 this.inactive = undefined;
             }
         }
         if (mouseInactivityTimer > 30 && this.inactive === undefined || !document.hasFocus() && this.inactive === undefined) {
             systemSuspend = true;
             this.inactive = true;
-            kernelLog("System has been suspended due to inactivity.", "info");
+            kernelDebug("System was suspended");
         }
     }
     //Suspend keyboard shortcut
