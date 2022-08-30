@@ -11,6 +11,7 @@ let showPerformanceInfo = true;
 let enableWatchdog = true;
 
 //Kernel objects
+const startupTime = Date.now();
 var Kernel = {
     id: System.name + " Kernel",
     version: System.version,
@@ -23,8 +24,25 @@ var Kernel = {
     ]
 }
 
+//Debug Logs
+let kernelDebugs = [];
+function DebugObject(message){
+    this.time = Date.now() - startupTime;
+    this.message = message;
+}
+function kernelDebug(message){
+    kernelDebugs.push(new DebugObject(message));
+}
+function printKernelDebugs(){
+    console.warn("Printing kernel debug logs");
+    for(let i = 0; i < kernelDebugs.length; i++){
+        console.log("[" + kernelDebugs[i].time + "]: " + kernelDebugs[i].message );
+    }
+}
+kernelDebug("System ID: " + System.name + " " + System.version);//Print system info to the debug log
+kernelDebug("Kernel ID: " + Kernel.id + " " + Kernel.version);//Print kernel info to the debug log
+
 //Performance numbers
-const startupTime = Date.now();
 const targetKernelLatency = 1000 / minimumCyclesPerSecond;
 let systemExecutionLatency = targetKernelLatency;
 let kernelExecutionCycleCount = 0;
@@ -58,6 +76,7 @@ function trackRealtimePerformance() {
     if (!this.init) {
         this.init = true;
         this.timer = performance.now();
+        kernelDebug("Realtime performance tracker has been intiated.");
     }
     kernelRealtimeLatency = performance.now() - this.timer;
     this.timer = performance.now();
@@ -70,10 +89,12 @@ function setPowerState(powerState) {
     //Kernel will run at a clock of (2^powerstate)ms
     kernelPowerStateManuallySet = true;
     kernelPowerState = powerState;
+    kernelLog("Power state has been manually altered.", "warning");
 }
 function resetPowerState() {
     kernelPowerStateManuallySet = false;
     kernelPowerState = 0;
+    kernelLog("Power state has been restored.", "warning");
 }
 
 //Logs
@@ -90,12 +111,14 @@ function kernelLog(message, severity) {
         currentSeverity = severity;
     }
     kernelLogs.push(new LogObject(message, currentSeverity));
+    kernelDebugs.push(new DebugObject("Kernel log: " + message));
 }
 function printKernelLogs(severity) {
     function printKernelMessage(logObject) {
         return "[" + logObject.time + "]: " + logObject.message;
     }
-    console.warn("Kernel log print triggered: ")
+    console.warn("Kernel log print triggered: ");
+    kernelDebug("Kernel log print was called");
     for (let i = 0; i < kernelLogs.length; i++) {
         switch (kernelLogs[i].severity) {
             case "info":
@@ -138,6 +161,7 @@ class Process {
         //Misc
         this.startTime = Date.now() - startupTime;
         this.dead = false;
+        kernelDebug("Process " + PIDs + " has been created.");
         PIDs++;
     }
     run() {
@@ -162,6 +186,9 @@ class Thread {
         this.ran = false;
     }
     run() {
+        if(this.ran === true){
+            kernelLog("A thread was called after already being ran.", "warning");
+        }
         if (this.ran === false) {
             this.command();
             this.ran = true;
@@ -250,11 +277,12 @@ function scheduler() {
     const accurateTargetTime = adjustedTargetLatency + performance.now();
     let stopLoop = false;
     function checkOvertime() {
-        if (Date.now() > targetEndTime) {
-            stopLoop = true;
-            return true;
-        } else {
+        if (Date.now() < targetEndTime) {
             return false;
+        } else {
+            stopLoop = true;
+            kernelDebug("Scheduler has gone overtime");
+            return true;
         }
     }
     //Main process loop
@@ -448,8 +476,9 @@ let watchdogHangTimer = false;
 let kernelWatchdogTriggerCount = 0;
 function watchdog() {
     if (enableWatchdog === true) {
+        kernelDebug("Calling watchdog");
         if (kernelExecutionCycleCount === watchdogCycleCountBuffer && watchdogHangTimer === false) {
-            kernelLog("Watchdog: Kernel watchdog timer triggered", "warning")
+            kernelLog("Watchdog: Kernel watchdog timer triggered", "warning");
             watchdogSafetyTimer = Date.now();
             watchdogHangTimer = true;
             kernelWatchdogTriggerCount++;
@@ -469,6 +498,7 @@ setInterval(() => { watchdog() }, 2500);//run kernel watchdog every 2.5 seconds
 
 //Kernel reset
 function resetKernel() {
+    kernelDebug("Kernel was reset");
     let processesBuffer = [];
     for (let i = 0; i < processes.length; i++) {
         processesBuffer[i] = new Process(processes[i].command, processes[i].priority);
@@ -476,6 +506,7 @@ function resetKernel() {
 }
 
 //Graphics
+kernelDebug("Initializing graphics");
 let canvas = document.createElement("canvas");
 if (!canvas) {
     kernelLog("Graphics: Failed to create canvas.", "error");
@@ -488,6 +519,7 @@ let webgl = canvas.getContext('webgl');
 if (!webgl) {
     kernelLog("Graphics: Failed to load webgl context.", "warning");
 }
+kernelDebug("Appending canvas to document");
 canvas.id = "canvas";
 canvas.width = window.innerWidth - 20;
 canvas.height = window.innerHeight - 21;
@@ -585,6 +617,7 @@ let loopKernel = true;
 function stopKernelLoop() {
     clearTimeout(kernelLoopTimeoutId);
     loopKernel = false;
+    kernelLog("Kernel loop has been stopped.", "warning");
 }
 function executeKernel() {
     let timeBefore = performance.now();
@@ -611,6 +644,7 @@ function executeKernel() {
 }
 //Run kernel
 try{
+    kernelDebug("Doing initial kernel execution");
     executeKernel();
 } catch (e) {
     kernelLog("Kernel did not load.", "error");
