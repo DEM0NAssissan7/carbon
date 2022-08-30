@@ -447,7 +447,7 @@ function panic(message) {
         panicMessage = message;
     }
     enableWatchdog = false;
-    console.error(panicMessage);
+    console.error("PANIC: " + panicMessage);
     kernelLog("FATAL - Kernel Panic (" + panicMessage + ")", "error");
 
     panicProcesses = processes;
