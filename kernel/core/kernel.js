@@ -124,7 +124,6 @@ class Process {
         this.PID = PIDs;
         this.processName = command.name;
         //Performance Tracking
-        this.frametime = 0;
         this.cycleCount = 0;
         this.runCount = 0;
         //Suspend
@@ -144,10 +143,10 @@ class Process {
     run() {
         if (this.suspend === false && this.manualSuspend === false) {
             if (this.priority >= 0) {
-                this.frametime = trackPerformance(this.command);
+                this.command();
                 this.runCount++;
             } else if (this.priority < 0 && this.cycleCount % Math.abs(this.priority) === 0) {//Halftime execution
-                this.frametime = trackPerformance(this.command);
+                this.command();
                 this.runCount++;
             }
             this.cycleCount++;
