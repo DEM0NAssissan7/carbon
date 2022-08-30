@@ -256,8 +256,10 @@ function suspendResponseDaemon() {
 
 //Compatibility
 let schedulerLatency = 0;
+let kernelCyclesPerSecond = 0;
 function compatibilityDaemon(){
     schedulerLatency = kernelRealtimeLatency;
+    kernelCyclesPerSecond = 1000/kernelRealtimeLatency;
 }
 
 //Kernel loop
