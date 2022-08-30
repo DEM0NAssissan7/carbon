@@ -84,9 +84,9 @@ function Rayham(){
             }
         }
     }
-    createProcess(blank, 0, this.processes);
-    createProcess(background, 0, this.processes);
-    createProcess(updateLights, 0, this.processes);
+    create_process(blank, 0, this.processes);
+    create_process(background, 0, this.processes);
+    create_process(updateLights, 0, this.processes);
 }
 
 Rayham.prototype.update = function(){

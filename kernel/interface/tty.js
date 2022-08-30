@@ -24,6 +24,7 @@ class TTY {
         self.textArray.push(obj);
       }
     }
+    let devices = getDevices();
     if (devices.keyboard.keyCodes[13] && !this.keyPressed) {
       this.textArray.push(this.textBuffer);
       this.promptArray[this.textArray.length - 1] = this.prompt;
@@ -99,7 +100,6 @@ class TTY {
     graphics.fillText(this.prompt + this.textBuffer, 2, this.textArray.length * 12 + 12);
   }
   createWindow(){
-    var windowProcesses = [];
     var tty = new TTY();
   
     createWindow([
@@ -124,7 +124,7 @@ try{
     function drawTTY() {
       ttySystem.draw(canvas, graphics);
     }
-    createProcess(updateTTY, 2);
-    createProcess(drawTTY);
+    create_process(updateTTY, 2);
+    create_process(drawTTY);
   }
 } catch(error){}

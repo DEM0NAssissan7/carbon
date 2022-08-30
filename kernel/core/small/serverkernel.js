@@ -59,10 +59,10 @@ class Thread {
         this.command();
     }
 }
-function createProcess(command) {
+function create_process(command) {
     processes.push(new Process(command));
 }
-function createThread(command) {
+function create_thread(command) {
     threads.push(new Thread(command));
 }
 function kill(PID) {
@@ -125,7 +125,7 @@ let schedulerIndex = 0;
         schedulerLatency = performanceCache - schedulerLatencyTimer;
         schedulerLatencyTimer = performanceCache;
     }
-    createProcess(trackSchedulerPerformance);
+    create_process(trackSchedulerPerformance);
 }
 function scheduler() {
     const adjustedTargetLatency = (targetKernelLatency - (kernelRealtimeLatency - kernelProcessExecutionLatency));

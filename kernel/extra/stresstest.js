@@ -9,7 +9,7 @@ function recurseProcess() {}
 
 function jskernelStresstest() {
   console.log("Stressing process manager and scheduler");
-  createProcess(function () { createProcess(function () { createProcess(recurseProcess) }) });
+  create_process(function () { create_process(function () { create_process(recurseProcess) }) });
 }
 function overhead() {
   systemSuspend = false;
@@ -17,7 +17,7 @@ function overhead() {
   const processCount = 1000000;
   const beforeCreationTime = Date.now();
   for (var i = 0; i < processCount; i++) {
-    createProcess(() => {}, 1);
+    create_process(() => {}, 1);
   }
   let creationTime = Date.now() - beforeCreationTime;
 
@@ -63,24 +63,24 @@ function capacity() {
   //(on my laptop)
   let beforeTime = Date.now();
   for (let i = 0; i < 10000000; i++) {
-    createProcess(recurseProcess);
+    create_process(recurseProcess);
   }
   console.log("processes have been created");
 
 }
 function forkBomb(){
-  createProcess(() => {
+  create_process(() => {
     forkBomb();
   });
-  createProcess(() => {
+  create_process(() => {
     forkBomb();
   });
 }
 function threadBomb(){
-  createThread(() => {
+  create_thread(() => {
     threadBomb();
   });
-  createThread(() => {
+  create_thread(() => {
     threadBomb();
   });
 }
@@ -90,7 +90,7 @@ function ultistress() {
   let processCount = 10000000;
   let beforeTime = Date.now();
   for (let i = 0; i < processCount; i++) {
-    createProcess(recurseProcess);
+    create_process(recurseProcess);
   }
   let creationTime = Date.now() - beforeTime;
   console.log("processes have been created");
@@ -101,7 +101,7 @@ function ultistress() {
 function schedulerResillience() {
   console.log("Stressing scheduler with huge processes");
   for (let i = 0; i < 1000; i++) {
-    createProcess(largeProcessorStressTest);
+    create_process(largeProcessorStressTest);
   }
 }
 
@@ -134,7 +134,7 @@ function testInfoFunctions() {
 
 function testKill() {
   console.log("Testing kill functionality");
-  createProcess(jskernelStresstest);
+  create_process(jskernelStresstest);
   killall("Killall Test");
   kill(5);
 }

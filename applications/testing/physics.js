@@ -100,24 +100,25 @@ class Physics{
                 self.graphics.fillRect(this.x, this.y, 1, 1);
             }
         }
+        let devices = getDevices();
         if(devices.mouse.clicked){
             this.objects.push(new PhysicsObject(Math.floor(Math.random() * this.width), Math.floor(Math.random() * this.height)));
         }
 
         //Update physics
         for(let i = 0; i < this.objects.length; i++){
-            createThread(() => {this.objects[i].update();});
+            create_thread(() => {this.objects[i].update();});
         }
 
         //Drawing code
-        createThread(() => {
+        create_thread(() => {
             this.graphics.fillStyle = "black";
             this.graphics.fillRect(0, 0, this.canvas.width, this.canvas.height);
         });
         for(let i = 0; i < this.objects.length; i++){
-            createThread(() => {this.objects[i].draw();});
+            create_thread(() => {this.objects[i].draw();});
         }
-        createThread(() => {
+        create_thread(() => {
             graphics.drawImage(this.canvas, 0, 0, canvas.width, canvas.height);
         });
     }

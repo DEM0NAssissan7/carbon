@@ -16,6 +16,7 @@ class Autoclick{
         });
         
         if(this.clicking && this.startClicking){
+            let devices = getDevices();
             if(this.clicked === false){
                 devices.mouse.clicked = true;
                 this.clicked = true;

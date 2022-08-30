@@ -120,12 +120,13 @@ function createIcon(iconFunction, x, y, size, createWindowFunction) {
   });
 
   let iconProcess = () => {
+    let devices = getDevices();
     if(devices.mouse.x > x && devices.mouse.x < size + x && devices.mouse.y > y && devices.mouse.y < size + y && buttonClicked === false && devices.mouse.clicked){
       createWindowFunction();
       buttonClicked = true;
     }
   }
-  createProcess(iconProcess);
+  create_process(iconProcess);
 
   icon.processesBuffer = [iconRender, iconKiller];
   icon.originalProcesses = [iconRender, iconKiller];
@@ -270,6 +271,7 @@ function kshellErrorScreenDaemon (process, error) {
     graphics.fillText(error, 10, canvas.height / 1.5);
     graphics.fillText("Process ID: " + process.PID, 10, canvas.height / 1.2);
     graphics.fillText("Check console for more details.", 10, canvas.height / 1.4);
+    let devices = getDevices();
     if (devices.keyboard.keyCodes[81]) {
         kill(process.PID);
         returnSystem();

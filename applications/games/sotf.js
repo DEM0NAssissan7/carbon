@@ -562,6 +562,7 @@ class SOTF {
       let playerMovementSpeed = this.currentGravityForce * 3 * this.speedMultiplier;
       if (!this.controller) {
         //Define control systems for internal use
+        let devices = getDevices();
         this.keyboardShop = devices.keyboard.keyCodes[88];//X
         if (!(this.keyboardShop && this.hasShop)) {
           this.keyboardUp = devices.keyboard.keyCodes[38];

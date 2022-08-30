@@ -58,10 +58,10 @@ class Thread {
         this.command();
     }
 }
-function createProcess(command) {
+function create_process(command) {
     processes.push(new Process(command));
 }
-function createThread(command) {
+function create_thread(command) {
     threads.push(new Thread(command));
 }
 function kill(PID) {

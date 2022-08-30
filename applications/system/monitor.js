@@ -9,12 +9,12 @@ class SystemMonitor{
     }
     update(canvas, graphics){
         this.data.push(schedulerLatency);
-        createThread(() => {this.data.splice(0, this.data.length - (canvas.width/this.graphSize));});
-        createThread(() => {
+        create_thread(() => {this.data.splice(0, this.data.length - (canvas.width/this.graphSize));});
+        create_thread(() => {
             this.scaleFactor = this.data.reduce((a, b) => Math.max(a, b), -Infinity);
             this.minScaleFactor = this.data.reduce((a, b) => Math.min(a, b), Infinity);
         });
-        createThread(() => {
+        create_thread(() => {
             setBackground(canvas, graphics);
             graphics.strokeStyle = "red";
             graphics.lineWidth = 2;
@@ -22,9 +22,9 @@ class SystemMonitor{
             graphics.beginPath();
         });
         for(let i = 0; i < this.data.length; i++){
-            createThread(() => {graphics.lineTo(i * this.graphSize, (this.precalculatedValue * (this.data[i] - this.minScaleFactor)))});
+            create_thread(() => {graphics.lineTo(i * this.graphSize, (this.precalculatedValue * (this.data[i] - this.minScaleFactor)))});
         }
-        createThread(() => {graphics.stroke();});
+        create_thread(() => {graphics.stroke();});
     }
     iconFunction(canvas, graphics){
 

@@ -1,7 +1,7 @@
 //This is where you put all of the files you want to load in
 
 let kbSystems;
-let kernelLocation = "kernel/core/kernel.js"
+let kernelLocation = "kernel/core/kernelX.js"
 {
         var graphite = [
             [

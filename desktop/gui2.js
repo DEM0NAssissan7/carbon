@@ -379,5 +379,5 @@ var kshellProcessGroup = [];
 
 //Create processes
 //Appdock
-//createProcess(updateAppDockSystem, "kshell", 2, kshellProcessGroup);
+//create_process(updateAppDockSystem, "kshell", 2, kshellProcessGroup);
 addProcessGroup(kshellProcessGroup);

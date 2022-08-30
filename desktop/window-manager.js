@@ -203,6 +203,7 @@ class GraphiteWindow {
     initProcesses() {
         for (let i = 0; i < this.processesBuffer.length; i++) {
             let windowProcess = () => {
+                let devices = getDevices()
                 let originalMouseX = devices.mouse.x;
                 let originalMouseY = devices.mouse.y;
                 devices.mouse.x -= this.x;
@@ -216,7 +217,7 @@ class GraphiteWindow {
             let processBuffer = new Process(windowProcess, this.processesBuffer[i].priority);
             processBuffer.processName = this.processesBuffer[i].processName;
             this.processes.push(processBuffer);
-            processes.push(processBuffer);
+            push_process(processBuffer);
         }
     }
     init() {
@@ -227,6 +228,7 @@ class GraphiteWindow {
         this.canvas.width = this.width;
         this.canvas.height = this.height;
         //Focus
+        let devices = getDevices();
         if(devices.mouse.x > this.x && devices.mouse.x < this.x + this.width && devices.mouse.y > this.y - this.topBarHeight && devices.mouse.y < this.y + this.height && this.focusable && devices.mouse.pressed){
             this.requestFocus = true;
         }
@@ -279,11 +281,7 @@ class GraphiteWindow {
         if(this.dead === true){
             //Kill all processes linked to the window
             for (let i = 0; i < this.processes.length; i++) {
-                for (let l = 0; l < processes.length; l++) {
-                    if (processes[l].PID === this.processes[i].PID) {
-                        processes.splice(l, 1);
-                    }
-                }
+                terminate(this.processes[i].PID);
             }
         }
     }
@@ -316,6 +314,7 @@ function setCursor(cursorDrawHandler) {
     }
     cursorDrawHandler(cursorOffscreenGraphics);
     cursorFunction = () => {
+        let devices = getDevices();
         firstFrameBufferGraphics.drawImage(cursorOffscreenCanvas, devices.mouse.x, devices.mouse.y);
     }
 }
@@ -389,22 +388,22 @@ graphics.fillRect(0, 0, canvas.width, canvas.height);
                 }
             };
             // drawWindow();
-            createThread(drawWindow);
+            create_thread(drawWindow);
         }
-        createThread(() => {drawCanvas(firstFrameBufferGraphics, wmBackground);});
-        createThread(() => {drawCanvas(firstFrameBufferGraphics, wmMiddleground);});
-        createThread(() => {clearCanvas(wmMiddlegroundGraphics);});
-        createThread(() => {drawCanvas(firstFrameBufferGraphics, wmForeground);});
-        createThread(cursorFunction);
+        create_thread(() => {drawCanvas(firstFrameBufferGraphics, wmBackground);});
+        create_thread(() => {drawCanvas(firstFrameBufferGraphics, wmMiddleground);});
+        create_thread(() => {clearCanvas(wmMiddlegroundGraphics);});
+        create_thread(() => {drawCanvas(firstFrameBufferGraphics, wmForeground);});
+        create_thread(cursorFunction);
         function drawFramebufer() {
             // clearCanvas(graphics);
             drawCanvas(graphics, firstFrameBuffer);
         }
-        createThread(drawFramebufer);
-        // createProcess(drawFramebufer);
-        // createThread(() => {clearCanvas(firstFrameBufferGraphics);});
+        create_thread(drawFramebufer);
+        // create_process(drawFramebufer);
+        // create_thread(() => {clearCanvas(firstFrameBufferGraphics);});
     }
-    createProcess(windowManagerDraw);
+    create_process(windowManagerDraw);
 }
 
 {
@@ -427,7 +426,7 @@ graphics.fillRect(0, 0, canvas.width, canvas.height);
             windows.push(focusedWindow);
         }
     }
-    createProcess(windowManagerLogic);
+    create_process(windowManagerLogic);
 }
 
 if(showWmPerformanceInfo === true){
@@ -447,5 +446,5 @@ if(showWmPerformanceInfo === true){
         graphics.fillText(Math.round(1000/ wmLatency), 10, 19);
         graphics.restore();
     }
-    createProcess(displayWmPerformance);
+    create_process(displayWmPerformance);
 }

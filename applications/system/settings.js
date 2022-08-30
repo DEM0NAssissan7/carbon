@@ -5,11 +5,11 @@ class Settings {
 
         graphics.fillStyle = "#282828";
         //Settings
-        showPerformanceInfo = booleanToggleButton(graphics, showPerformanceInfo, "Turn on FPS display", "Turn off FPS display", 10, 10, canvas.width-20, 30);
+        // showPerformanceInfo = booleanToggleButton(graphics, showPerformanceInfo, "Turn on FPS display", "Turn off FPS display", 10, 10, canvas.width-20, 30);
         // trackPerformance = booleanToggleButton(graphics, trackPerformance, "Track processes performance", "Untrack processes performance", 10, 50, canvas.width-20, 30);
-        preemptiveKernel = booleanToggleButton(graphics, preemptiveKernel, "Enable preemptive scheduler", "Disable preemptive scheduler", 10, 90, canvas.width-20, 30);
+        // preemptiveKernel = booleanToggleButton(graphics, preemptiveKernel, "Enable preemptive scheduler", "Disable preemptive scheduler", 10, 90, canvas.width-20, 30);
         // limitFps = booleanToggleButton(graphics, limitFps, "Enable FPS limiter", "Disable FPS limiter", 10, 130, canvas.width-20, 30);
-        idleSuspend = booleanToggleButton(graphics, idleSuspend, "Suspend at idle", "Do not suspend at idle", 10, 170, canvas.width-20, 30);
+        // idleSuspend = booleanToggleButton(graphics, idleSuspend, "Suspend at idle", "Do not suspend at idle", 10, 170, canvas.width-20, 30);
         darkmode = booleanToggleButton(graphics, darkmode, "Light mode", "Dark mode", 10, 210, canvas.width-20, 30, setTheme);
         // displayScaling = booleanToggleButton(graphics, displayScaling, "Scale display", "Do not scale display", 10, 210, canvas.width-20, 30);
         cursorShape = listSelector(graphics, cursorShape, [

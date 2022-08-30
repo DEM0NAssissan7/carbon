@@ -58,6 +58,7 @@ class CookieClicker{
         //Draw cookie
         graphics.fillStyle = "#005096";
         graphics.ellipse(canvas.width/4 + canvas.width/2, canvas.height/2, canvas.height/3, canvas.height/3, 0, 0, 0, false);
+        let devices = getDevices();
         if(devices.mouse.pressed && this.keyPressed === false){
             this.money += this.clickPower;
             this.keyPressed = true;
