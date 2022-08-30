@@ -1,8 +1,3 @@
-/* Goals:
-- Make Device a class and make an array called "devices" where all devices can be interfaced.
-- Preferibly, devices would be divided into devices.keyboard, devices.mouse, devices.gamepad, etc.
-/* Fully compatible with the JSOKS (Javascript Octane Kernel Structure) standard */
-
 //Option Variables
 const minimumCyclesPerSecond = 10;
 let preemptiveKernel = true;
