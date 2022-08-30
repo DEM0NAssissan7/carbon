@@ -238,40 +238,40 @@ let priorityTasks = [];
 let schedulerIndex = 0;
 let schedulerLatency = 0;
 let schedulerLatencyTimer = performance.now();
-function trackSchedulerPerformance(){
+function trackSchedulerPerformance() {
     const performanceCache = performance.now();
     schedulerLatency = performanceCache - schedulerLatencyTimer;
     schedulerLatencyTimer = performanceCache;
 }
 createProcess(trackSchedulerPerformance);
-function scheduler(){
+function scheduler() {
     const adjustedTargetLatency = (targetKernelLatency - (kernelRealtimeLatency - kernelProcessExecutionLatency));
     const targetEndTime = adjustedTargetLatency + Date.now();
     const accurateTargetTime = adjustedTargetLatency + performance.now();
     let stopLoop = false;
-    function checkOvertime(){
-        if(Date.now() > targetEndTime){
+    function checkOvertime() {
+        if (Date.now() > targetEndTime) {
             stopLoop = true;
             return true;
-        }else{
+        } else {
             return false;
         }
     }
     //Main process loop
-    for(let c = 0; c < processes.length && performance.now() < accurateTargetTime; c++){
-        if(!(schedulerIndex < processes.length)){//Index management
+    for (let c = 0; c < processes.length && performance.now() < accurateTargetTime; c++) {
+        if (!(schedulerIndex < processes.length)) {//Index management
             schedulerIndex = 0;
         }
 
         //Thread runner
-        while(threads.length > 0){
+        while (threads.length > 0) {
             runThread(threads[0]);
             threads.splice(0, 1);
-            if(checkOvertime()){
+            if (checkOvertime()) {
                 break;
             }
         }
-        if(stopLoop === true){
+        if (stopLoop === true) {
             break;
         }
 
@@ -281,14 +281,14 @@ function scheduler(){
                 runProcess(priorityTasks[schedulerIndex][i]);
             }
             priorityTasks.splice(schedulerIndex, 1);
-            if(checkOvertime()){
+            if (checkOvertime()) {
                 break;
             }
         }
-        
+
         //Process runner
         let process = processes[schedulerIndex];
-        if(process.dead === true){
+        if (process.dead === true) {
             processes.splice(schedulerIndex, 1);
         } else {
             runProcess(process);
@@ -313,7 +313,7 @@ function updateKernelProcesses() {
         } else {
             //Non-preemptive
             for (let i = 0; i < processes.length; i++) {
-                while(threads.length > 0) {
+                while (threads.length > 0) {
                     runThread(threads[0]);
                     threads.splice(0, 1);
                 }
@@ -326,7 +326,7 @@ function updateKernelProcesses() {
                 let process = processes[i];
                 if (process.dead === true) {
                     processes.splice(i, 1);
-                }else{
+                } else {
                     runProcess(process);
                     for (let i = 0; i < process.priority - 1; i++) {//Priority
                         let index = (Math.round(((processes.length) / process.priority) * i) + (schedulerIndex + 1)) % (processes.length);
@@ -605,7 +605,7 @@ function executeKernel() {
     performanceDisplay();
     //Report performance
     systemExecutionLatency = performance.now() - timeBefore;
-    
+
     //Set an asynchronous timeout so the kernel executes itself again
     kernelLoopTimeoutId = setTimeout(executeKernel, Math.pow(2, kernelPowerState));
 }
