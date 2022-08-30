@@ -434,13 +434,13 @@ function suspendSystem(processesArray) {
     for (let i = 0; i < processesArray.length; i++) {
         processesArray[i].suspend = true;
     }
-    kernelLog("System has been suspended.", "warning");
+    kernelDebug("System was suspended");
 }
 function resumeSystem(processesArray) {
     for (let i = 0; i < processesArray.length; i++) {
         processesArray[i].suspend = false;
     }
-    kernelLog("System has been resumed.", "warning");
+    kernelDebug("System was resumed");
 }
 
 //Kernel panic
