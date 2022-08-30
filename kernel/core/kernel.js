@@ -283,24 +283,24 @@ function scheduler(){
             priorityTasks.splice(schedulerIndex, 1);
             if(checkOvertime()){
                 break;
-        }
+            }
         }
         
         //Process runner
-            let process = processes[schedulerIndex];
-            if(process.dead === true){
-                processes.splice(schedulerIndex, 1);
-            } else {
-                runProcess(process);
-                for (let i = 0; i < process.priority - 1; i++) {//Priority
-                    let index = (Math.round(((processes.length) / process.priority) * i) + (schedulerIndex + 1)) % (processes.length);
-                    if (priorityTasks[index] === undefined) {
-                        priorityTasks[index] = [];
-                    }
-                    priorityTasks[index].push(process);
+        let process = processes[schedulerIndex];
+        if(process.dead === true){
+            processes.splice(schedulerIndex, 1);
+        } else {
+            runProcess(process);
+            for (let i = 0; i < process.priority - 1; i++) {//Priority
+                let index = (Math.round(((processes.length) / process.priority) * i) + (schedulerIndex + 1)) % (processes.length);
+                if (priorityTasks[index] === undefined) {
+                    priorityTasks[index] = [];
                 }
+                priorityTasks[index].push(process);
             }
-            schedulerIndex++;//Index management
+        }
+        schedulerIndex++;//Index management
     }
 }
 
@@ -564,7 +564,7 @@ function suspendResponseDaemon() {
         }
     }
     if (kernelPowerStateManuallySet === false && systemSuspend === true) {
-        kernelPowerState = 8;
+        kernelPowerState = 9;
     } else if (kernelPowerStateManuallySet === false) {
         kernelPowerState = 0;
     }
@@ -605,6 +605,7 @@ function executeKernel() {
     performanceDisplay();
     //Report performance
     systemExecutionLatency = performance.now() - timeBefore;
+    
     //Set an asynchronous timeout so the kernel executes itself again
     kernelLoopTimeoutId = setTimeout(executeKernel, Math.pow(2, kernelPowerState));
 }
