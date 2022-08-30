@@ -609,4 +609,14 @@ function executeKernel() {
     //Set an asynchronous timeout so the kernel executes itself again
     kernelLoopTimeoutId = setTimeout(executeKernel, Math.pow(2, kernelPowerState));
 }
-executeKernel();//Run kernel
+//Run kernel
+try{
+    executeKernel();
+} catch (e) {
+    kernelLog("Kernel did not load.", "error");
+    kernelLog(e, "error");
+    panic("Kernel was unable to execute: " + e);
+} finally {
+    console.log("Kernel has successfully loaded.");
+    kernelLog("Kernel has successfully loaded.", "info");
+}
