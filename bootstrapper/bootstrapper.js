@@ -5,6 +5,9 @@ function createScriptElement(fileName) {
   script.src = fileName;
   return script;
 }
+function kbLoadKernel(){
+  document.head.appendChild(createScriptElement(kernelLocation));
+}
 function kbLoadSystem(systemArray){
   let systemScripts = systemArray[0];
   var systemName = systemArray[1];
@@ -29,6 +32,7 @@ function kbLoadSystem(systemArray){
   },10);
 }
 function kbInit() {
+  kbLoadKernel();//Load the kernel
   var bootstrapInterrupted = false;
   function escKeyInterrupter(e) {
     if(e.keyCode === 27){
