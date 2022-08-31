@@ -203,7 +203,11 @@ class GraphiteWindow {
     initProcesses() {
         for (let i = 0; i < this.processesBuffer.length; i++) {
             let windowProcess = () => {
-                let devices = getDevices()
+                let devices = get_devices();
+                let old_get_devices = get_devices;
+                get_devices = function(){
+                    return devices;
+                }
                 let originalMouseX = devices.mouse.x;
                 let originalMouseY = devices.mouse.y;
                 devices.mouse.x -= this.x;
@@ -213,6 +217,7 @@ class GraphiteWindow {
 
                 devices.mouse.x = originalMouseX;
                 devices.mouse.y = originalMouseY;
+                get_devices = old_get_devices;
             };
             let processBuffer = new Process(windowProcess, this.processesBuffer[i].priority);
             processBuffer.processName = this.processesBuffer[i].processName;
@@ -228,7 +233,7 @@ class GraphiteWindow {
         this.canvas.width = this.width;
         this.canvas.height = this.height;
         //Focus
-        let devices = getDevices();
+        let devices = get_devices();
         if(devices.mouse.x > this.x && devices.mouse.x < this.x + this.width && devices.mouse.y > this.y - this.topBarHeight && devices.mouse.y < this.y + this.height && this.focusable && devices.mouse.pressed){
             this.requestFocus = true;
         }
@@ -314,7 +319,7 @@ function setCursor(cursorDrawHandler) {
     }
     cursorDrawHandler(cursorOffscreenGraphics);
     cursorFunction = () => {
-        let devices = getDevices();
+        let devices = get_devices();
         firstFrameBufferGraphics.drawImage(cursorOffscreenCanvas, devices.mouse.x, devices.mouse.y);
     }
 }

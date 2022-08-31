@@ -31,7 +31,7 @@ function simpleCenterText(graphics, displayText, textX, textY){
     graphics.fillText(displayText, textX - textWidth(displayText)/2, textY);
 }
 function blankButton(x, y, w, h, func){
-    let devices = getDevices();
+    let devices = get_devices();
     if (devices.mouse.x > x && devices.mouse.x < x + w && devices.mouse.y > y && devices.mouse.y < y + h && devices.mouse.clicked && buttonClicked === false) {
         func();
         buttonClicked = true;
@@ -39,7 +39,7 @@ function blankButton(x, y, w, h, func){
 }
 function Button(graphics, x, y, w, h, func) {
     graphics.save();
-    let devices = getDevices();
+    let devices = get_devices();
     if (devices.mouse.x > x && devices.mouse.x < x + w && devices.mouse.y > y && devices.mouse.y < y + h) {
         graphics.strokeStyle = colorScheme.accent;
         graphics.lineWidth = 1.8;
@@ -100,7 +100,7 @@ function booleanToggleButton(graphics, bool, textFalse, textTrue, x, y, w, h, cu
 }
 function listSelector(graphics, variable, options, x, y, w, h, text, customFunction){
     let result = variable;
-    let devices = getDevices();
+    let devices = get_devices();
     function openMenu(){
         listViewOpened = text;
         this.mouseClickedX = devices.mouse.x;
@@ -132,7 +132,7 @@ function listSelector(graphics, variable, options, x, y, w, h, text, customFunct
 }
 //Reset button clicked status
 function toolkitClickMonitor(){
-    if(getDevices().mouse.clicked === false){
+    if(get_devices().mouse.clicked === false){
         buttonClicked = false;
     }
 }

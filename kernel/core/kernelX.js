@@ -21,53 +21,53 @@ let canvas, graphics, webgl;
     //Option variables
     const suspend_on_unfocus = true;
     const print_debug_logs = true;
-    const minimum_cycle_rate = 60;
+    const minimum_cycle_rate = 10;
     const display_performance = true;
 
     //Customization variables
     const run_loop = true;
     const preemptive = true;
     const track_performance = true;
-    
+
     const windowed = true;
     const use_devices = true;
     const use_graphics = true;
-    
+
     const do_logging = true;
     const use_watchdog = true;
-    
+
     const error_handler = true;
 
     //Debug logging
     let debug;
-    if(do_logging === true){
+    if (do_logging === true) {
         let debug_logs = [];
-        let debug_object = function(message){
+        let debug_object = function (message) {
             this.message = message;
             this.date = Date.now() - Kernel.start_time;
         }
-        debug = function(message){
+        debug = function (message) {
             debug_logs.push(new debug_object(message));
-            if(print_debug_logs === true){
+            if (print_debug_logs === true) {
                 console.log(message);
             }
         }
-        function print_kernel_debug(){
+        function print_kernel_debug() {
             console.warn("Printing kernel debug logs");
-            for(let i = 0; i < debug_logs.length; i++){
+            for (let i = 0; i < debug_logs.length; i++) {
                 console.log("[" + debug_logs[i].date + "] " + debug_logs[i].message);
             }
         }
     } else {
-        debug = function(){
-            
+        debug = function () {
+
         }
     }
 
     //Panic
     let panicked = false;
-    let panic = function(message){
-        if(windowed === true){
+    let panic = function (message) {
+        if (windowed === true) {
             alert("Kernel panic -> " + message);
         }
         processes = [];
@@ -77,60 +77,63 @@ let canvas, graphics, webgl;
 
     //Error management
     let error_screen;
-    if(error_handler === true){
+    if (error_handler === true) {
 
     }
 
     //Process management
     let processes = [];
     let PIDs = 0;
-    function Process(command, priority){
+    function Process(command, priority) {
         this.command = command;
-        this.processName = command.name;
+        this.process_name = command.name;
         this.priority = priority;
         this.suspended = false;
         this.PID = PIDs;
+        this.cycle_count = 0;
+        this.ran_priority = false;
         PIDs++;
     }
-    Process.prototype.run = function(){
-        if(this.suspended !== true){
-            try{
+    Process.prototype.run = function () {
+        if (this.suspended !== true) {
+            try {
                 this.command();
-            } catch (e){
+            } catch (e) {
                 console.error("Process " + this.PID + " has encountered an error.");
                 console.error(e);
                 this.suspended = true;
             }
+            this.cycle_count++;
         }
     }
-    function create_process(command, priority){
+    function create_process(command, priority) {
         processes.push(new Process(command, priority));
         return PIDs - 1;
     }
-    function push_process(process){
+    function push_process(process) {
         processes.push(process);
     }
     let threads = [];
     let running_threads = 0;
-    let Thread = function(command){
+    let Thread = function (command) {
         this.command = command;
     }
-    Thread.prototype.run = function(){
-        try{
+    Thread.prototype.run = function () {
+        try {
             this.command();
             running_threads--;
-        } catch (e){
+        } catch (e) {
             console.error("A thread encountered an error.");
             console.error(e);
         }
     }
-    function create_thread(command){
+    function create_thread(command) {
         threads.push(new Thread(command));
         running_threads++;
     }
-    function terminate(PID){
-        for(let i = 0; i < processes.length; i++){
-            if(processes[i].PID === PID){
+    function terminate(PID) {
+        for (let i = 0; i < processes.length; i++) {
+            if (processes[i].PID === PID) {
                 processes.splice(i, 1);
             }
         }
@@ -139,7 +142,7 @@ let canvas, graphics, webgl;
     //Suspension
 
     //Devices
-    if(use_devices === true && windowed === true){
+    if (use_devices === true && windowed === true) {
         let devices = {};
         //Mouse
         devices.mouse = {
@@ -183,13 +186,24 @@ let canvas, graphics, webgl;
             devices.keyboard.pressed = false;
             devices.keyboard.info = event;
         };
-        function getDevices(){
-            return devices;
+        //Controllers
+        devices.controllers = [];
+        window.addEventListener("gamepadconnected", e => {
+            kernelLog("Device: Controller " + e.gamepad.index + " connected (" + e.gamepad.id + ")", "info");
+            devices.controllers.push(e.gamepad);
+        });
+        window.addEventListener("gamepaddisconnected", e => {
+            kernelLog("Device: Controller " + e.gamepad.index + " disconnected (" + e.gamepad.id + ")", "info");
+            devices.controllers.splice(e.gamepad, 1);
+        });
+        function get_devices() {
+            let devices_buffer = JSON.parse(JSON.stringify(devices));;
+            return devices_buffer;
         }
     }
 
     //Graphics
-    if(use_graphics === true && windowed === true){
+    if (use_graphics === true && windowed === true) {
         debug("Initializing graphics stack");
         canvas = document.createElement("canvas");
         if (!canvas) {
@@ -211,15 +225,15 @@ let canvas, graphics, webgl;
 
     //Suspension
     let suspend_system = false;
-    let suspend_daemon = () => {};
+    let suspend_daemon = () => { };
     let execution_time = 0;
-    if(suspend_on_unfocus === true && windowed === true){
-        suspend_daemon = function(){
-            if(document.hasFocus()){
+    if (suspend_on_unfocus === true && windowed === true) {
+        suspend_daemon = function () {
+            if (document.hasFocus()) {
                 execution_time = 0;
                 suspend_system = false;
             }
-            if(!document.hasFocus()){
+            if (!document.hasFocus()) {
                 suspend_system = true;
                 execution_time = 500;
             }
@@ -228,16 +242,16 @@ let canvas, graphics, webgl;
 
     //Runtime
     let execution_count = 0;
-    let scheduler = function(){//Non-premptive
-        for(let i = 0; i < processes.length; i++){
+    let scheduler = function () {//Non-premptive
+        for (let i = 0; i < processes.length; i++) {
             processes[i].run();
-            while(threads.length > 0){
+            while (threads.length > 0) {
                 threads[0].run();
                 threads.splice(0, 1);
             }
         }
     }
-    if(preemptive === true){//Preemptive
+    if (preemptive === true) {//Preemptive
         debug("Running kernel preemptively");
         /* Here is the idea of this scheduler:
         - Run processes as threads (for better performance and better scheduling)
@@ -246,48 +260,115 @@ let canvas, graphics, webgl;
         2. Run all threads (the processes may open more threads)
         3. Finish when either all processes+threads have run, or when the time expires
         */
-        scheduler = function(){
-            const target_frametime = 1000/minimum_cycle_rate + performance.now();
-            for(let i = 0; i < processes.length + running_threads && performance.now() < target_frametime; i++){
-                if(threads.length === 0){
-                    for(let i = 0; i < processes.length; i++){
-                        threads.push(processes[i]);
+        function get_processes(){
+            return processes
+        }
+        function get_threads(){
+            return threads
+        }
+        scheduler = function() {
+            const target_time = 1000/minimum_cycle_rate + performance.now();
+            if(threads.length === 0){//Fill threads with processes
+                for(let i = 0; i < processes.length; i++){
+                    threads.push(processes[i]);
+                }
+            }
+            // while(threads.length > 0){
+                threads[0].run();
+                if(threads[0].priority > 1){
+                    for(let i = 1; i < threads[0].priority; i++){
+                        let index = (Math.round((threads.length) / threads[0].priority) * (i)) % threads.length;
+                        console.log(index, threads.length)
+                        threads.splice(index, 0, threads[0]);
                     }
                 }
-                threads[0].run();
                 threads.splice(0, 1);
+            // }
+            /*
+            const end_time = 1000/minimum_cycle_rate + Date.now();
+            const end_time_accurate = 1000/minimum_cycle_rate + performance.now();
+            let loop = true;
+            let check_overtime = function() {
+                if (Date.now() < end_time) {
+                    return false;
+                } else {
+                    loop = false;
+                    debug("Scheduler has gone overtime");
+                    return true;
+                }
             }
+            //Main process loop
+            for (let c = 0; c < processes.length && performance.now() < end_time_accurate; c++) {
+                if (!(scheduler_index < processes.length)) {//Index
+                    scheduler_index = 0;
+                }
+                while (threads.length > 0) {//Threads
+                    threads[0].run();
+                    threads.splice(0, 1);
+                    if (check_overtime()) {
+                        break;
+                    }
+                }
+                if (loop === false) {
+                    break;
+                }
+                if (priorty_processes[scheduler_index] !== undefined) {//Priority
+                    for (let i = 0; i < priorty_processes[scheduler_index].length; i++) {
+                        priorty_processes[scheduler_index][i].run();
+                    }
+                    priorty_processes.splice(scheduler_index, 1);
+                    if (check_overtime()) {
+                        break;
+                    }
+                }
+                //Processes
+                let process = processes[scheduler_index];
+                if (process.dead === true) {
+                    processes.splice(scheduler_index, 1);
+                } else {
+                    process.run();
+                    for (let i = 0; i < process.priority - 1; i++) {//Priority
+                        let index = (Math.round((processes.length* i) / process.priority) + (scheduler_index + 1)) % (processes.length);
+                        if (priorty_processes[index] === undefined) {
+                            priorty_processes[index] = [];
+                        }
+                        priorty_processes[index].push(process);
+                    }
+                }
+                scheduler_index++;//Index management
+            }
+            */
         }
-    }else{
+    } else {
         debug("Running kernel non-preemptively");
     }
-    let run_processes = function(){
-        if(suspend_system !== true){
+    let run_processes = function () {
+        if (suspend_system !== true) {
             scheduler();
         }
     }
 
     //Performance tracking
-    let performance_tracker = () => {};
-    if(track_performance === true){
+    let performance_tracker = () => { };
+    if (track_performance === true) {
         let realtime_performance = 0;
         let scheduler_performance = 0;
         {
             let timer = performance.now();
-            performance_tracker = function(){
+            performance_tracker = function () {
                 realtime_performance = performance.now() - timer;
                 timer = performance.now();
             }
         }
         {
             let timer = performance.now();
-            let scheduler_performance_tracker = function(){
+            let scheduler_performance_tracker = function () {
                 scheduler_performance = performance.now() - timer;
                 timer = performance.now();
             }
             create_process(scheduler_performance_tracker);
         }
-        function get_performance(){
+        function get_performance() {
             let result = {
                 realtime: realtime_performance,
                 scheduler: scheduler_performance
@@ -297,54 +378,54 @@ let canvas, graphics, webgl;
     }
 
     //Performance display
-    let performance_display = function(){};
-    if(display_performance === true){
-        performance_display = function(){
+    let performance_display = function () { };
+    if (display_performance === true) {
+        performance_display = function () {
             //TODO: Make default performance display
         }
-        function set_performance_display(handler){
+        function set_performance_display(handler) {
             performance_display = handler;
         }
     }
 
     //Watchdog
-    if(use_watchdog === true){
+    if (use_watchdog === true) {
         debug("Initializing watchdog");
         let timer = 0;
         let previous_execution_count = 0;
-        let watchdog = function(){
-            if(previous_execution_count === execution_count){
+        let watchdog = function () {
+            if (previous_execution_count === execution_count) {
                 debug("Watchdog has been triggered");
-            } else if(previous_execution_count < execution_count){
+            } else if (previous_execution_count < execution_count) {
                 timer = Date.now();
                 previous_execution_count = execution_count;
             }
-            if(Date.now() - timer > 5000 && panicked === false){
+            if (Date.now() - timer > 5000 && panicked === false) {
                 panic("Watchdog has detected that the kernel is hung.");
             }
         }
         setInterval(watchdog, 2500);
     }
-    
+
     //Main loop
-    let main = function(){
+    let main = function () {
         suspend_daemon();
         run_processes();
         performance_tracker();
         performance_display();
         execution_count++;
         //Rexecute loop
-        if(run_loop === true && panicked === false){
+        if (run_loop === true && panicked === false) {
             setTimeout(main, execution_time);
         }
     }
-    try{
-        debug("Starting kernel.");
+    try {
+        debug("Starting kernel");
         main();
-        try {    
+        try {
             console.log("Kernel successfully started. (" + (Date.now() - Kernel.start_time) + "ms)")
             debug("Kernel was started")
-        } catch (e) {}
+        } catch (e) { }
     } catch (e) {
         console.error("Kernel was unable to start.");
         console.error(e);

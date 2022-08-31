@@ -24,7 +24,7 @@ class TTY {
         self.textArray.push(obj);
       }
     }
-    let devices = getDevices();
+    let devices = get_devices();
     if (devices.keyboard.keyCodes[13] && !this.keyPressed) {
       this.textArray.push(this.textBuffer);
       this.promptArray[this.textArray.length - 1] = this.prompt;

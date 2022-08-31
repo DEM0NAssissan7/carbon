@@ -100,7 +100,7 @@ class Physics{
                 self.graphics.fillRect(this.x, this.y, 1, 1);
             }
         }
-        let devices = getDevices();
+        let devices = get_devices();
         if(devices.mouse.clicked){
             this.objects.push(new PhysicsObject(Math.floor(Math.random() * this.width), Math.floor(Math.random() * this.height)));
         }

@@ -1,5 +1,5 @@
 var System = {
-    version: "1.2-alpha-1",
+    version: "1.3-alpha-newkernel",
     name: "Graphite",
     startup: Date.now(),
 }
