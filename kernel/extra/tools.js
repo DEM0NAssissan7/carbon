@@ -94,7 +94,7 @@ function loadKernelState(){
 
     input.click();
 }
-performanceDisplayFunction = function(){
+set_performance_display(() => {
     graphics.save();
     graphics.fillStyle = '#AAAAAA';
     graphics.fillRect(0, 0, 38, 30);
@@ -109,4 +109,4 @@ performanceDisplayFunction = function(){
     graphics.fillStyle = 'black';
     graphics.fillText(Math.round(get_performance().realtime), 10, 19);
     graphics.restore();
-};
+})

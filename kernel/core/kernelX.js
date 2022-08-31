@@ -19,19 +19,24 @@ let canvas, graphics, webgl;
 
 {
     //Option variables
+    const suspend_on_unfocus = true;
+    const print_debug_logs = true;
+    const minimum_cycle_rate = 60;
+    const display_performance = true;
 
     //Customization variables
     const run_loop = true;
-    const print_debug_logs = false;
+    const preemptive = true;
+    const track_performance = true;
+    
+    const windowed = true;
     const use_devices = true;
     const use_graphics = true;
+    
     const do_logging = true;
-    const preemptive = true;
     const use_watchdog = true;
-    const track_performance = true;
-    const windowed = true;
+    
     const error_handler = true;
-    const suspend_on_unfocus = true;
 
     //Debug logging
     let debug;
@@ -88,11 +93,14 @@ let canvas, graphics, webgl;
         PIDs++;
     }
     Process.prototype.run = function(){
-        try{
-            this.command();
-        } catch (e){
-            console.error("Process " + this.PID + " has encountered an error.");
-            console.error(e);
+        if(this.suspended !== true){
+            try{
+                this.command();
+            } catch (e){
+                console.error("Process " + this.PID + " has encountered an error.");
+                console.error(e);
+                this.suspended = true;
+            }
         }
     }
     function create_process(command, priority){
@@ -103,12 +111,14 @@ let canvas, graphics, webgl;
         processes.push(process);
     }
     let threads = [];
+    let running_threads = 0;
     let Thread = function(command){
         this.command = command;
     }
     Thread.prototype.run = function(){
         try{
             this.command();
+            running_threads--;
         } catch (e){
             console.error("A thread encountered an error.");
             console.error(e);
@@ -116,6 +126,7 @@ let canvas, graphics, webgl;
     }
     function create_thread(command){
         threads.push(new Thread(command));
+        running_threads++;
     }
     function terminate(PID){
         for(let i = 0; i < processes.length; i++){
@@ -210,38 +221,50 @@ let canvas, graphics, webgl;
             }
             if(!document.hasFocus()){
                 suspend_system = true;
-                execution_time = 100;
+                execution_time = 500;
             }
         }
     }
 
     //Runtime
     let execution_count = 0;
-    let scheduler = function(){
-        while(threads.length > 0){
-            threads[0].run();
-            threads.splice(0, 1);
-        }
+    let scheduler = function(){//Non-premptive
         for(let i = 0; i < processes.length; i++){
             processes[i].run();
-        }
-    }
-    if(preemptive === true){
-        const target_frametime = 10;
-        debug("Running kernel preemptively");
-        scheduler = function(){
-            while(threads.length > 0 && performance.now() < target_frametime){
+            while(threads.length > 0){
                 threads[0].run();
                 threads.splice(0, 1);
             }
-            if(threads.length === 0){
-                for(let i = 0; i < processes.length; i++){
-                    threads.push(processes[i]);
+        }
+    }
+    if(preemptive === true){//Preemptive
+        debug("Running kernel preemptively");
+        /* Here is the idea of this scheduler:
+        - Run processes as threads (for better performance and better scheduling)
+        Steps:
+        1. Fill threads with all processes if there are no threads
+        2. Run all threads (the processes may open more threads)
+        3. Finish when either all processes+threads have run, or when the time expires
+        */
+        scheduler = function(){
+            const target_frametime = 1000/minimum_cycle_rate + performance.now();
+            for(let i = 0; i < processes.length + running_threads && performance.now() < target_frametime; i++){
+                if(threads.length === 0){
+                    for(let i = 0; i < processes.length; i++){
+                        threads.push(processes[i]);
+                    }
                 }
+                threads[0].run();
+                threads.splice(0, 1);
             }
         }
     }else{
         debug("Running kernel non-preemptively");
+    }
+    let run_processes = function(){
+        if(suspend_system !== true){
+            scheduler();
+        }
     }
 
     //Performance tracking
@@ -273,6 +296,17 @@ let canvas, graphics, webgl;
         }
     }
 
+    //Performance display
+    let performance_display = function(){};
+    if(display_performance === true){
+        performance_display = function(){
+            //TODO: Make default performance display
+        }
+        function set_performance_display(handler){
+            performance_display = handler;
+        }
+    }
+
     //Watchdog
     if(use_watchdog === true){
         debug("Initializing watchdog");
@@ -297,6 +331,7 @@ let canvas, graphics, webgl;
         suspend_daemon();
         run_processes();
         performance_tracker();
+        performance_display();
         execution_count++;
         //Rexecute loop
         if(run_loop === true && panicked === false){
