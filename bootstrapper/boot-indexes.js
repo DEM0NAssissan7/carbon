@@ -1,9 +1,8 @@
 //This is where you put all of the files you want to load in
 
-let kbSystems;
-let kernelLocation = "kernel/core/kernelX.js"
 {
-        var graphite = [
+        let kernel = "kernel/core/kernelX.js"
+        let graphite = [
             [
             //Kernel
             "kernel/extra/tools.js",
@@ -24,7 +23,7 @@ let kernelLocation = "kernel/core/kernelX.js"
             ],
             "Graphite Desktop"
         ];
-        var graphiteGui2 = [
+        let graphiteGui2 = [
             [
             //Kernel
             "kernel/extra/tools.js",
@@ -42,7 +41,7 @@ let kernelLocation = "kernel/core/kernelX.js"
             ],
             "Graphite GUI2"
         ];
-        var sotfLaunch = [
+        let sotfLaunch = [
             [
             //Kernel
             "kernel/extra/tools.js",
@@ -56,7 +55,7 @@ let kernelLocation = "kernel/core/kernelX.js"
             ],
             "Survival of the Fittest"
         ];
-        var graphiteCore = [
+        let graphiteCore = [
             [
             //Kernel
             "kernel/extra/tools.js",
@@ -67,17 +66,17 @@ let kernelLocation = "kernel/core/kernelX.js"
             ],
             "Graphite Core"
         ];
-        var bareKernel = [
+        let bareKernel = [
             [
             ],
             "Bare Kernel"
         ]
-        kbSystems = [
+        let systems = [
             graphite,
             graphiteGui2,
             sotfLaunch,
             graphiteCore,
             bareKernel,
         ]
+        init_system(systems, kernel);//Leave this at the end
 }
-kbInit();//Leave this at the end

@@ -286,7 +286,7 @@ class GraphiteWindow {
         if(this.dead === true){
             //Kill all processes linked to the window
             for (let i = 0; i < this.processes.length; i++) {
-                terminate(this.processes[i].PID);
+                kill(this.processes[i].PID);
             }
         }
     }

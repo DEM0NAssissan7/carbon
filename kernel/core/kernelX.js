@@ -59,8 +59,25 @@ let canvas, graphics, webgl;
             }
         }
     } else {
-        debug = function () {
+        debug = function () {}
+    }
 
+    //Kernel key management
+    const kernel_key = Math.random();
+    function get_kernel_key() {
+        console.warn("[" + (Date.now() - Kernel.start_time) + "]: Kernel key was accessed.");
+        debug("Critical warning: Kernel key was accessed");
+        return kernel_key;
+    }
+
+    //Root execution
+    function run_as_root(command_string, key){
+        if(key === kernel_key){
+            eval(command_string);
+            debug("-" + command_string + "- was run at kernel level");
+        } else {
+            console.warn("Warning: Illegal run-as-root request was made.")
+            debug("Illegal run_as_root.");
         }
     }
 
@@ -78,10 +95,14 @@ let canvas, graphics, webgl;
     //Error management
     let error_screen;
     if (error_handler === true) {
-
+        error_screen = {
+            triggered: false,
+            process: undefined,
+            error: undefined
+        }
     }
 
-    //Process management
+    //Processes
     let processes = [];
     let PIDs = 0;
     function Process(command, priority) {
@@ -90,8 +111,7 @@ let canvas, graphics, webgl;
         this.priority = priority;
         this.suspended = false;
         this.PID = PIDs;
-        this.cycle_count = 0;
-        this.ran_priority = false;
+        this.copy = false;
         PIDs++;
     }
     Process.prototype.run = function () {
@@ -103,7 +123,6 @@ let canvas, graphics, webgl;
                 console.error(e);
                 this.suspended = true;
             }
-            this.cycle_count++;
         }
     }
     function create_process(command, priority) {
@@ -113,15 +132,35 @@ let canvas, graphics, webgl;
     function push_process(process) {
         processes.push(process);
     }
+    let find_by_pid = function(PID){
+        let result;
+        for(let i = 0; i < processes.length; i++){
+            if(processes[i].PID === PID) {
+                result = {
+                    index: i,
+                    process: processes[i]
+                }
+            }
+        }
+        return result;
+    }
+    function kill(PID) {
+        processes.splice(find_by_pid(PID).index, 1);
+    }
+    function suspend(PID){
+        find_by_pid(PID).process.suspend = true;
+    }
+    function resume(PID){
+        find_by_pid(PID).process.suspend = false;
+    }
+    //Threads
     let threads = [];
-    let running_threads = 0;
     let Thread = function (command) {
         this.command = command;
     }
     Thread.prototype.run = function () {
         try {
             this.command();
-            running_threads--;
         } catch (e) {
             console.error("A thread encountered an error.");
             console.error(e);
@@ -129,14 +168,6 @@ let canvas, graphics, webgl;
     }
     function create_thread(command) {
         threads.push(new Thread(command));
-        running_threads++;
-    }
-    function terminate(PID) {
-        for (let i = 0; i < processes.length; i++) {
-            if (processes[i].PID === PID) {
-                processes.splice(i, 1);
-            }
-        }
     }
 
     //Suspension
@@ -189,15 +220,15 @@ let canvas, graphics, webgl;
         //Controllers
         devices.controllers = [];
         window.addEventListener("gamepadconnected", e => {
-            kernelLog("Device: Controller " + e.gamepad.index + " connected (" + e.gamepad.id + ")", "info");
+            debug("Device: Controller " + e.gamepad.index + " connected (" + e.gamepad.id + ")");
             devices.controllers.push(e.gamepad);
         });
         window.addEventListener("gamepaddisconnected", e => {
-            kernelLog("Device: Controller " + e.gamepad.index + " disconnected (" + e.gamepad.id + ")", "info");
+            debug("Device: Controller " + e.gamepad.index + " disconnected (" + e.gamepad.id + ")");
             devices.controllers.splice(e.gamepad, 1);
         });
         function get_devices() {
-            let devices_buffer = JSON.parse(JSON.stringify(devices));;
+            const devices_buffer = JSON.parse(JSON.stringify(devices));;
             return devices_buffer;
         }
     }
@@ -240,104 +271,45 @@ let canvas, graphics, webgl;
         }
     }
 
-    //Runtime
-    let execution_count = 0;
-    let scheduler = function () {//Non-premptive
-        for (let i = 0; i < processes.length; i++) {
-            processes[i].run();
-            while (threads.length > 0) {
-                threads[0].run();
-                threads.splice(0, 1);
+    //Scheduler
+    let scheduler = function () {//Non preemptive
+        for (let i = 0; i < processes.length; i++) {//Fill threads with processes
+            processes[i].copy = false;
+            threads.push(processes[i]);
+        }
+        while (threads.length > 0) {
+            threads[0].run();
+            if (threads[0].priority > 1 && threads[0].copy === false) {
+                threads[0].copy = true;
+                for (let i = 1; i < threads[0].priority; i++) {
+                    let index = (Math.round((threads.length * i + 1) / threads[0].priority)) % threads.length;
+                    threads.splice(index, 0, threads[0]);
+                }
             }
+            threads.splice(0, 1);
         }
     }
-    if (preemptive === true) {//Preemptive
+    if (preemptive === true) {
         debug("Running kernel preemptively");
-        /* Here is the idea of this scheduler:
-        - Run processes as threads (for better performance and better scheduling)
-        Steps:
-        1. Fill threads with all processes if there are no threads
-        2. Run all threads (the processes may open more threads)
-        3. Finish when either all processes+threads have run, or when the time expires
-        */
-        function get_processes(){
-            return processes
-        }
-        function get_threads(){
-            return threads
-        }
-        scheduler = function() {
-            const target_time = 1000/minimum_cycle_rate + performance.now();
-            if(threads.length === 0){//Fill threads with processes
-                for(let i = 0; i < processes.length; i++){
+        scheduler = function () {
+            const target_time = 1000 / minimum_cycle_rate + performance.now();
+            if (threads.length === 0) {//Fill threads with processes
+                for (let i = 0; i < processes.length; i++) {
+                    processes[i].copy = false;
                     threads.push(processes[i]);
                 }
             }
-            // while(threads.length > 0){
+            while (threads.length > 0 && performance.now() < target_time) {
                 threads[0].run();
-                if(threads[0].priority > 1){
-                    for(let i = 1; i < threads[0].priority; i++){
-                        let index = (Math.round((threads.length) / threads[0].priority) * (i)) % threads.length;
-                        console.log(index, threads.length)
+                if (threads[0].priority > 1 && threads[0].copy === false) {
+                    threads[0].copy = true;
+                    for (let i = 1; i < threads[0].priority; i++) {
+                        let index = (Math.round((threads.length * (i) + 1) / threads[0].priority)) % threads.length;
                         threads.splice(index, 0, threads[0]);
                     }
                 }
                 threads.splice(0, 1);
-            // }
-            /*
-            const end_time = 1000/minimum_cycle_rate + Date.now();
-            const end_time_accurate = 1000/minimum_cycle_rate + performance.now();
-            let loop = true;
-            let check_overtime = function() {
-                if (Date.now() < end_time) {
-                    return false;
-                } else {
-                    loop = false;
-                    debug("Scheduler has gone overtime");
-                    return true;
-                }
             }
-            //Main process loop
-            for (let c = 0; c < processes.length && performance.now() < end_time_accurate; c++) {
-                if (!(scheduler_index < processes.length)) {//Index
-                    scheduler_index = 0;
-                }
-                while (threads.length > 0) {//Threads
-                    threads[0].run();
-                    threads.splice(0, 1);
-                    if (check_overtime()) {
-                        break;
-                    }
-                }
-                if (loop === false) {
-                    break;
-                }
-                if (priorty_processes[scheduler_index] !== undefined) {//Priority
-                    for (let i = 0; i < priorty_processes[scheduler_index].length; i++) {
-                        priorty_processes[scheduler_index][i].run();
-                    }
-                    priorty_processes.splice(scheduler_index, 1);
-                    if (check_overtime()) {
-                        break;
-                    }
-                }
-                //Processes
-                let process = processes[scheduler_index];
-                if (process.dead === true) {
-                    processes.splice(scheduler_index, 1);
-                } else {
-                    process.run();
-                    for (let i = 0; i < process.priority - 1; i++) {//Priority
-                        let index = (Math.round((processes.length* i) / process.priority) + (scheduler_index + 1)) % (processes.length);
-                        if (priorty_processes[index] === undefined) {
-                            priorty_processes[index] = [];
-                        }
-                        priorty_processes[index].push(process);
-                    }
-                }
-                scheduler_index++;//Index management
-            }
-            */
         }
     } else {
         debug("Running kernel non-preemptively");
@@ -369,9 +341,11 @@ let canvas, graphics, webgl;
             create_process(scheduler_performance_tracker);
         }
         function get_performance() {
+            let const_realtime_performance = realtime_performance;
+            let const_scheduler_performance = scheduler_performance;
             let result = {
-                realtime: realtime_performance,
-                scheduler: scheduler_performance
+                realtime: const_realtime_performance,
+                scheduler: const_scheduler_performance
             }
             return result;
         }
@@ -408,6 +382,7 @@ let canvas, graphics, webgl;
     }
 
     //Main loop
+    let execution_count = 0;
     let main = function () {
         suspend_daemon();
         run_processes();
@@ -423,8 +398,9 @@ let canvas, graphics, webgl;
         debug("Starting kernel");
         main();
         try {
-            console.log("Kernel successfully started. (" + (Date.now() - Kernel.start_time) + "ms)")
-            debug("Kernel was started")
+            let time_since_start = (Date.now() - Kernel.start_time);
+            console.log("Kernel successfully started. (" + time_since_start + "ms)")
+            debug("Kernel was started in " + time_since_start + "ms");
         } catch (e) { }
     } catch (e) {
         console.error("Kernel was unable to start.");

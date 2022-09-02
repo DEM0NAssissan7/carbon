@@ -1444,38 +1444,33 @@ class SOTF {
     function updateGame() {
       self.update();
     }
-    //Processes
-    let logicProcesses = [
-      //World
-      new Process(generateWorld, 0),
-      //Enemies
-      new Process(capEnemyCount, 2),
-      new Process(updateEnemies, 1, self.logicProcesses),
-      //Players
-      new Process(updatePlayers, 4, self.logicProcesses),
-      //Update player-enemy collissions
-      new Process(updateEnemyPlayerCollisions, 0, self.logicProcesses),
-      //Game logic (levels)
-      new Process(updateGameLogic, 2, self.logicProcesses),
-    ]
-    let logicProcessesPIDs = [];
-    for(let i = 0; i < logicProcesses.length; i++){
-      let logicProcess = new Process(logicProcesses[i].command, logicProcesses[i].priority);
-      logicProcess.name = logicProcesses[i].name;
-      logicProcessesPIDs.push(logicProcess.PID);
-      processes.push(logicProcess);
+    function sotf_logic_update(){
+      createThread(generateWorld);
+      createThread(capEnemyCount);
+      createThread(updateEnemies);
+      createThread(updatePlayers);
+      createThread(updateEnemyPlayerCollisions);
+      createThread(updateGameLogic);
     }
-
     //Create processes to pass into the window manager
-    let windowProcesses = [
-      new Process(drawBackground, 1),
-      new Process(renderWorld, 0),
-      new Process(drawEnemies, -3),
-      new Process(updatePlayerShooting, 2),
-      new Process(drawPlayers, 2),
-      new Process(renderHud, 1),
-      new Process(updateGame, 3),
-    ]
+    function sotf_graphics_update(){
+      createThread(drawBackground)
+      createThread(renderWorld)
+      createThread(drawEnemies)
+      createThread(updatePlayerShooting)
+      createThread(drawPlayers)
+      createThread(renderHud)
+      createThread(updateGame)
+    }
+    // let windowProcesses = [
+    //   new Process(drawBackground, 1),
+    //   new Process(renderWorld, 0),
+    //   new Process(drawEnemies, -3),
+    //   new Process(updatePlayerShooting, 2),
+    //   new Process(drawPlayers, 2),
+    //   new Process(renderHud, 1),
+    //   new Process(updateGame, 3),
+    // ]
 
     if (mode === "fullscreen") {
       var sotfWindow = new GraphiteWindow("Survival of the Fittest", windowProcesses, false, self.logicProcesses);

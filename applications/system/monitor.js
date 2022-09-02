@@ -19,11 +19,11 @@ class SystemMonitor{
         init_data(this.sched_data);
         init_data(this.rt_data);
         const precalculated_value = canvas.height/(scale_factor - min_scale_factor);
-        function graph_data(array, data){
+        let graph_data = function(array, data){
             array.push(data);
-            create_thread(() => {array.splice(0, array.length - canvas.width);});
-                graphics.lineWidth = 2;
-                graphics.beginPath();
+            array.splice(0, array.length - canvas.width);
+            graphics.lineWidth = 2;
+            graphics.beginPath();
             for(let i = 0; i < array.length; i++){
                 graphics.lineTo(i, (precalculated_value * (array[i] - min_scale_factor)));
             }
@@ -31,20 +31,18 @@ class SystemMonitor{
         }
 
         setBackground(canvas, graphics);
-        create_thread(() => {
-            graphics.strokeStyle = "red";
-            graph_data(this.rt_data, get_performance().realtime);
-        });
-        create_thread(() => {
-            graphics.strokeStyle = "blue";
-            graph_data(this.sched_data, get_performance().scheduler);
-        });
+
+        graphics.strokeStyle = "red";
+        graph_data(this.rt_data, get_performance().realtime);
+
+        graphics.strokeStyle = "blue";
+        graph_data(this.sched_data, get_performance().scheduler);
     }
     iconFunction(canvas, graphics){
 
     }
     createWindow(){
-        var settingsSystem = new SystemMonitor();
-        quickWindow((canvas,graphics) => {settingsSystem.update(canvas,graphics)}, "System Monitor");
+        let app = new SystemMonitor();
+        quickWindow((canvas,graphics) => {app.update(canvas,graphics)}, "System Monitor");
     }
 }
