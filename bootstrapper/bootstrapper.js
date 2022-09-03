@@ -9,22 +9,23 @@
     }
     function load_script(file){
         document.body.append(create_script_element(file));
-        if(print_loadout_message === true){
-            console.log("Bootstrapper: Loaded " + file);
-        }
     }
-    let load_scripts = function(script_array){
+    let load_system = function(script_array){
         let scripts = script_array[0];
         let name = script_array[1];
         console.warn("Loading " + name + "...");
         for(let i = 0; i < scripts.length; i++){
             setTimeout(() => {
                 load_script(scripts[i]);
+                if(print_loadout_message === true){
+                    console.log("Bootstrapper: Loaded " + scripts[i]);
+                }
             }, (i + 1) * 20);
         }
         document.title = name;
     }
     function init_system(scripts, kernel){
+        load_script(kernel);
         let interrupted = false;
         let prompt_interrupt = function(e) {//Escape key
             if(e.key === "Escape"){
@@ -43,16 +44,14 @@
                     if(e.key > 0 && e.key < scripts.length + 1){
                         document.open();
                         document.close();
-                        load_script(kernel);
-                        load_scripts(scripts[e.key - 1]);
+                        load_system(scripts[e.key - 1]);
                         document.removeEventListener('keydown', boot_select_interruptor);
                     }
                 }
                 window.removeEventListener('keydown', prompt_interrupt);
                 window.addEventListener('keydown', boot_select_interruptor);
             } else {
-                load_script(kernel);
-                load_scripts(scripts[0]);
+                load_system(scripts[0]);
             }
         }, boot_select_timeout);
     }

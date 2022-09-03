@@ -1,7 +1,7 @@
 //This is where you put all of the files you want to load in
 
 {
-        let kernel = "kernel/core/kernelX.js"
+        let kernel = "kernel/core/kernel.js"
         let graphite = [
             [
             //Kernel

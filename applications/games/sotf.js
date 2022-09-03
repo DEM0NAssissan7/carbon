@@ -1450,9 +1450,24 @@ class SOTF {
       createThread(updateEnemies);
       createThread(updatePlayers);
       createThread(updateEnemyPlayerCollisions);
-      createThread(updateGameLogic);
+      createThread(generateWorld);
     }
-    //Create processes to pass into the window manager
+    let logic_process = new Process(sotf_logic_update);
+    
+    //Processes
+    // let logicProcesses = [
+    //   //World
+    //   new Process(generateWorld, 0),
+    //   //Enemies
+    //   new Process(capEnemyCount, 2),
+    //   new Process(updateEnemies, 1, self.logicProcesses),
+    //   //Players
+    //   new Process(updatePlayers, 4, self.logicProcesses),
+    //   //Update player-enemy collissions
+    //   new Process(updateEnemyPlayerCollisions, 0, self.logicProcesses),
+    //   //Game logic (levels)
+    //   new Process(updateGameLogic, 2, self.logicProcesses),
+    // ]
     function sotf_graphics_update(){
       createThread(drawBackground)
       createThread(renderWorld)
@@ -1462,6 +1477,8 @@ class SOTF {
       createThread(renderHud)
       createThread(updateGame)
     }
+
+    //Create processes to pass into the window manager
     // let windowProcesses = [
     //   new Process(drawBackground, 1),
     //   new Process(renderWorld, 0),
@@ -1480,9 +1497,7 @@ class SOTF {
       sotfWindow.targetHeight = canvas.height;
       windows.push(sotfWindow);
     } else if(mode === "standalone"){
-      for(let i = 0; i < windowProcesses.length; i++){
-        graphicalProcesses.push(windowProcesses[i]);
-      }
+      push_process()
       addProcessGroup(self.logicProcesses);
     }else {
       //Add game processes to the window manager

@@ -1,14 +1,5 @@
-//Option Variables
-const minimumCyclesPerSecond = 10;
-let preemptiveKernel = true;
-let idleSuspend = true;
-let showPerformanceInfo = true;
-let enableWatchdog = true;
-
-//Kernel objects
-const startupTime = Date.now();
-var Kernel = {
-    id: System.name + " Kernel",
+const Kernel = {
+    name: System.name + " Kernel",
     version: System.version,
     capibilities: [
         "Preemptive",
@@ -16,635 +7,426 @@ var Kernel = {
         "Performance Tracking",
         "Power States",
         "Live Reclocking",
-    ]
+    ],
+    start_time: Date.now()
 }
 
-//Debug Logs
-let kernelDebugs = [];
-function DebugObject(message){
-    this.time = Date.now() - startupTime;
-    this.message = message;
-}
-function kernelDebug(message){
-    kernelDebugs.push(new DebugObject(message));
-}
-function printKernelDebugs(){
-    console.warn("Printing kernel debug logs");
-    for(let i = 0; i < kernelDebugs.length; i++){
-        console.log("[" + kernelDebugs[i].time + "]: " + kernelDebugs[i].message );
-    }
-}
-kernelDebug("System ID: " + System.name + " " + System.version);//Print system info to the debug log
-kernelDebug("Kernel ID: " + Kernel.id + " " + Kernel.version);//Print kernel info to the debug log
+let canvas, graphics, webgl;
 
-//Performance numbers
-const targetKernelLatency = 1000 / minimumCyclesPerSecond;
-let systemExecutionLatency = targetKernelLatency;
-let kernelExecutionCycleCount = 0;
-let kernelCycleLatency = 0;
-let kernelCyclesPerSecond = 0;
-const performanceSampleSize = Math.max(Math.round(minimumCyclesPerSecond / 10), 1);
-function kernelLatencyReporter() {
-    const dividedCycleCounter = kernelExecutionCycleCount % (performanceSampleSize * 2);
-    if (dividedCycleCounter === 0) {
-        this.time1 = performance.now();
-    }
-    if (dividedCycleCounter === performanceSampleSize) {
-        this.time2 = performance.now();
-    }
-    kernelCycleLatency = Math.abs(this.time1 - this.time2) / performanceSampleSize;
-    if (!kernelCycleLatency) {
-        kernelCycleLatency = 1;
-    }
-    kernelCyclesPerSecond = Math.floor(1000 / kernelCycleLatency);
+{
+    //Option variables
+    const suspend_on_unfocus = true;
+    const print_debug_logs = false;
+    const minimum_cycle_rate = 10;
+    const display_performance = true;
 
-    kernelExecutionCycleCount++;
-}
-function trackPerformance(command) {
-    let timeBefore = performance.now();
-    command();
-    return performance.now() - timeBefore;
-}
-//Track realtime performance
-let kernelRealtimeLatency = 0;
-function trackRealtimePerformance() {
-    if (!this.init) {
-        this.init = true;
-        this.timer = performance.now();
-        kernelDebug("Realtime performance tracker has been intiated.");
-    }
-    kernelRealtimeLatency = performance.now() - this.timer;
-    this.timer = performance.now();
-}
+    //Customization variables
+    const run_loop = true;
+    const preemptive = true;
+    const track_performance = true;
 
-//Power state
-let kernelPowerState = 0;
-let kernelPowerStateManuallySet = false;
-function setPowerState(powerState) {
-    //Kernel will run at a clock of (2^powerstate)ms
-    kernelPowerStateManuallySet = true;
-    kernelPowerState = powerState;
-    kernelLog("Power state has been manually altered.", "warning");
-}
-function resetPowerState() {
-    kernelPowerStateManuallySet = false;
-    kernelPowerState = 0;
-    kernelLog("Power state has been restored.", "warning");
-}
+    const windowed = true;
+    const use_devices = true;
+    const use_graphics = true;
 
-//Logs
-let kernelLogs = [];
-function LogObject(message, severity) {
-    this.time = Date.now() - startupTime;
+    const do_logging = true;
+    const use_watchdog = true;
 
-    this.message = message;
-    this.severity = severity;
-}
-function kernelLog(message, severity) {
-    let currentSeverity = "info";
-    if (severity !== undefined) {
-        currentSeverity = severity;
-    }
-    kernelLogs.push(new LogObject(message, currentSeverity));
-    kernelDebugs.push(new DebugObject("Kernel log: " + message));
-}
-function printKernelLogs(severity) {
-    function printKernelMessage(logObject) {
-        return "[" + logObject.time + "]: " + logObject.message;
-    }
-    console.warn("Kernel log print triggered: ");
-    kernelDebug("Kernel log print was called");
-    for (let i = 0; i < kernelLogs.length; i++) {
-        switch (kernelLogs[i].severity) {
-            case "info":
-                console.log(printKernelMessage(kernelLogs[i]));
-                break;
-            case "warning":
-                console.warn(printKernelMessage(kernelLogs[i]));
-                break;
-            case "error":
-                console.error(printKernelMessage(kernelLogs[i]));
-                break;
-            default:
-                console.log(printKernelMessage(kernelLogs[i]));
+    const error_handler = true;
+
+    //Debug logging
+    let debug = function () {};
+    if (do_logging === true) {
+        let debug_logs = [];
+        let debug_object = function (message) {
+            this.message = message;
+            this.date = Date.now() - Kernel.start_time;
+        }
+        debug = function (message) {
+            debug_logs.push(new debug_object(message));
+            if (print_debug_logs === true) {
+                console.log(message);
+            }
+        }
+        function print_kernel_debug() {
+            console.warn("Printing kernel debug logs");
+            for (let i = 0; i < debug_logs.length; i++) {
+                console.log("[" + debug_logs[i].date + "] " + debug_logs[i].message);
+            }
         }
     }
-}
 
-//Processes
-let processes = [];
-let PIDs = 0;
-let systemSuspend = false;
-class Process {
-    constructor(command, priority) {
-        //Essential process traits
+    //Kernel key management
+    const kernel_key = Math.random();
+    function get_kernel_key() {
+        console.warn("[" + (Date.now() - Kernel.start_time) + "]: Kernel key was accessed.");
+        let confirmation = true;
+        if(windowed === true){
+            confirmation =  confirm("A program is requesting root access. Accept?");
+        }
+        if(confirmation === true){
+            debug("Critical warning: The kernel key was accessed");
+            return kernel_key;
+        } else {
+            debug("Critical warning: The kernel key was requested, but declined.");
+            return null;
+        }
+    }
+
+    //Root execution
+    function run_as_root(command_string, key){
+        if(key === kernel_key){
+            eval(command_string);
+            debug("'" + command_string + "' was run at kernel level");
+        } else {
+            console.warn("Warning: Illegal run-as-root request was made.")
+            debug("Illegal run_as_root was made. No key supplied");
+        }
+        if(key === null){
+            panic("Root access was requested with a forbidden key. Malice has been detected.");
+        }
+    }
+
+    //Panic
+    let panicked = false;
+    let panic = function (message) {
+        console.error("Critical: Kernel panic (" + message + ")");
+        debug("Kernel panicked: " + message);
+        processes = [];
+        threads = [];
+        panicked = true;
+        print_kernel_debug();
+        if (windowed === true) {
+            alert("Kernel panic -> " + message);
+        }
+    }
+
+    //Error management
+    let error_screen;
+    let error_screen_daemon = function(){};
+    if (error_handler === true) {
+        let error_screen_handler = function(){//Default 
+
+        };
+        error_screen = {
+            triggered: false,
+            process: undefined,
+            error: undefined
+        }
+        error_screen_daemon = function(){
+
+        }
+        function set_error_screen(handler){
+            error_screen_handler = handler;
+        }
+    }
+
+    //Processes
+    let processes = [];
+    let PIDs = 0;
+    function Process(command, priority) {
         this.command = command;
+        this.process_name = command.name;
+        this.priority = priority;
+        this.suspended = false;
         this.PID = PIDs;
-        this.processName = command.name;
-        //Performance Tracking
-        this.cycleCount = 0;
-        this.runCount = 0;
-        //Suspend
-        this.suspend = false;
-        this.manualSuspend = false;
-        //Scheduler variables
-        let currentPriority = 1;
-        if (priority !== undefined) {
-            currentPriority = priority;
-        }
-        this.priority = currentPriority;
-        //Misc
-        this.startTime = Date.now() - startupTime;
-        this.dead = false;
-        kernelDebug("Process " + PIDs + " has been created.");
+        this.copy = false;
         PIDs++;
     }
-    run() {
-        if (this.suspend === false && this.manualSuspend === false) {
-            if (this.priority >= 0) {
+    Process.prototype.run = function () {
+        if (this.suspended !== true) {
+            try {
                 this.command();
-                this.runCount++;
-            } else if (this.priority < 0 && this.cycleCount % Math.abs(this.priority) === 0) {//Halftime execution
-                this.command();
-                this.runCount++;
+            } catch (e) {
+                console.error("Process " + this.PID + " has encountered an error.");
+                console.error(e);
+                this.suspended = true;
             }
-            this.cycleCount++;
         }
     }
-};
-let threads = [];
-class Thread {
-    constructor(command) {
-        //Essential process traits
+    function create_process(command, priority) {
+        processes.push(new Process(command, priority));
+        return PIDs - 1;
+    }
+    function push_process(process) {
+        processes.push(process);
+    }
+    let find_by_pid = function(PID){
+        let result;
+        for(let i = 0; i < processes.length; i++){
+            if(processes[i].PID === PID) {
+                result = {
+                    index: i,
+                    process: processes[i]
+                }
+            }
+        }
+        return result;
+    }
+    function kill(PID) {
+        processes.splice(find_by_pid(PID).index, 1);
+    }
+    function suspend(PID){
+        find_by_pid(PID).process.suspend = true;
+    }
+    function resume(PID){
+        find_by_pid(PID).process.suspend = false;
+    }
+    //Threads
+    let threads = [];
+    let Thread = function (command) {
         this.command = command;
-        //Misc
-        this.ran = false;
     }
-    run() {
-        if(this.ran === true){
-            kernelLog("A thread was called after already being ran.", "warning");
-        }
-        if (this.ran === false) {
-            this.command();
-            this.ran = true;
-        }
-    }
-}
-function createProcess(command, priority) {
-    processes.push(new Process(command, priority));
-}
-function createThread(command) {
-    threads.push(new Thread(command));
-}
-function kill(PID) {
-    for (let i = 0; i < processes.length; i++) {
-        if (processes[i].PID === PID) {
-            processes[i].dead = true;
-            kernelLog("Process " + PID + " killed", "warning");
-        }
-    }
-}
-function terminate(PID) {
-    for (let i = 0; i < processes.length; i++) {
-        if (processes[i].PID === PID) {
-            processes.splice(i);
-            kernelLog("Process " + PID + " terminated", "warning");
-        }
-    }
-}
-function suspend(PID) {
-    for (let i = 0; i < processes.length; i++) {
-        if (processes[i].PID === PID) {
-            processes[i].manualSuspend = true;
-            kernelLog("Process " + PID + " suspended", "warning");
-        }
-    }
-}
-function resume(PID) {
-    for (let i = 0; i < processes.length; i++) {
-        if (processes[i].PID === PID) {
-            processes[i].manualSuspend = false;
-            processes[i].suspend = false;
-            kernelLog("Process " + PID + " resumed", "warning");
-        }
-    }
-}
-let systemError = [];
-function runProcess(process) {
-    try {
-        process.run();
-    } catch (error) {
-        console.error("Process with PID " + process.PID + " encountered an error.");
-        console.error(error);
-        kernelLog("Process with PID " + process.PID + " failed to run: " + error, "error");
-        systemError = [true, process, error];
-    }
-}
-function runThread(thread) {
-    try {
-        thread.run();
-    } catch (error) {
-        console.error("A Thread encountered an error.");
-        console.error(error);
-        kernelLog("A Thread encountered an error.");
-    }
-}
-
-let kernelProcessesLoopsPerSecond = 0;
-let kernelProcessesExecutionCount = 0;
-
-let kernelProcessExecutionLatency = targetKernelLatency;
-
-let previousThreadLatency = 0;
-let priorityTasks = [];
-let schedulerIndex = 0;
-let schedulerLatency = 0;
-let schedulerLatencyTimer = performance.now();
-function trackSchedulerPerformance() {
-    const performanceCache = performance.now();
-    schedulerLatency = performanceCache - schedulerLatencyTimer;
-    schedulerLatencyTimer = performanceCache;
-}
-createProcess(trackSchedulerPerformance);
-function scheduler() {
-    const adjustedTargetLatency = (targetKernelLatency - (kernelRealtimeLatency - kernelProcessExecutionLatency));
-    const targetEndTime = adjustedTargetLatency + Date.now();
-    const accurateTargetTime = adjustedTargetLatency + performance.now();
-    let stopLoop = false;
-    function checkOvertime() {
-        if (Date.now() < targetEndTime) {
-            return false;
-        } else {
-            stopLoop = true;
-            kernelDebug("Scheduler has gone overtime");
-            return true;
-        }
-    }
-    //Main process loop
-    for (let c = 0; c < processes.length && performance.now() < accurateTargetTime; c++) {
-        if (!(schedulerIndex < processes.length)) {//Index management
-            schedulerIndex = 0;
-        }
-
-        //Thread runner
-        while (threads.length > 0) {
-            runThread(threads[0]);
-            threads.splice(0, 1);
-            if (checkOvertime()) {
-                break;
-            }
-        }
-        if (stopLoop === true) {
-            break;
-        }
-
-        //Run priority tasks
-        if (priorityTasks[schedulerIndex] !== undefined) {
-            for (let i = 0; i < priorityTasks[schedulerIndex].length; i++) {
-                runProcess(priorityTasks[schedulerIndex][i]);
-            }
-            priorityTasks.splice(schedulerIndex, 1);
-            if (checkOvertime()) {
-                break;
-            }
-        }
-
-        //Process runner
-        let process = processes[schedulerIndex];
-        if (process.dead === true) {
-            processes.splice(schedulerIndex, 1);
-        } else {
-            runProcess(process);
-            for (let i = 0; i < process.priority - 1; i++) {//Priority
-                let index = (Math.round(((processes.length) / process.priority) * i) + (schedulerIndex + 1)) % (processes.length);
-                if (priorityTasks[index] === undefined) {
-                    priorityTasks[index] = [];
-                }
-                priorityTasks[index].push(process);
-            }
-        }
-        schedulerIndex++;//Index management
-    }
-}
-
-function updateKernelProcesses() {
-    if (systemSuspend === false && systemError[0] !== true && processes.length > 0) {
-        let timeBefore = performance.now();
-        //Sort processes by priority depending on if the kernel is preemtive
-        if (preemptiveKernel === true) {
-            scheduler();
-        } else {
-            //Non-preemptive
-            for (let i = 0; i < processes.length; i++) {
-                while (threads.length > 0) {
-                    runThread(threads[0]);
-                    threads.splice(0, 1);
-                }
-                if (priorityTasks[i] !== undefined) {//Run priority tasks
-                    for (let l = 0; l < priorityTasks[i].length; l++) {
-                        runProcess(priorityTasks[i][l]);
-                    }
-                    priorityTasks.splice(i, 1);
-                }
-                let process = processes[i];
-                if (process.dead === true) {
-                    processes.splice(i, 1);
-                } else {
-                    runProcess(process);
-                    for (let i = 0; i < process.priority - 1; i++) {//Priority
-                        let index = (Math.round(((processes.length) / process.priority) * i) + (schedulerIndex + 1)) % (processes.length);
-                        if (priorityTasks[index] === undefined) {
-                            priorityTasks[index] = [];
-                        }
-                        priorityTasks[index].push(process);
-                    }
-                }
-            }
-        }
-        kernelProcessesExecutionCount++;
-        kernelProcessExecutionLatency = performance.now() - timeBefore;
-    }
-}
-
-//Input management
-let devices = {};
-//Mouse
-devices.mouse = {
-    x: 0,
-    y: 0,
-    vectorX: 0,
-    vectorY: 0,
-    clicked: false
-};
-document.onmousemove = event => {
-    devices.mouse.vectorX = devices.mouse.x - event.pageX;
-    devices.mouse.vectorY = devices.mouse.y - event.pageY;
-    devices.mouse.x = event.pageX;
-    devices.mouse.y = event.pageY;
-};
-document.onmousedown = () => {
-    devices.mouse.clicked = true;
-    devices.mouse.pressed = true;
-};
-document.onmouseup = () => {
-    devices.mouse.clicked = false;
-    devices.mouse.pressed = false;
-};
-//Keyboard
-devices.keyboard = {
-    keys: [],
-    keyCodes: [],
-    pressed: false,
-    keyCode: 0,
-    info: {},
-};
-devices.keyboard.keyCodes = [];
-document.onkeydown = event => {
-    devices.keyboard.keyCodes[event.keyCode] = true;
-    devices.keyboard.keys.push(event.key);
-    devices.keyboard.pressed = true;
-    devices.keyboard.info = event;
-};
-document.onkeyup = event => {
-    devices.keyboard.keyCodes[event.keyCode] = false;
-    devices.keyboard.pressed = false;
-    devices.keyboard.info = event;
-};
-function keyboardConfigurationDaemon() {
-    devices.keyboard.keys = [];
-}
-//Controllers
-devices.controllers = [];
-window.addEventListener("gamepadconnected", e => {
-    kernelLog("Device: Controller " + e.gamepad.index + " connected (" + e.gamepad.id + ")", "info");
-    devices.controllers.push(e.gamepad);
-});
-window.addEventListener("gamepaddisconnected", e => {
-    kernelLog("Device: Controller " + e.gamepad.index + " disconnected (" + e.gamepad.id + ")", "info");
-    devices.controllers.splice(e.gamepad, 1);
-});
-
-//System suspend
-function suspendSystem(processesArray) {
-    for (let i = 0; i < processesArray.length; i++) {
-        processesArray[i].suspend = true;
-    }
-    kernelDebug("System was suspended");
-}
-function resumeSystem(processesArray) {
-    for (let i = 0; i < processesArray.length; i++) {
-        processesArray[i].suspend = false;
-    }
-    kernelDebug("System was resumed");
-}
-
-//Kernel panic
-let panicProcesses = [];
-let panicWindow = [];
-function panic(message) {
-    let panicMessage = "A kernel panic has occured. System is unusable.";
-    if (message !== undefined) {
-        panicMessage = message;
-    }
-    enableWatchdog = false;
-    console.error("PANIC: " + panicMessage);
-    kernelLog("FATAL - Kernel Panic (" + panicMessage + ")", "error");
-
-    panicProcesses = processes;
-    kernelLog("Check the panicProcesses variable for the process state before the system went down.", "info");
-    panicProcesses = processes;
-    kernelLog("Check the panicWindow for the window state before the system went down.", "info");
-
-    processes = [];
-    printKernelLogs();
-
-    canvas = null;
-    monitorFramerate = null;
-    alert("Kernel panic -> " + panicMessage);
-    kernelPowerState = 11;
-}
-
-//Kernel watchdog
-let watchdogCycleCountBuffer = 0;
-let watchdogSafetyTimer = 0;
-let watchdogHangTimer = false;
-let kernelWatchdogTriggerCount = 0;
-function watchdog() {
-    if (enableWatchdog === true) {
-        if (kernelExecutionCycleCount === watchdogCycleCountBuffer && watchdogHangTimer === false) {
-            kernelLog("Watchdog: Kernel watchdog timer triggered", "warning");
-            watchdogSafetyTimer = Date.now();
-            watchdogHangTimer = true;
-            kernelWatchdogTriggerCount++;
-        } else if (kernelExecutionCycleCount !== watchdogCycleCountBuffer) {
-            watchdogCycleCountBuffer = kernelExecutionCycleCount;
-            watchdogHangTimer = false;
-        }
-        if (watchdogHangTimer === true && Date.now() - watchdogSafetyTimer >= 4300) {
-            panic("Kernel watchdog has detected that your system is hung.");
-        }
-        if (kernelWatchdogTriggerCount > 5) {
-            kernelLog("Watchdog: The watchdog has been called many times. The system is freezing a lot. Are there heavy processes running?", "warning");
-        }
-    }
-}
-setInterval(() => { watchdog() }, 2500);//run kernel watchdog every 2.5 seconds
-
-//Kernel reset
-function resetKernel() {
-    kernelDebug("Kernel was reset");
-    let processesBuffer = [];
-    for (let i = 0; i < processes.length; i++) {
-        processesBuffer[i] = new Process(processes[i].command, processes[i].priority);
-    }
-}
-
-//Graphics
-kernelDebug("Initializing graphics");
-let canvas = document.createElement("canvas");
-if (!canvas) {
-    kernelLog("Graphics: Failed to create canvas.", "error");
-}
-let graphics = canvas.getContext('2d');
-if (!graphics) {
-    kernelLog("Graphics: Failed to load 2d context.", "error");
-}
-let webgl = canvas.getContext('webgl');
-if (!webgl) {
-    kernelLog("Graphics: Failed to load webgl context.", "warning");
-}
-kernelDebug("Appending canvas to document");
-canvas.id = "canvas";
-canvas.width = window.innerWidth - 20;
-canvas.height = window.innerHeight - 21;
-document.body.appendChild(canvas);
-
-//Error screen daemon
-let errorScreenFunction = (process, processError) => {//Default error
-    let killConfirmation = confirm("Process " + process.PID + " encountered an error: --> " + processError + " <-- Attempting to kill the errored process.");
-    if (killConfirmation === false) {
+    Thread.prototype.run = function () {
         try {
-            process.command();
-        } catch (error) {
-            alert("Process " + process.PID + " failed to run again. Killing process.");
-            console.error(error);
-            process.dead = true;
+            this.command();
+        } catch (e) {
+            console.error("A thread encountered an error.");
+            console.error(e);
+        }
+    }
+    function create_thread(command) {
+        threads.push(new Thread(command));
+    }
+
+    //Devices
+    if (use_devices === true && windowed === true) {
+        let devices = {};
+        //Mouse
+        devices.mouse = {
+            x: 0,
+            y: 0,
+            vectorX: 0,
+            vectorY: 0,
+            clicked: false
+        };
+        document.onmousemove = event => {
+            devices.mouse.vectorX = devices.mouse.x - event.pageX;
+            devices.mouse.vectorY = devices.mouse.y - event.pageY;
+            devices.mouse.x = event.pageX;
+            devices.mouse.y = event.pageY;
+        };
+        document.onmousedown = () => {
+            devices.mouse.clicked = true;
+            devices.mouse.pressed = true;
+        };
+        document.onmouseup = () => {
+            devices.mouse.clicked = false;
+            devices.mouse.pressed = false;
+        };
+        //Keyboard
+        devices.keyboard = {
+            keys: [],
+            keyCodes: [],
+            pressed: false,
+            keyCode: 0,
+            info: {},
+        };
+        devices.keyboard.keyCodes = [];
+        document.onkeydown = event => {
+            devices.keyboard.keyCodes[event.keyCode] = true;
+            devices.keyboard.keys.push(event.key);
+            devices.keyboard.pressed = true;
+            devices.keyboard.info = event;
+        };
+        document.onkeyup = event => {
+            devices.keyboard.keyCodes[event.keyCode] = false;
+            devices.keyboard.pressed = false;
+            devices.keyboard.info = event;
+        };
+        //Controllers
+        devices.controllers = [];
+        window.addEventListener("gamepadconnected", e => {
+            debug("Device: Controller " + e.gamepad.index + " connected (" + e.gamepad.id + ")");
+            devices.controllers.push(e.gamepad);
+        });
+        window.addEventListener("gamepaddisconnected", e => {
+            debug("Device: Controller " + e.gamepad.index + " disconnected (" + e.gamepad.id + ")");
+            devices.controllers.splice(e.gamepad, 1);
+        });
+        function add_listener(type, handler){
+            switch(type){
+                
+            }
+        }
+        function get_devices() {
+            const devices_buffer = JSON.parse(JSON.stringify(devices));;
+            return devices_buffer;
+        }
+    }
+
+    //Graphics
+    if (use_graphics === true && windowed === true) {
+        debug("Initializing graphics stack");
+        canvas = document.createElement("canvas");
+        if (!canvas) {
+            debug("Graphics: Failed to create canvas.");
+        }
+        graphics = canvas.getContext('2d');
+        if (!graphics) {
+            debug("Graphics: Failed to load 2d context.");
+        }
+        webgl = canvas.getContext('webgl');
+        if (!webgl) {
+            debug("Graphics: Failed to load webgl context.");
+        }
+        canvas.id = "canvas";
+        canvas.width = window.innerWidth - 20;
+        canvas.height = window.innerHeight - 21;
+        document.body.appendChild(canvas);
+    }
+
+    //Suspension
+    let suspend_system = false;
+    let suspend_daemon = () => { };
+    let execution_time = 0;
+    if (suspend_on_unfocus === true && windowed === true) {
+        suspend_daemon = function () {
+            if (document.hasFocus()) {
+                execution_time = 0;
+                suspend_system = false;
+            }
+            if (!document.hasFocus()) {
+                suspend_system = true;
+                execution_time = 500;
+            }
+        }
+    }
+
+    //Scheduler
+    let scheduler = function () {//Non preemptive
+        for (let i = 0; i < processes.length; i++) {//Fill threads with processes
+            processes[i].copy = false;
+            threads.push(processes[i]);
+        }
+        while (threads.length > 0) {
+            threads[0].run();
+            if (threads[0].priority > 1 && threads[0].copy === false) {
+                threads[0].copy = true;
+                for (let i = 1; i < threads[0].priority; i++) {
+                    let index = (Math.round((threads.length * i + 1) / threads[0].priority)) % threads.length;
+                    threads.splice(index, 0, threads[0]);
+                }
+            }
+            threads.splice(0, 1);
+        }
+    }
+    if (preemptive === true) {
+        debug("Running kernel preemptively");
+        scheduler = function () {
+            const target_time = 1000 / minimum_cycle_rate + performance.now();
+            if (threads.length === 0) {//Fill threads with processes
+                for (let i = 0; i < processes.length; i++) {
+                    processes[i].copy = false;
+                    threads.push(processes[i]);
+                }
+            }
+            while (threads.length > 0 && performance.now() < target_time) {
+                threads[0].run();
+                if (threads[0].priority > 1 && threads[0].copy === false) {
+                    threads[0].copy = true;
+                    for (let i = 1; i < threads[0].priority; i++) {
+                        let index = (Math.round((threads.length * (i) + 1) / threads[0].priority)) % threads.length;
+                        threads.splice(index, 0, threads[0]);
+                    }
+                }
+                threads.splice(0, 1);
+            }
         }
     } else {
-        process.dead = true;
+        debug("Running kernel non-preemptively");
     }
-    systemError = [];
-};
-function errorScreenDaemon() {
-    if (systemError[0] === true) {
-        errorScreenFunction(systemError[1], systemError[2]);
-    }
-}
-
-//Performance Display
-let performanceDisplayFunction = () => {
-    //TODO: Add performance display for native kernel
-};
-function performanceDisplay() {
-    if (showPerformanceInfo === true) {
-        performanceDisplayFunction();
-    }
-}
-
-//System suspend daemon. Responsible for suspending on inactivity/unfocused and with keyboard shortcut.
-let mouseInactivityTimer = 0;
-let systemKeySuspended = false;
-function suspendResponseDaemon() {
-    //Inactivity suspend
-    if (idleSuspend === true) {
-        if (devices.mouse.vectorX === 0 && devices.mouse.vectorY === 0 && !devices.keyboard.pressed && !devices.mouse.pressed) {
-            mouseInactivityTimer += systemExecutionLatency / 1000;
+    let run_processes = function () {
+        if (suspend_system !== true) {
+            scheduler();
         }
-        if (document.hasFocus()) {
-            mouseInactivityTimer = 0;
-            if (this.inactive === true) {
-                systemSuspend = false;
-                kernelDebug("System was resumed");
-                this.inactive = undefined;
+    }
+
+    //Performance tracking
+    let performance_tracker = () => { };
+    if (track_performance === true) {
+        let realtime_performance = 0;
+        let scheduler_performance = 0;
+        {
+            let timer = performance.now();
+            performance_tracker = function () {
+                realtime_performance = performance.now() - timer;
+                timer = performance.now();
             }
         }
-        if (mouseInactivityTimer > 30 && this.inactive === undefined || !document.hasFocus() && this.inactive === undefined) {
-            systemSuspend = true;
-            this.inactive = true;
-            kernelDebug("System was suspended");
+        {
+            let timer = performance.now();
+            let scheduler_performance_tracker = function () {
+                scheduler_performance = performance.now() - timer;
+                timer = performance.now();
+            }
+            create_process(scheduler_performance_tracker);
+        }
+        function get_performance() {
+            let const_realtime_performance = realtime_performance;
+            let const_scheduler_performance = scheduler_performance;
+            let result = {
+                realtime: const_realtime_performance,
+                scheduler: const_scheduler_performance
+            }
+            return result;
         }
     }
-    //Suspend keyboard shortcut
-    if (devices.keyboard.keyCodes[192] && this.suspended === undefined) {
-        systemSuspend = true;
-        this.suspended = true;
-        kernelLog("System has been manually suspended.", "warning");
-    }
-    if (this.suspended && devices.keyboard.keyCodes[192] !== true) {
-        systemKeySuspended = true;
-        if (devices.keyboard.info.pressed) {
-            systemSuspend = false;
-            this.suspended = undefined;
-            systemKeySuspended = false;
-            kernelLog("System has been manually resumed.", "warning");
+
+    //Performance display
+    let performance_display = function () { };
+    if (display_performance === true) {
+        performance_display = function () {
+            //TODO: Make default performance display
+        }
+        function set_performance_display(handler) {
+            performance_display = handler;
         }
     }
-    if (kernelPowerStateManuallySet === false && systemSuspend === true) {
-        kernelPowerState = 9;
-    } else if (kernelPowerStateManuallySet === false) {
-        kernelPowerState = 0;
+
+    //Watchdog
+    if (use_watchdog === true) {
+        debug("Initializing watchdog");
+        let timer = 0;
+        let previous_execution_count = 0;
+        let watchdog = function () {
+            if (previous_execution_count === execution_count) {
+                debug("Watchdog has been triggered");
+            } else if (previous_execution_count < execution_count) {
+                timer = Date.now();
+                previous_execution_count = execution_count;
+            }
+            if (Date.now() - timer > 5000 && panicked === false) {
+                panic("Watchdog has detected that the kernel is hung.");
+            }
+        }
+        setInterval(watchdog, 2500);
     }
-}
 
-
-/* Create process example:
-createProcess(command, priority);
-createProcess(foo, 1);
-createProcess(foo1, 0);
-createProcess(foo2, 0);
-*/
-
-
-//Kernel loop
-let kernelLoopTimeoutId;
-let loopKernel = true;
-function stopKernelLoop() {
-    clearTimeout(kernelLoopTimeoutId);
-    loopKernel = false;
-    kernelLog("Kernel loop has been stopped.", "warning");
-}
-function executeKernel() {
-    let timeBefore = performance.now();
-    //Suspend hotkey daemon
-    suspendResponseDaemon();
-    //Update processes
-    updateKernelProcesses();
-    //Error screen daemon
-    errorScreenDaemon();
-    //Run keyboard daemon
-    keyboardConfigurationDaemon();
-
-    //Calculate and report latency
-    kernelLatencyReporter();
-    //Report realtime performance
-    trackRealtimePerformance();
-    //Show performance info
-    performanceDisplay();
-    //Report performance
-    systemExecutionLatency = performance.now() - timeBefore;
-
-    //Set an asynchronous timeout so the kernel executes itself again
-    kernelLoopTimeoutId = setTimeout(executeKernel, Math.pow(2, kernelPowerState));
-}
-//Run kernel
-try{
-    kernelDebug("Doing initial kernel execution");
-    executeKernel();
-} catch (e) {
-    kernelLog("Kernel did not load.", "error");
-    kernelLog(e, "error");
-    panic("Kernel was unable to execute: " + e);
-} finally {
-    console.log("Kernel has successfully loaded.");
-    kernelLog("Kernel has successfully loaded.", "info");
+    //Main loop
+    let execution_count = 0;
+    let main = function () {
+        suspend_daemon();
+        run_processes();
+        error_screen_daemon();
+        performance_tracker();
+        performance_display();
+        execution_count++;
+        //Rexecute loop
+        if (run_loop === true && panicked === false) {
+            setTimeout(main, execution_time);
+        }
+    }
+    try {
+        debug("Starting kernel");
+        main();
+        try {
+            let time_since_start = (Date.now() - Kernel.start_time);
+            console.log("Kernel successfully started. (" + time_since_start + "ms)")
+            debug("Kernel was started in " + time_since_start + "ms");
+        } catch (e) { }
+    } catch (e) {
+        console.error(e);
+        panic("Unable to start kernel");
+    }
 }
