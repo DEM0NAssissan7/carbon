@@ -101,6 +101,19 @@ let canvas, graphics, webgl;
         }
     }
 
+    //Uptime
+    function raw_uptime(){
+        return Date.now() - Kernel.start_time;
+    }
+    function uptime(){
+        let uptime_buffer = raw_uptime();
+        let seconds = Math.floor(uptime_buffer / 1000 % 60)
+        let minutes = Math.floor(uptime_buffer / 1000 / 60);
+        
+        let uptime_message = minutes + ":" + seconds;
+        return uptime_message;
+    }
+
     //Error management
     let error_screen;
     let error_screen_daemon = function(){};
