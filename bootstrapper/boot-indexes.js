@@ -11,11 +11,13 @@
             "applications/system/settings.js",
             "applications/games/sotf.js",
             "applications/development/octane.js",
-            "applications/testing/physics.js",
+            "applications/emulators/physics.js",
             "applications/system/monitor.js",
             "applications/games/cookieclicker.js",
             "applications/utilities/autoclick.js",
             "kernel/interface/tty.js",
+            //Machine Code Emulator
+            "applications/emulators/vm/vm.js",
             //Desktop
             "desktop/window-manager.js",
             "desktop/app-manager.js",
