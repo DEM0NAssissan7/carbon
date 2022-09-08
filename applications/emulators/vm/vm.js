@@ -36,6 +36,7 @@ Set specs as needed.
             this.cpus = CPUs;
 
             this.instruction_length = 4 + this.arch;
+            this.increment = Math.floor(this.instruction_length / 8) + 1;
 
             //Initialize data sets
             this.ram = new Uint8Array(ram_size);
@@ -82,9 +83,10 @@ Set specs as needed.
                 },
                 (arg) => {//BRC
                     this.program_counter = arg;
+                    return 0;
                 },
                 () => {//HLT
-                    return 1;
+                    this.halt = true;
                 }
 
             ];
@@ -109,12 +111,15 @@ Set specs as needed.
         }
         clock() {
             if (this.halt === false) {
-                let ram_used = Math.floor(this.instruction_length / 8) + 1;
-                for (let i = 0; i < ram_used; i++) {
-                    append_value(this.cache, convert_to_binary(this.ram[i + this.program_counter]));
+                this.opcode_buffer = 0;
+                for(let i = 1; i < this.increment; i++){
+                    this.opcode_buffer += this.ram[this.program_counter + i];
                 }
+                let instruction_output = this.instruction_set[this.ram[this.program_counter]](this.opcode_buffer);
 
-                this.program_counter += ram_used;
+                if(instruction_output !== 0){
+                    this.program_counter += this.increment;
+                }
                 if (this.program_counter >= this.ram.length) {
                     this.halt = true;
                 }
@@ -131,10 +136,10 @@ Set specs as needed.
             */
             if (program.arch === this.arch) {
                 for (let i = 0; i < program.data.length; i++) {
-                    let prg = "";
-                    prg.concat(convert_to_binary(program.data[i][0]), convert_to_binary(program.data[i][1]));
-                    console.log(prg)
-                    console.log(convert_to_binary(program.data[i][1]))
+                    this.ram[i * this.increment] = program.data[i][0];
+                    for(let l = 0; l < Math.floor(program.data[i][1]/255) + 1; l++){
+                        this.ram[(i * this.increment) + l + 1] = Math.min(255, program.data[i][1] - (255 * l));
+                    }
                 }
             }
         }
@@ -170,12 +175,19 @@ let test_program = {
     data: [
         [2, 100],//Set register to 100
         [3, 28],//Add 100 to register
-        [1, 0],//Store register value in ram address 0x0
+        [1, 32],//Store register value in ram address 0x20
         [4, 0],//Print out register contents
-        [0, 0],//Load ram address 0x0
+        [0, 32],//Load ram address 0x20
         [8, 0],//Halt program
         [4, 0],//Print out register contents
         [7, 0],//Jump to ram address 0
+    ]
+}
+let vm_kernel = {
+    arch:8,
+    data: [
+        [7, 0],
+        
     ]
 }
 VM.set_program(test_program);
