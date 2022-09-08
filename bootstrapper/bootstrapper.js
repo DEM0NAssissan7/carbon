@@ -20,7 +20,7 @@
                 if(print_loadout_message === true){
                     console.log("Bootstrapper: Loaded " + scripts[i]);
                 }
-            }, (i + 1) * 20);
+            }, (i + 1) * 50);
         }
         document.title = name;
     }
