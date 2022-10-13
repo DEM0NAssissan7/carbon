@@ -74,10 +74,19 @@
             ],
             "Bare Kernel"
         ]
+        let virtual_machine = [
+            [
+            //Applications
+            "applications/emulators/vm/vm.js",
+            "applications/emulators/vm/test machine.js",
+            ],
+            "Carbonite VM"
+        ];
         let systems = [
             graphite,
             graphiteGui2,
             sotfLaunch,
+            virtual_machine,
             graphiteCore,
             bareKernel,
         ]

@@ -55,6 +55,9 @@ Set specs as needed.
                 6: AND (reg = AND(reg, m)) [0110]
                 7: BRC (pc = m) [0111]
                 8: HLT (stop the CPU from executing) [1000]
+                9: RLD (m[m[arg]] = reg) [1001] (set the register to be the memory address referenced at the ram address specified)
+                10: CBR (if->reg=0: pc = m) [1010]
+
             */
             this.instruction_set = [
                 (arg) => {//LOD
@@ -78,16 +81,23 @@ Set specs as needed.
                 (arg) => {//AND
                     this.reg = (arg === this.reg);
                 },
-                (arg) => {//LRG
-                    this.reg = (arg > this.reg);
-                },
                 (arg) => {//BRC
-                    this.program_counter = arg;
+                    this.program_counter = arg * this.increment;
                     return 0;
                 },
                 () => {//HLT
                     this.halt = true;
-                }
+                    return 0;
+                },
+                (arg) => {//RLD
+                    this.ram[this.ram[arg]] = this.reg;
+                },
+                (arg) => {//CBR
+                    if(this.reg === 0){
+                        this.program_counter = arg * this.increment;
+                        return 0;
+                    }
+                },
 
             ];
 
@@ -115,12 +125,18 @@ Set specs as needed.
                 for(let i = 1; i < this.increment; i++){
                     this.opcode_buffer += this.ram[this.program_counter + i];
                 }
-                let instruction_output = this.instruction_set[this.ram[this.program_counter]](this.opcode_buffer);
+                try{
+                    let instruction_output = this.instruction_set[this.ram[this.program_counter]](this.opcode_buffer);
 
-                if(instruction_output !== 0){
-                    this.program_counter += this.increment;
-                }
-                if (this.program_counter >= this.ram.length) {
+                    if(instruction_output !== 0){
+                        this.program_counter += this.increment;
+                    }
+                    if (this.program_counter >= this.ram.length) {
+                        this.halt = true;
+                    }
+                } catch (e) {
+                    console.error("Virtual machine " + this.id + " has encountered a fatal error.");
+                    console.error(e);
                     this.halt = true;
                 }
             }
@@ -159,7 +175,7 @@ Set specs as needed.
         if (max_time) {
             _max_time = max_time;
         }
-        let start_time = Date.now() + (1000 / _max_time);
+        let start_time = Date.now() + _max_time;
         while (Date.now() < start_time) {
             virtual_machine.clock();
         }
@@ -168,28 +184,3 @@ Set specs as needed.
 
     }
 }
-let VM = createVM(128, 8, 1);
-VM.init();
-let test_program = {
-    arch: 8,
-    data: [
-        [2, 100],//Set register to 100
-        [3, 28],//Add 100 to register
-        [1, 32],//Store register value in ram address 0x20
-        [4, 0],//Print out register contents
-        [0, 32],//Load ram address 0x20
-        [8, 0],//Halt program
-        [4, 0],//Print out register contents
-        [7, 0],//Jump to ram address 0
-    ]
-}
-let vm_kernel = {
-    arch:8,
-    data: [
-        [7, 0],
-        
-    ]
-}
-VM.set_program(test_program);
-VM.print_debug();
-runVM(VM, 10);
