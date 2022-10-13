@@ -1,5 +1,5 @@
 const System = {
-    version: "1.3-alpha-newkernel",
+    version: "1.3 Alpha",
     name: "Graphite",
     startup: Date.now(),
 }

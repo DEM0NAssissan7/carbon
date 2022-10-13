@@ -107,33 +107,34 @@ setCursor(renderMouseCursor);
 
 //Applications
 //Icon creation function
+let icons = [];
 function createIcon(iconFunction, x, y, size, createWindowFunction) {
   var icon = new GraphiteWindow([], "icon");
   let iconRender = new Process((canvas, graphics) => {
     graphics.clearRect(0, 0, canvas.width, canvas.height);
     iconFunction(canvas, graphics);
+    sleep(1);
   });
   let iconKiller = new Process(() => {
     if(icon.fadeFill === 1){
       icon.dead = true;
     }
+    sleep(100);
+  });
+  icons.push({
+    x: x, 
+    y: y,
+    size: size,
+    window_function: createWindowFunction
   });
 
-  let iconProcess = () => {
-    let devices = get_devices();
-    if(devices.mouse.x > x && devices.mouse.x < size + x && devices.mouse.y > y && devices.mouse.y < size + y && buttonClicked === false && devices.mouse.clicked){
-      createWindowFunction();
-      buttonClicked = true;
-    }
-  }
-  create_process(iconProcess);
 
   icon.processesBuffer = [iconRender, iconKiller];
   icon.originalProcesses = [iconRender, iconKiller];
   icon.x = x;
   icon.y = y;
-  icon.width = size;
-  icon.height = size;
+  icon.canvas.width = size;
+  icon.canvas.height = size;
   icon.topBarHeight = 0;
   icon.focusable = false;
   icon.level = "foreground";
@@ -141,6 +142,18 @@ function createIcon(iconFunction, x, y, size, createWindowFunction) {
 
   windows.push(icon);
 }
+let icon_response_daemon = function() {
+  for(let i = 0; i < icons.length; i++){
+    let icon = icons[i];
+    let devices = get_devices();
+    if(devices.mouse.x > icon.x && devices.mouse.x < icon.size + icon.x && devices.mouse.y > icon.y && devices.mouse.y < icon.size + icon.y && buttonClicked === false && devices.mouse.clicked){
+      icon.window_function();
+      buttonClicked = true;
+    }
+  }
+  sleep(10);
+}
+create_process(icon_response_daemon);
 
 //Rayhamburger
 function rainbow() { }

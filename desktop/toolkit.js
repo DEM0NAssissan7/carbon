@@ -135,6 +135,7 @@ function toolkitClickMonitor(){
     if(get_devices().mouse.clicked === false){
         buttonClicked = false;
     }
+    sleep(10)
 }
 create_process(toolkitClickMonitor, 2);
 //Animation handler

@@ -49,6 +49,7 @@ let canvas, graphics, webgl;
             }
         }
         function print_kernel_debug() {
+            debug("Printing kernel debug logs");
             console.warn("Printing kernel debug logs");
             for (let i = 0; i < debug_logs.length; i++) {
                 console.log("[" + debug_logs[i].date + "] " + debug_logs[i].message);
@@ -65,7 +66,7 @@ let canvas, graphics, webgl;
             confirmation =  confirm("A program is requesting root access. Accept?");
         }
         if(confirmation === true){
-            debug("Critical warning: The kernel key was accessed");
+            debug("Warning: The kernel key was accessed");
             return kernel_key;
         } else {
             debug("Critical warning: The kernel key was requested, but declined.");
@@ -108,9 +109,10 @@ let canvas, graphics, webgl;
     function uptime(){
         let uptime_buffer = raw_uptime();
         let seconds = Math.floor(uptime_buffer / 1000 % 60)
-        let minutes = Math.floor(uptime_buffer / 1000 / 60);
+        let minutes = Math.floor(uptime_buffer / 1000 / 60 % 60);
+        let hours = Math.floor(uptime_buffer / 1000 / 3600);
         
-        let uptime_message = minutes + ":" + seconds;
+        let uptime_message = hours + ":" + minutes + ":" + seconds;
         return uptime_message;
     }
 
@@ -137,10 +139,10 @@ let canvas, graphics, webgl;
     //Processes
     let processes = [];
     let PIDs = 0;
-    function Process(command, priority) {
+    function Process(command) {
         this.command = command;
         this.process_name = command.name;
-        this.priority = priority;
+        this.sleep_timer = 0;
         this.suspended = false;
         this.PID = PIDs;
         this.copy = false;
@@ -157,14 +159,14 @@ let canvas, graphics, webgl;
             }
         }
     }
-    function create_process(command, priority) {
-        processes.push(new Process(command, priority));
+    function create_process(command) {
+        processes.push(new Process(command));
         return PIDs - 1;
     }
     function push_process(process) {
         processes.push(process);
     }
-    let find_by_pid = function(PID){
+    function find_by_pid (PID){
         let result;
         for(let i = 0; i < processes.length; i++){
             if(processes[i].PID === PID) {
@@ -177,7 +179,8 @@ let canvas, graphics, webgl;
         return result;
     }
     function kill(PID) {
-        processes.splice(find_by_pid(PID).index, 1);
+        let index = find_by_pid(PID).index;
+        processes.splice(index, 1);
     }
     function suspend(PID){
         find_by_pid(PID).process.suspend = true;
@@ -307,52 +310,44 @@ let canvas, graphics, webgl;
     }
 
     //Scheduler
-    let scheduler = function () {//Non preemptive
-        for (let i = 0; i < processes.length; i++) {//Fill threads with processes
-            processes[i].copy = false;
-            threads.push(processes[i]);
-        }
-        while (threads.length > 0) {
-            threads[0].run();
-            if (threads[0].priority > 1 && threads[0].copy === false) {
-                threads[0].copy = true;
-                for (let i = 1; i < threads[0].priority; i++) {
-                    let index = (Math.round((threads.length * i + 1) / threads[0].priority)) % threads.length;
-                    threads.splice(index, 0, threads[0]);
-                }
-            }
-            threads.splice(0, 1);
-        }
-    }
-    if (preemptive === true) {
-        debug("Running kernel preemptively");
-        scheduler = function () {
+    let process_in_execution;
+    let waiting_processes_average = 0;
+    let scheduler_run_count = 0;
+    let runtime_sum = 0;
+    let scheduler = function () {
+        if (suspend_system !== true) {
             const target_time = 1000 / minimum_cycle_rate + performance.now();
             if (threads.length === 0) {//Fill threads with processes
                 for (let i = 0; i < processes.length; i++) {
-                    processes[i].copy = false;
-                    threads.push(processes[i]);
-                }
-            }
-            while (threads.length > 0 && performance.now() < target_time) {
-                threads[0].run();
-                if (threads[0].priority > 1 && threads[0].copy === false) {
-                    threads[0].copy = true;
-                    for (let i = 1; i < threads[0].priority; i++) {
-                        let index = (Math.round((threads.length * (i) + 1) / threads[0].priority)) % threads.length;
-                        threads.splice(index, 0, threads[0]);
+                    let process = processes[i];
+                    if(performance.now() >= process.sleep_timer){
+                        processes[i].copy = false;
+                        threads.push(processes[i]);
+                        if(process.sleep_timer === 0){
+                            debug(process.process_name + " (" + process.PID +") is not sleeping.");
+                        }
                     }
                 }
+            }
+            const start_time = performance.now();
+            while (threads.length > 0 && performance.now() < target_time) {
+                waiting_processes_average++;
+                process_in_execution = threads[0];
+                threads[0].run();
                 threads.splice(0, 1);
             }
+            runtime_sum += performance.now() - start_time;
+            scheduler_run_count++;
+            process_in_execution = null;
         }
-    } else {
-        debug("Running kernel non-preemptively");
     }
-    let run_processes = function () {
-        if (suspend_system !== true) {
-            scheduler();
-        }
+
+    //Process management APIs
+    function sleep(timeout){
+        process_in_execution.sleep_timer = timeout + performance.now();
+    }
+    function fork(){
+        processes.push(process_in_execution);
     }
 
     //Performance tracking
@@ -360,30 +355,39 @@ let canvas, graphics, webgl;
     if (track_performance === true) {
         let realtime_performance = 0;
         let scheduler_performance = 0;
+        let realtime_performance_sum = 0;
         {
             let timer = performance.now();
             performance_tracker = function () {
                 realtime_performance = performance.now() - timer;
+                realtime_performance_sum += realtime_performance;
                 timer = performance.now();
             }
         }
-        {
-            let timer = performance.now();
-            let scheduler_performance_tracker = function () {
-                scheduler_performance = performance.now() - timer;
-                timer = performance.now();
-            }
-            create_process(scheduler_performance_tracker);
-        }
+        scheduler_performance = 15;
         function get_performance() {
             let const_realtime_performance = realtime_performance;
             let const_scheduler_performance = scheduler_performance;
             let result = {
                 realtime: const_realtime_performance,
-                scheduler: const_scheduler_performance
+                scheduler: const_scheduler_performance,
+                average: waiting_processes_average / scheduler_run_count,
+                percent: (runtime_sum / realtime_performance_sum) * 100
             }
             return result;
         }
+        setInterval(() => {
+            if(suspend_system !== true){
+                waiting_processes_average = 0;
+                scheduler_run_count = 0;
+            }
+        }, 5000);
+        setInterval(() => {
+            if(suspend_system !== true){
+                runtime_sum = 0;
+                realtime_performance_sum = 0;
+            }
+        }, 100);
     }
 
     //Performance display
@@ -420,7 +424,7 @@ let canvas, graphics, webgl;
     let execution_count = 0;
     let main = function () {
         suspend_daemon();
-        run_processes();
+        scheduler();
         error_screen_daemon();
         performance_tracker();
         performance_display();

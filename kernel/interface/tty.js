@@ -103,8 +103,8 @@ class TTY {
     var tty = new TTY();
   
     createWindow([
-      new Process(() => {tty.update();}, 2),
-      new Process((canvas, graphics) => {tty.draw(canvas, graphics);})
+      new Process(() => {tty.update();sleep(9);}),
+      new Process((canvas, graphics) => {tty.draw(canvas, graphics);sleep(20);})
     ], "Terminal");
   }
   iconFunction(canvas, graphics){
@@ -120,11 +120,13 @@ try{
     var ttySystem = new TTY;
     function updateTTY() {
       ttySystem.update();
+      sleep(9)
     }
     function drawTTY() {
       ttySystem.draw(canvas, graphics);
+      sleep(15);
     }
-    create_process(updateTTY, 2);
+    create_process(updateTTY);
     create_process(drawTTY);
   }
 } catch(error){}

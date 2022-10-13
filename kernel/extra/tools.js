@@ -107,6 +107,6 @@ set_performance_display(() => {
     graphics.fillStyle = '#EEAAAA';
     graphics.fillRect(0, 0, 38, 30);
     graphics.fillStyle = 'black';
-    graphics.fillText(Math.round(get_performance().realtime), 10, 19);
+    graphics.fillText(Math.round(get_performance().percent), 10, 19);
     graphics.restore();
 })
