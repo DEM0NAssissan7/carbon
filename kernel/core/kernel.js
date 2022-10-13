@@ -22,12 +22,12 @@ let canvas, graphics, webgl;
 
     //Customization variables
     const run_loop = true;
-    const preemptive = true;
     const track_performance = true;
+    const manage_power = true;
 
     const windowed = true;
-    const use_devices = true;
     const use_graphics = true;
+    const use_devices = true;
 
     const do_logging = true;
     const use_watchdog = true;
@@ -142,7 +142,8 @@ let canvas, graphics, webgl;
     function Process(command) {
         this.command = command;
         this.process_name = command.name;
-        this.sleep_timer = 0;
+        this.sleep_time = 0;
+        this.time_marker = 0;
         this.suspended = false;
         this.PID = PIDs;
         this.copy = false;
@@ -320,11 +321,11 @@ let canvas, graphics, webgl;
             if (threads.length === 0) {//Fill threads with processes
                 for (let i = 0; i < processes.length; i++) {
                     let process = processes[i];
-                    if(performance.now() >= process.sleep_timer){
+                    if(performance.now() >= process.sleep_time + process.time_marker){
                         processes[i].copy = false;
                         threads.push(processes[i]);
-                        if(process.sleep_timer === 0){
-                            debug(process.process_name + " (" + process.PID +") is not sleeping.");
+                        if(process.time_marker === 0){
+                            debug(process.process_name + " (" + process.PID +") did not call sleep().");
                         }
                     }
                 }
@@ -344,7 +345,8 @@ let canvas, graphics, webgl;
 
     //Process management APIs
     function sleep(timeout){
-        process_in_execution.sleep_timer = timeout + performance.now();
+        process_in_execution.sleep_time = timeout;
+        process_in_execution.time_marker = performance.now();
     }
     function fork(){
         processes.push(process_in_execution);
@@ -390,6 +392,25 @@ let canvas, graphics, webgl;
         }, 100);
     }
 
+    //Power management
+    let power_manager = function(){};
+    if(manage_power === true){
+        power_manager = function(){
+            if(suspend_system !== true){
+                let minimum_sleep_time = Infinity;
+                let time_marker = performance.now()
+                for(let i = 0; i < processes.length; i++){
+                    if(processes[i].sleep_time < minimum_sleep_time && processes[i].time_marker !== 0){
+                        minimum_sleep_time = processes[i].sleep_time - time_marker;
+                    }
+                }
+                if(minimum_sleep_time !== Infinity){
+                    execution_time = Math.max(minimum_sleep_time, 0);
+                }
+            }
+        }
+    }
+
     //Performance display
     let performance_display = function () { };
     if (display_performance === true) {
@@ -423,25 +444,29 @@ let canvas, graphics, webgl;
     //Main loop
     let execution_count = 0;
     let main = function () {
-        suspend_daemon();
-        scheduler();
-        error_screen_daemon();
-        performance_tracker();
-        performance_display();
-        execution_count++;
-        //Rexecute loop
-        if (run_loop === true && panicked === false) {
-            setTimeout(main, execution_time);
+        try{
+            suspend_daemon();
+            scheduler();
+            error_screen_daemon();
+            performance_tracker();
+            performance_display();
+            power_manager();
+            execution_count++;
+            //Rexecute loop
+            if (run_loop === true && panicked === false) {
+                setTimeout(main, execution_time);
+            }
+        } catch (e) {
+            panic("Kernel execution encountered an error.");
         }
     }
     try {
         debug("Starting kernel");
         main();
-        try {
-            let time_since_start = (Date.now() - Kernel.start_time);
-            console.log("Kernel successfully started. (" + time_since_start + "ms)")
-            debug("Kernel was started in " + time_since_start + "ms");
-        } catch (e) { }
+
+        let time_since_start = (Date.now() - Kernel.start_time);
+        console.log("Kernel successfully started. (" + time_since_start + "ms)")
+        debug("Kernel was started in " + time_since_start + "ms");
     } catch (e) {
         console.error(e);
         panic("Unable to start kernel");

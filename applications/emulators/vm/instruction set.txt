@@ -1,0 +1,13 @@
+0: LOD (reg = m) [0000]
+1: STR (m = reg) [0001]
+2: SET (reg = arg) [0010]
+3: ADD (reg += op) [0011]
+4: DMP (dump register contents through outputs) [0100]
+5: SUB (reg = XOR(reg, arg) ) [0101]
+6: AND (reg = AND(reg, arg)) [0110]
+7: BRC (pc = arg) [0111]
+8: HLT (stop the CPU from executing) [1000]
+9: RLD (m[m[arg]] = reg) [1001] (set the memory address referenced at the ram address specified to be the register)
+10: RST (reg = m[m[arg]]) [1010] (set the regsiter to be the memory address referenced at the ram address specified)
+11: CBR (if reg=0: pc = arg) [1011]
+12: SRG (switch register) [1111]

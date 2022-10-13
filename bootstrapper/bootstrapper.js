@@ -25,7 +25,6 @@
         document.title = name;
     }
     function init_system(scripts, kernel){
-        load_script(kernel);
         let interrupted = false;
         let prompt_interrupt = function(e) {//Escape key
             if(e.key === "Escape"){
@@ -36,7 +35,6 @@
         setTimeout(() => {
             if(interrupted === true){
                 console.warn("The system has been interrupted. Prompting load selection.");
-                document.open();
                 for(let i = 0; i < Math.min(scripts.length, 9); i++){
                     document.write("Press " + (i + 1) + " to load " + scripts[i][1] + "<br>");
                 }
@@ -44,6 +42,7 @@
                     if(e.key > 0 && e.key < scripts.length + 1){
                         document.open();
                         document.close();
+                        load_script(kernel);
                         load_system(scripts[e.key - 1]);
                         document.removeEventListener('keydown', boot_select_interruptor);
                     }
@@ -51,6 +50,7 @@
                 window.removeEventListener('keydown', prompt_interrupt);
                 window.addEventListener('keydown', boot_select_interruptor);
             } else {
+                load_script(kernel);
                 load_system(scripts[0]);
             }
         }, boot_select_timeout);

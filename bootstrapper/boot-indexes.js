@@ -64,7 +64,6 @@
             //Stress Tools
             "kernel/extra/stresstest.js",
             //TTY
-            "desktop/toolkit.js",
             "kernel/interface/tty.js",
             ],
             "Graphite Core"

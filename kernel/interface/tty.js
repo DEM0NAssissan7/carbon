@@ -103,9 +103,15 @@ class TTY {
     var tty = new TTY();
   
     createWindow([
-      new Process(() => {tty.update();sleep(9);}),
-      new Process((canvas, graphics) => {tty.draw(canvas, graphics);sleep(20);})
-    ], "Terminal");
+      new Process(() => {
+        tty.update();
+        sleep(9);
+      }),
+      new Process((canvas, graphics) => {
+        tty.draw(canvas, graphics);
+        sleep(20);
+      })
+    ]);
   }
   iconFunction(canvas, graphics){
     graphics.fillStyle = 'black';
@@ -117,12 +123,13 @@ class TTY {
 }
 try{
   if(stress){
-    var ttySystem = new TTY;
-    function updateTTY() {
+    console.log("Starting TTY standalone")
+    var ttySystem = new TTY();
+    let updateTTY = function() {
       ttySystem.update();
       sleep(9)
     }
-    function drawTTY() {
+    let drawTTY = function() {
       ttySystem.draw(canvas, graphics);
       sleep(15);
     }

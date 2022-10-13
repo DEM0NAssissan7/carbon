@@ -151,7 +151,7 @@ let icon_response_daemon = function() {
       buttonClicked = true;
     }
   }
-  sleep(10);
+  sleep(20);
 }
 create_process(icon_response_daemon);
 

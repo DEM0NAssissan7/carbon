@@ -446,7 +446,7 @@ graphics.fillRect(0, 0, canvas.width, canvas.height);
             windows.splice(requestedWindowIndex, 1);
             windows.push(focusedWindow);
         }
-        sleep(12);
+        sleep(14);
     }
     create_process(windowManagerLogic);
 }
