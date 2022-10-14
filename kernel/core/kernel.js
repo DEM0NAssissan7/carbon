@@ -184,10 +184,10 @@ let canvas, graphics, webgl;
         processes.splice(index, 1);
     }
     function suspend(PID){
-        find_by_pid(PID).process.suspend = true;
+        find_by_pid(PID).process.suspended = true;
     }
     function resume(PID){
-        find_by_pid(PID).process.suspend = false;
+        find_by_pid(PID).process.suspended = false;
     }
     //Threads
     let threads = [];
@@ -398,10 +398,9 @@ let canvas, graphics, webgl;
         power_manager = function(){
             if(suspend_system !== true){
                 let minimum_sleep_time = Infinity;
-                let time_marker = performance.now()
                 for(let i = 0; i < processes.length; i++){
                     if(processes[i].sleep_time < minimum_sleep_time && processes[i].time_marker !== 0){
-                        minimum_sleep_time = processes[i].sleep_time - time_marker;
+                        minimum_sleep_time = processes[i].sleep_time;
                     }
                 }
                 if(minimum_sleep_time !== Infinity){
@@ -457,6 +456,7 @@ let canvas, graphics, webgl;
                 setTimeout(main, execution_time);
             }
         } catch (e) {
+            console.log(e);
             panic("Kernel execution encountered an error.");
         }
     }
