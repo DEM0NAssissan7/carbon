@@ -40,7 +40,7 @@ let canvas, graphics, webgl;
         let debug_logs = [];
         let debug_object = function (message) {
             this.message = message;
-            this.date = Date.now() - Kernel.start_time;
+            this.date = Date.now();
         }
         debug = function (message) {
             debug_logs.push(new debug_object(message));
@@ -52,7 +52,7 @@ let canvas, graphics, webgl;
             debug("Printing kernel debug logs");
             console.warn("Printing kernel debug logs");
             for (let i = 0; i < debug_logs.length; i++) {
-                console.log("[" + debug_logs[i].date + "] " + debug_logs[i].message);
+                console.log("[" + (debug_logs[i].date - Kernel.start_time) + "] " + debug_logs[i].message);
             }
         }
     }
@@ -80,7 +80,7 @@ let canvas, graphics, webgl;
             eval(command_string);
             debug("'" + command_string + "' was run at kernel level");
         } else {
-            console.warn("Warning: Illegal run-as-root request was made.")
+            console.warn("Warning: Illegal run_as_root request was made.")
             debug("Illegal run_as_root was made. No key supplied");
         }
         if(key === null){
@@ -445,7 +445,7 @@ let canvas, graphics, webgl;
     let main = function () {
         try{
             suspend_daemon();
-            scheduler();
+            scheduler();//Run processes
             error_screen_daemon();
             performance_tracker();
             performance_display();
