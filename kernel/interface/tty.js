@@ -6,6 +6,7 @@ class TTY {
     this.promptArray = [];
     this.textLine = 0;
     this.textBuffer = [];
+    this.keys = [];
     this.keyPressed = false;
     this.textOrder = 0;
   }
@@ -32,8 +33,14 @@ class TTY {
         try {
           var stringToCommand = eval(this.textBuffer);
           if (stringToCommand !== undefined) {
-            stringToCommandToString = stringToCommand.toString();
-            for(var i = 0; i < stringToCommandToString.length; i++){
+            let stringToCommandToString = stringToCommand.toString();
+            let line_count = 1;
+            for(let i = 0; i < stringToCommandToString.length; i++){
+              if(stringToCommandToString[i] === "\n"){
+                line_count++;
+              }
+            }
+            for(let i = 0; i < line_count; i++){
               this.textArray.push(stringToCommandToString.replace(/[^\x20-\x7E]/gmi, ""));
             }
           }
@@ -46,7 +53,9 @@ class TTY {
       return;
     } else {
       if (devices.keyboard.keyCodes[8] && !this.keyPressed) {
-        this.textBuffer = this.textBuffer.slice(0, -1);
+        if(this.textBuffer.length > 0){
+          this.textBuffer = this.textBuffer.slice(0, -1);
+        }
         this.keyPressed = true;
       }
       if (devices.keyboard.keyCodes[38] && !this.keyPressed && this.textArray[this.textArray.length - (this.textOrder + 1)] !== undefined) {
@@ -70,13 +79,17 @@ class TTY {
       if (!devices.keyboard.info.keyIsPressed) {
         this.keyPressed = false;
       }
-      for (var i in devices.keyboard.keys) {
-        var currentKey = devices.keyboard.keys[i]
-        if (currentKey !== "Enter" && currentKey !== "Backspace" && currentKey !== "ArrowUp" && currentKey !== "ArrowDown" && currentKey !== "Alt" && currentKey !== "Shift" && currentKey !== "Tab" && currentKey !== "Control") {
-          this.textBuffer += currentKey;
+      for (let i in devices.keyboard.keys) {
+        if(this.keys[i] !== devices.keyboard.keys[i]){
+          this.keys[i] = devices.keyboard.keys[i];
+          let key = this.keys[i];
+          if (key !== "Enter" && key !== "Backspace" && key !== "ArrowUp" && key !== "ArrowDown" && key !== "Alt" && key !== "Shift" && key !== "Tab" && key !== "Control") {
+            this.textBuffer += key;
+          }  
         }
       }
     }
+    sleep(35);
   }
   draw(canvas, graphics){
     graphics.font = '12px Monospace';
@@ -98,6 +111,7 @@ class TTY {
       graphics.fillText(currentPrompt + this.textArray[i], 2, i * 12 + 12);
     }
     graphics.fillText(this.prompt + this.textBuffer, 2, this.textArray.length * 12 + 12);
+    sleep(35);
   }
   createWindow(){
     var tty = new TTY();
@@ -127,11 +141,9 @@ try{
     var ttySystem = new TTY();
     let updateTTY = function() {
       ttySystem.update();
-      sleep(9)
     }
     let drawTTY = function() {
       ttySystem.draw(canvas, graphics);
-      sleep(15);
     }
     create_process(updateTTY);
     create_process(drawTTY);

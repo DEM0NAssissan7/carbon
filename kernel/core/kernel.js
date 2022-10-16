@@ -51,9 +51,13 @@ let canvas, graphics, webgl;
         function print_kernel_debug() {
             debug("Printing kernel debug logs");
             console.warn("Printing kernel debug logs");
+            let parsed_kernel_logs = "";
             for (let i = 0; i < debug_logs.length; i++) {
-                console.log("[" + (debug_logs[i].date - Kernel.start_time) + "] " + debug_logs[i].message);
+                let message_parse = "[" + (debug_logs[i].date - Kernel.start_time) + "] " + debug_logs[i].message;
+                parsed_kernel_logs += message_parse + "\n";
+                console.log(message_parse);
             }
+            return parsed_kernel_logs;
         }
     }
 
@@ -91,6 +95,7 @@ let canvas, graphics, webgl;
     //Panic
     let panicked = false;
     let panic = function (message) {
+        clear_root_timers();
         console.error("Critical: Kernel panic (" + message + ")");
         debug("Kernel panicked: " + message);
         processes = [];
@@ -146,7 +151,6 @@ let canvas, graphics, webgl;
         this.time_marker = 0;
         this.suspended = false;
         this.PID = PIDs;
-        this.copy = false;
         PIDs++;
     }
     Process.prototype.run = function () {
@@ -168,7 +172,10 @@ let canvas, graphics, webgl;
         processes.push(process);
     }
     function find_by_pid (PID){
-        let result;
+        let result = {
+            index: null,
+            process: null
+        };
         for(let i = 0; i < processes.length; i++){
             if(processes[i].PID === PID) {
                 result = {
@@ -182,12 +189,15 @@ let canvas, graphics, webgl;
     function kill(PID) {
         let index = find_by_pid(PID).index;
         processes.splice(index, 1);
+        debug("Killed " + PID);
     }
     function suspend(PID){
         find_by_pid(PID).process.suspended = true;
+        debug("Suspended " + PID);
     }
     function resume(PID){
         find_by_pid(PID).process.suspended = false;
+        debug("Resumed " + PID);
     }
     //Threads
     let threads = [];
@@ -311,45 +321,75 @@ let canvas, graphics, webgl;
     }
 
     //Scheduler
-    let process_in_execution;
+    let thread_in_execution;
     let waiting_processes_average = 0;
     let scheduler_run_count = 0;
     let runtime_sum = 0;
+    let minimum_sleep_time = Infinity;
     let scheduler = function () {
         if (suspend_system !== true) {
-            const target_time = 1000 / minimum_cycle_rate + performance.now();
             if (threads.length === 0) {//Fill threads with processes
+                minimum_sleep_time = Infinity;
                 for (let i = 0; i < processes.length; i++) {
                     let process = processes[i];
                     if(performance.now() >= process.sleep_time + process.time_marker){
-                        processes[i].copy = false;
                         threads.push(processes[i]);
-                        if(process.time_marker === 0){
-                            debug(process.process_name + " (" + process.PID +") did not call sleep().");
+                        if(process.time_marker !== 0){
+                            if(process.sleep_time < minimum_sleep_time)
+                                minimum_sleep_time = process.sleep_time
                         }
+                    }
+                }
+                if(manage_power === true){
+                    if(minimum_sleep_time !== Infinity){
+                        execution_time = Math.max(minimum_sleep_time, 0);
                     }
                 }
             }
             const start_time = performance.now();
+            const target_time = 1000 / minimum_cycle_rate + start_time;
             while (threads.length > 0 && performance.now() < target_time) {
                 waiting_processes_average++;
-                process_in_execution = threads[0];
-                threads[0].run();
+                let thread = threads[0];
+                thread_in_execution = thread;
+                thread.run();
+                if(thread.time_marker === 0)
+                    debug(thread.process_name + " (" + thread.PID +") did not call sleep().");
                 threads.splice(0, 1);
             }
             runtime_sum += performance.now() - start_time;
             scheduler_run_count++;
-            process_in_execution = null;
+            thread_in_execution = null;
         }
     }
 
     //Process management APIs
     function sleep(timeout){
-        process_in_execution.sleep_time = timeout;
-        process_in_execution.time_marker = performance.now();
+        thread_in_execution.sleep_time = timeout;
+        thread_in_execution.time_marker = performance.now();
     }
     function fork(){
-        processes.push(process_in_execution);
+        processes.push(thread_in_execution);
+    }
+
+    //Timer management
+    /* I don't know whether to make this exposed as an API or make it kernel-level only */
+    let timers = [];
+    let create_root_timeout = function(handler, time){
+        let timer_id = setTimeout(handler, time);
+        timers.push(timer_id);
+        return timer_id;
+    }
+    let create_root_interval = function(handler, time){
+        let timer_id = setInterval(handler, time);
+        timers.push(timer_id)
+        return timer_id;
+    }
+    let clear_root_timers = function(id){
+        debug("All root timers were cleared")
+        for(let i = 0; i < timers.length; i++){
+            clearTimeout(timers[i]);
+        }
     }
 
     //Performance tracking
@@ -378,36 +418,18 @@ let canvas, graphics, webgl;
             }
             return result;
         }
-        setInterval(() => {
+        create_root_interval(() => {
             if(suspend_system !== true){
                 waiting_processes_average = 0;
                 scheduler_run_count = 0;
             }
         }, 5000);
-        setInterval(() => {
+        create_root_interval(() => {
             if(suspend_system !== true){
                 runtime_sum = 0;
                 realtime_performance_sum = 0;
             }
         }, 100);
-    }
-
-    //Power management
-    let power_manager = function(){};
-    if(manage_power === true){
-        power_manager = function(){
-            if(suspend_system !== true){
-                let minimum_sleep_time = Infinity;
-                for(let i = 0; i < processes.length; i++){
-                    if(processes[i].sleep_time < minimum_sleep_time && processes[i].time_marker !== 0){
-                        minimum_sleep_time = processes[i].sleep_time;
-                    }
-                }
-                if(minimum_sleep_time !== Infinity){
-                    execution_time = Math.max(minimum_sleep_time, 0);
-                }
-            }
-        }
     }
 
     //Performance display
@@ -437,7 +459,7 @@ let canvas, graphics, webgl;
                 panic("Watchdog has detected that the kernel is hung.");
             }
         }
-        setInterval(watchdog, 2500);
+        create_root_interval(watchdog, 2500);
     }
 
     //Main loop
@@ -449,11 +471,10 @@ let canvas, graphics, webgl;
             error_screen_daemon();
             performance_tracker();
             performance_display();
-            power_manager();
             execution_count++;
             //Rexecute loop
             if (run_loop === true && panicked === false) {
-                setTimeout(main, execution_time);
+                create_root_timeout(main, execution_time);
             }
         } catch (e) {
             console.log(e);
