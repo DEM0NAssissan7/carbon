@@ -111,9 +111,13 @@ let icons = [];
 function createIcon(iconFunction, x, y, size, createWindowFunction) {
   var icon = new GraphiteWindow([], "icon");
   let iconRender = new Process((canvas, graphics) => {
-    graphics.clearRect(0, 0, canvas.width, canvas.height);
-    iconFunction(canvas, graphics);
-    sleep(1);
+    try{
+      graphics.clearRect(0, 0, canvas.width, canvas.height);
+      iconFunction(canvas, graphics);  
+    } catch (e){
+      console.error(e);
+    }
+    sleep(15);
   });
   let iconKiller = new Process(() => {
     if(icon.fadeFill === 1){
@@ -147,7 +151,12 @@ let icon_response_daemon = function() {
     let icon = icons[i];
     let devices = get_devices();
     if(devices.mouse.x > icon.x && devices.mouse.x < icon.size + icon.x && devices.mouse.y > icon.y && devices.mouse.y < icon.size + icon.y && buttonClicked === false && devices.mouse.clicked){
-      icon.window_function();
+      try {
+        icon.window_function();
+      } catch (e) {
+        console.error(e);
+        icons.splice(i, 1);
+      }
       buttonClicked = true;
     }
   }
