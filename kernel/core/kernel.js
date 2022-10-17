@@ -4,9 +4,12 @@ const Kernel = {
     capibilities: [
         "Preemptive",
         "Scheduler",
-        "Performance Tracking",
+        "Advanced Performance Tracking",
         "Power States",
         "Live Reclocking",
+        "Power Management",
+        "Overload Protection",
+        "Modular",
     ],
     start_time: Date.now()
 }
