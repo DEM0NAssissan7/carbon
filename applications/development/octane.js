@@ -48,7 +48,7 @@ class Octane{
     createWindow(){
         let octaneObject = new Octane();
         let windowProcesses = [
-            new Process(octaneObject.update),
+            spawn_process(octaneObject.update),
         ]
         let octaneWindow = new GraphiteWindow(windowProcesses, "Octane Game Engine");
         octaneWindow.width = 600;

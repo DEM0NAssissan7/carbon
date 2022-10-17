@@ -59,8 +59,8 @@ class GraphiteWindow {
         this.originalProcesses = windowProcesses;
 
         this.canvas = document.createElement("canvas");
-        this.canvas.width = 400;
-        this.canvas.height = 400;
+        this.canvas.width = 450;
+        this.canvas.height = 450;
         this.graphics = this.canvas.getContext('2d');
 
         this.fadeFill = 0;
@@ -217,7 +217,7 @@ class GraphiteWindow {
                 devices.mouse.y = originalMouseY;
                 get_devices = old_get_devices;
             };
-            let processBuffer = new Process(windowProcess, this.processesBuffer[i].priority, this.processesBuffer[i].interval);
+            let processBuffer = spawn_process(windowProcess, this.processesBuffer[i].priority, this.processesBuffer[i].interval);
             processBuffer.processName = this.processesBuffer[i].processName;
             this.processes.push(processBuffer);
             push_process(processBuffer);
@@ -295,7 +295,7 @@ function createWindow(windowProcesses, name) {
     windows.push(currentWindow);
 }
 function quickWindow(command, name) {
-    let currentWindow = new GraphiteWindow([new Process(command)], name);
+    let currentWindow = new GraphiteWindow([spawn_process(command)], name);
     currentWindow.init();
     currentWindow.initProcesses();
     windows.push(currentWindow);

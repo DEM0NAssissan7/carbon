@@ -110,7 +110,7 @@ setCursor(renderMouseCursor);
 let icons = [];
 function createIcon(iconFunction, x, y, size, createWindowFunction) {
   var icon = new GraphiteWindow([], "icon");
-  let iconRender = new Process((canvas, graphics) => {
+  let iconRender = spawn_process((canvas, graphics) => {
     try{
       graphics.clearRect(0, 0, canvas.width, canvas.height);
       iconFunction(canvas, graphics);  
@@ -119,7 +119,7 @@ function createIcon(iconFunction, x, y, size, createWindowFunction) {
     }
     sleep(15);
   });
-  let iconKiller = new Process(() => {
+  let iconKiller = spawn_process(() => {
     if(icon.fadeFill === 1){
       icon.dead = true;
     }

@@ -117,15 +117,15 @@ class TTY {
     var tty = new TTY();
   
     createWindow([
-      new Process(() => {
+      spawn_process(() => {
         tty.update();
         sleep(9);
       }),
-      new Process((canvas, graphics) => {
+      spawn_process((canvas, graphics) => {
         tty.draw(canvas, graphics);
         sleep(20);
       })
-    ]);
+    ], "Terminal");
   }
   iconFunction(canvas, graphics){
     graphics.fillStyle = 'black';

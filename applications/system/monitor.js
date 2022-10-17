@@ -63,7 +63,7 @@ class SystemMonitor{
             sleep(20);
         })
         createWindow([
-            new Process((canvas, graphics) => {app.renderGraphics(canvas, graphics);sleep(100)}),
+            spawn_process((canvas, graphics) => {app.renderGraphics(canvas, graphics);sleep(100)}),
         ], "System Monitor");
     }
 }
