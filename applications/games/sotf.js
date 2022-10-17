@@ -70,7 +70,10 @@ class SOTF {
     this.nextLevelTransitionCounter = 0;
     this.worldGenerationNumber = 0;
   }
-  update() {
+  update(canvas, graphics) {
+    let p5_environment = create_p5_environment(canvas, graphics);
+    let rect = p5_environment.rect;
+    let fill = p5_environment.fill;
     let self = this;
 
     //Guns
@@ -1452,21 +1455,21 @@ class SOTF {
       createThread(updateEnemyPlayerCollisions);
       createThread(generateWorld);
     }
-    let logic_process = new Process(sotf_logic_update);
+    let logic_process = spawn_process(sotf_logic_update);
     
     //Processes
     // let logicProcesses = [
     //   //World
-    //   new Process(generateWorld, 0),
+    //   spawn_process(generateWorld, 0),
     //   //Enemies
-    //   new Process(capEnemyCount, 2),
-    //   new Process(updateEnemies, 1, self.logicProcesses),
+    //   spawn_process(capEnemyCount, 2),
+    //   spawn_process(updateEnemies, 1, self.logicProcesses),
     //   //Players
-    //   new Process(updatePlayers, 4, self.logicProcesses),
+    //   spawn_process(updatePlayers, 4, self.logicProcesses),
     //   //Update player-enemy collissions
-    //   new Process(updateEnemyPlayerCollisions, 0, self.logicProcesses),
+    //   spawn_process(updateEnemyPlayerCollisions, 0, self.logicProcesses),
     //   //Game logic (levels)
-    //   new Process(updateGameLogic, 2, self.logicProcesses),
+    //   spawn_process(updateGameLogic, 2, self.logicProcesses),
     // ]
     function sotf_graphics_update(){
       createThread(drawBackground)
@@ -1480,13 +1483,13 @@ class SOTF {
 
     //Create processes to pass into the window manager
     // let windowProcesses = [
-    //   new Process(drawBackground, 1),
-    //   new Process(renderWorld, 0),
-    //   new Process(drawEnemies, -3),
-    //   new Process(updatePlayerShooting, 2),
-    //   new Process(drawPlayers, 2),
-    //   new Process(renderHud, 1),
-    //   new Process(updateGame, 3),
+    //   spawn_process(drawBackground, 1),
+    //   spawn_process(renderWorld, 0),
+    //   spawn_process(drawEnemies, -3),
+    //   spawn_process(updatePlayerShooting, 2),
+    //   spawn_process(drawPlayers, 2),
+    //   spawn_process(renderHud, 1),
+    //   spawn_process(updateGame, 3),
     // ]
 
     if (mode === "fullscreen") {
