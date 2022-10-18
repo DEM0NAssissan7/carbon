@@ -14,7 +14,8 @@
 [ ] Let `maximize` be toggleable
 [c] Live `windowWidth`/`windowHeight` resizing
 [x] Allow bootstrapper to be able to choose between different systems (jskernel core, JsOS shell, etc.) and make it easy for devs to add a system to the menu.
-[ ] get_transition currently uses the static value of "15" to determine animation speed. We need to change that.
+[x] get_transition currently uses the static value of "15" to determine animation speed. We need to change that.
+[ ] Multi-user support
 
 ## Low priority
 [ ] Make `stress()` use a list format that executes each stresstest in a for loop from an array.
