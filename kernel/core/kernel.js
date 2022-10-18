@@ -162,6 +162,18 @@ let canvas, graphics, webgl;
         }
     }
 
+    //Users
+    let users = [];
+    let UIDs = 0;
+    let User = function(name, permission_level){
+        /* Less permission level = more capable user 
+           Root has permission level 0.*/
+        this.permission_level = permission_level;
+        this.name = name;
+        this.UID = UIDs;
+        UIDs++;
+    }
+
     //Processes
     let processes = [];
     let PIDs = 0;
@@ -353,13 +365,14 @@ let canvas, graphics, webgl;
     let minimum_sleep_time = Infinity;
     let scheduler = function () {
         if (suspend_system !== true) {
+            const start_time = performance.now();
             if (threads.length === 0) {//Fill threads with processes
                 for(let i = 0; i < ktasks.length; i++)
                     threads.push(ktasks[i]);
                 minimum_sleep_time = Infinity;
                 for (let i = 0; i < processes.length; i++) {
                     let process = processes[i];
-                    if(performance.now() >= process.sleep_time + process.time_marker){
+                    if(start_time >= process.sleep_time + process.time_marker){
                         threads.push(processes[i]);
                         if(process.time_marker !== 0 && process.sleep_time < minimum_sleep_time)
                             minimum_sleep_time = process.sleep_time
@@ -368,7 +381,6 @@ let canvas, graphics, webgl;
                 if(manage_power === true && minimum_sleep_time !== Infinity)
                     execution_time = Math.max(minimum_sleep_time, 0);
             }
-            const start_time = performance.now();
             const target_time = 1000 / minimum_cycle_rate + start_time;
             while (threads.length > 0 && performance.now() < target_time) {
                 let thread = threads[0];
@@ -480,7 +492,7 @@ let canvas, graphics, webgl;
                 runtime_sum = 0;
                 realtime_performance_sum = 0;
             }
-        }, 100);
+        }, 1000);
     }
 
     //Performance display
