@@ -5,6 +5,7 @@ class CookieClicker{
         this.clickPower = 1;
         this.cps = 0;
         this.spacebarPressed = false;
+        this.timer = create_timer();
 
         let self = this;
         function Shop (price, cps, title, customFunction) {
@@ -73,7 +74,9 @@ class CookieClicker{
         centerText(graphics, "$" + Math.floor(this.money), canvas.width/4 + canvas.width/2, 30, 0, 0, 30);
         centerText(graphics, "CPS: " + (Math.floor(this.cps*10)/10), canvas.width/4 + canvas.width/2, canvas.height - 30, 0, 0, 20);
 
-        this.money += getTransition(this.cps, 1000);
+        this.timer.update();
+        this.money += getTransition(this.cps, 1000, this.timer);
+        sleep(50);
     }
     createWindow(){
         var self = new CookieClicker();

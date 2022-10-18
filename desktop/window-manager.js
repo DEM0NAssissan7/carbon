@@ -57,6 +57,7 @@ class GraphiteWindow {
         this.processes = [];
         this.processesBuffer = windowProcesses;
         this.originalProcesses = windowProcesses;
+        this.timer = create_timer();
 
         this.canvas = document.createElement("canvas");
         this.canvas.width = 450;
@@ -262,15 +263,16 @@ class GraphiteWindow {
         }
         //Animations
         if(cheapGraphics !== true){
+            this.timer.update();
             if(this.dying !== true){
                 if (Math.round(this.fadeFill*100)/100 < 1) {
-                    this.fadeFill += (getTransition(1, 500) - (getTransition(this.fadeFill, 500))) * 2;
+                    this.fadeFill += (getTransition(1, 500, this.timer) - (getTransition(this.fadeFill, 500, this.timer))) * 2;
                 } else {
                     this.fadeFill = 1;
                 }    
             }else {
                 if(Math.floor(this.fadeFill*100)/100 > 0){
-                    this.fadeFill -= (getTransition(1, 500) - (getTransition(1-this.fadeFill, 500))) * 2;
+                    this.fadeFill -= (getTransition(1, 500, this.timer) - (getTransition(1-this.fadeFill, 500, this.timer))) * 2;
                 }else{
                     this.fadeFill = 0;
                     this.dead = true;
