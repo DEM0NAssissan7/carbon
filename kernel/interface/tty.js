@@ -9,6 +9,8 @@ class TTY {
     this.keys = [];
     this.keyPressed = false;
     this.textOrder = 0;
+    this.root = false;
+    this.kernel_key = null;
   }
   update(){
     //Commandline functions
@@ -25,13 +27,27 @@ class TTY {
         self.textArray.push(obj);
       }
     }
+    function su () {
+      self.kernel_key = get_kernel_key();
+      self.root = true;
+      self.prompt = "[kernel]# ";
+    }
     let devices = get_devices();
     if (devices.keyboard.keyCodes[13] && !this.keyPressed) {
       this.textArray.push(this.textBuffer);
       this.promptArray[this.textArray.length - 1] = this.prompt;
       if (this.textBuffer) {
         try {
-          var stringToCommand = eval(this.textBuffer);
+          var stringToCommand;
+          if(this.root !== true){
+            stringToCommand = eval(this.textBuffer);
+          } else {
+            if(this.textBuffer === "clr()"){
+              self.textArray = [];
+            } else {
+              stringToCommand = run_as_root(this.textBuffer, this.kernel_key);
+            }
+          }
           if (stringToCommand !== undefined) {
             let stringToCommandToString = stringToCommand.toString();
             let line_count = 1;
@@ -89,7 +105,7 @@ class TTY {
         }
       }
     }
-    sleep(35);
+    sleep(40);
   }
   draw(canvas, graphics){
     graphics.font = '12px Monospace';
@@ -105,13 +121,12 @@ class TTY {
     }
     for (var i = 0; i < this.textArray.length; i++) {
       let currentPrompt = this.promptArray[i];
-      if (currentPrompt === undefined) {
+      if (currentPrompt === undefined)
         currentPrompt = "";
-      }
       graphics.fillText(currentPrompt + this.textArray[i], 2, i * 12 + 12);
     }
     graphics.fillText(this.prompt + this.textBuffer, 2, this.textArray.length * 12 + 12);
-    sleep(35);
+    sleep(40);
   }
   createWindow(){
     var tty = new TTY();
@@ -119,11 +134,9 @@ class TTY {
     createWindow([
       spawn_process(() => {
         tty.update();
-        sleep(9);
       }),
       spawn_process((canvas, graphics) => {
         tty.draw(canvas, graphics);
-        sleep(20);
       })
     ], "Terminal");
   }
