@@ -101,13 +101,15 @@ let canvas, graphics, webgl;
 
     //Root execution
     function run_as_root(command_string, key){
+        let command_output;
         if(key === kernel_key){
-            eval(command_string);
+            command_output = eval(command_string);
             debug("'" + command_string + "' was run at kernel level");
         } else {
             console.error("A security breach was detected. Command '" + command_string + "' was attempted to be run at root level.");
             panic("A root request was requested with a forbidden key. Malice has been detected.");
         }
+        return command_output;
     }
 
     //Panic
@@ -221,22 +223,6 @@ let canvas, graphics, webgl;
     function resume(PID){
         find_by_pid(PID).process.suspended = false;
         debug("Resumed " + PID);
-    }
-    //Threads
-    let threads = [];
-    let Thread = function (command) {
-        this.command = command;
-    }
-    Thread.prototype.run = function () {
-        try {
-            this.command();
-        } catch (e) {
-            console.error("A thread encountered an error.");
-            console.error(e);
-        }
-    }
-    function create_thread(command) {
-        threads.push(new Thread(command));
     }
 
     //Devices
@@ -359,6 +345,7 @@ let canvas, graphics, webgl;
     let create_ktask = function(command) {
         ktasks.push(new kTask(command));
     }
+    let threads = [];
     let thread_in_execution;
     let waiting_processes_average = 0;
     let scheduler_run_count = 0;
@@ -384,8 +371,9 @@ let canvas, graphics, webgl;
             const start_time = performance.now();
             const target_time = 1000 / minimum_cycle_rate + start_time;
             while (threads.length > 0 && performance.now() < target_time) {
-                waiting_processes_average++;
                 let thread = threads[0];
+                if(thread.PID !== undefined)
+                    waiting_processes_average++;
                 thread_in_execution = thread;
                 thread.run();
                 if(thread.time_marker === 0 && thread.marked !== true){
@@ -544,6 +532,8 @@ let canvas, graphics, webgl;
                 if(Date.now() - timer > 3000 && panicked === false){
                     panic("System has been overloaded");
                 }
+            } else {
+                timer = Date.now();
             }
         }
         create_interval(overload_monitor, 2500);
