@@ -485,7 +485,7 @@ let canvas, graphics, webgl;
             return timer_id;
         }
     }
-    let create_interval = function (handler, time) {
+    let create_interval = function(handler, time) {
         let timer_id = set_interval(() => {
             handler();
             timers.splice(timer_id);
