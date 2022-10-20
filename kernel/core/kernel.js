@@ -28,28 +28,46 @@ let canvas, graphics, webgl;
     const track_performance = true;
     const manage_power = true;
 
-    const windowed = true;
     const use_graphics = true;
     const use_devices = true;
 
     const do_logging = true;
+    const track_errors = true;
+    const error_handler = true;
+
     const use_watchdog = true;
     const overload_protection = true;
 
-    const error_handler = true;
+    //Auto-set constants
+    const windowed = (window !== undefined);
 
     //Debug logging
     let debug = function () {};
+    let warn = function () {};
+    let error = function () {};
     if (do_logging === true) {
         let debug_logs = [];
-        let debug_object = function (message) {
+        let debug_object = function (message, level) {
             this.message = message;
+            this.level = level;
             this.date = Date.now();
         }
         debug = function (message) {
-            debug_logs.push(new debug_object(message));
+            debug_logs.push(new debug_object(message, 0));
             if (print_debug_logs === true) {
                 console.log(message);
+            }
+        }
+        warn = function (message) {
+            debug_logs.push(new debug_object(message, 1));
+            if (print_debug_logs === true) {
+                console.warn(message);
+            }
+        }
+        error = function (message) {
+            debug_logs.push(new debug_object(message, 2));
+            if (print_debug_logs === true) {
+                console.error(message);
             }
         }
         function print_kernel_debug() {
@@ -57,9 +75,20 @@ let canvas, graphics, webgl;
             console.warn("Printing kernel debug logs");
             let parsed_kernel_logs = "";
             for (let i = 0; i < debug_logs.length; i++) {
-                let message_parse = "[" + (debug_logs[i].date - Kernel.start_time) + "] " + debug_logs[i].message;
+                let log = debug_logs[i];
+                let message_parse = "[" + (log.date - Kernel.start_time) + "] " + log.message;
                 parsed_kernel_logs += message_parse + "\n";
-                console.log(message_parse);
+                switch (log.level){
+                    case 0:
+                        console.log(message_parse);
+                        break;
+                    case 1:
+                        console.warn(message_parse)
+                        break;
+                    case 2:
+                        console.error(message_parse)
+                        break;
+                }
             }
             return parsed_kernel_logs;
         }
@@ -74,10 +103,10 @@ let canvas, graphics, webgl;
             confirmation =  confirm("A program is requesting root access. Accept?");
         }
         if(confirmation === true){
-            debug("Warning: The kernel key was accessed");
+            warn("The kernel key was accessed");
             return kernel_key;
         } else {
-            debug("Critical warning: The kernel key was requested, but declined.");
+            error("The kernel key was requested, but declined.");
             return Math.random();
         }
     }
@@ -106,8 +135,7 @@ let canvas, graphics, webgl;
             command_output = eval(command_string);
             debug("'" + command_string + "' was run at kernel level");
         } else {
-            console.error("A security breach was detected. Command '" + command_string + "' was attempted to be run at root level.");
-            panic("A root request was requested with a forbidden key. Malice has been detected.");
+            error("A security breach was detected. Command '" + command_string + "' was attempted to be run at root level.");
         }
         return command_output;
     }
@@ -115,16 +143,18 @@ let canvas, graphics, webgl;
     //Panic
     let panicked = false;
     let panic = function (message) {
-        clear_timers();
-        kernel_daemons = [];
-        console.error("Critical: Kernel panic (" + message + ")");
-        debug("Kernel panicked: " + message);
-        processes = [];
-        threads = [];
-        panicked = true;
-        print_kernel_debug();
-        if (windowed === true) {
-            alert("Kernel panic -> " + message);
+        if(panicked === false){
+            panicked = true;
+            clear_timers();
+            kernel_daemons = [];
+            console.error("Critical: Kernel panic (" + message + ")");
+            error("Kernel panicked: " + message);
+            processes = [];
+            threads = [];
+            print_kernel_debug();
+            if (windowed === true) {
+                alert("Kernel panic -> " + message);
+            }
         }
     }
 
@@ -406,7 +436,7 @@ let canvas, graphics, webgl;
             if(thread_in_execution !== null){
                 handler();
             } else {
-                console.error("Thread in execution is null");
+                warn("Thread in execution is null");
             }
         }
         function sleep(timeout){
@@ -426,12 +456,14 @@ let canvas, graphics, webgl;
     /* I don't know whether to make this exposed as an API or make it kernel-level only */
     let timers = [];
     let create_timeout = function(handler, time){
-        let timer_id = setTimeout(() => {
-            handler();
-            timers.splice(timer_id);
-        }, time);
-        timers.push(timer_id);
-        return timer_id;
+        if(panicked === false){
+            let timer_id = setTimeout(() => {
+                handler();
+                timers.splice(timer_id);
+            }, time);
+            timers.push(timer_id);
+            return timer_id;
+        }
     }
     let create_interval = function(handler, time){
         let timer_id = setInterval(() => {
@@ -515,12 +547,12 @@ let canvas, graphics, webgl;
         let previous_execution_count = 0;
         let watchdog = function () {
             if (previous_execution_count === execution_count) {
-                debug("Watchdog has been triggered");
+                warn("Watchdog has been triggered");
             } else if (previous_execution_count < execution_count) {
                 timer = Date.now();
                 previous_execution_count = execution_count;
             }
-            if (Date.now() - timer > 1500 && panicked === false) {
+            if (Date.now() - timer > 1500) {
                 panic("Watchdog has detected that the kernel is hung.");
             }
         }
@@ -536,12 +568,12 @@ let canvas, graphics, webgl;
         let overload_monitor = function () {
             if(suspend_system !== true){
                 if(cycle_count_buffer === scheduler_cycle_count){
-                    debug("Overload monitor has been detected");
+                    warn("Overload monitor has been detected");
                 } else if (cycle_count_buffer < scheduler_cycle_count){
                     timer = Date.now();
                     cycle_count_buffer = scheduler_cycle_count;
                 }
-                if(Date.now() - timer > 3000 && panicked === false){
+                if(Date.now() - timer > 3000){
                     panic("System has been overloaded");
                 }
             } else {
@@ -568,15 +600,16 @@ let canvas, graphics, webgl;
             panic("Kernel execution encountered an error.");
         }
     }
+    console.log(Kernel.name + " " + Kernel.version);
     try {
         debug("Starting kernel");
         main();
-
-        let time_since_start = (Date.now() - Kernel.start_time);
-        console.log("Kernel successfully started. (" + time_since_start + "ms)")
-        debug("Kernel was started in " + time_since_start + "ms");
     } catch (e) {
         console.error(e);
         panic("Unable to start kernel");
+    } finally {
+        let time_since_start = (Date.now() - Kernel.start_time);
+        console.log("Kernel successfully started. (" + time_since_start + "ms)");
+        debug("Kernel was started in " + time_since_start + "ms");
     }
 }
