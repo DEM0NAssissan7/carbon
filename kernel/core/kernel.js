@@ -30,9 +30,9 @@ let canvas, graphics, webgl;
 
     const use_graphics = true;
     const use_devices = true;
+    const reassign_jsapi = true;
 
     const do_logging = true;
-    const track_errors = true;
     const error_handler = true;
 
     const use_watchdog = true;
@@ -42,9 +42,9 @@ let canvas, graphics, webgl;
     const windowed = (window !== undefined);
 
     //Debug logging
-    let debug = function () {};
-    let warn = function () {};
-    let error = function () {};
+    let debug = function () { };
+    let warn = function () { };
+    let error = function () { };
     if (do_logging === true) {
         let debug_logs = [];
         let debug_object = function (message, level) {
@@ -78,7 +78,7 @@ let canvas, graphics, webgl;
                 let log = debug_logs[i];
                 let message_parse = "[" + (log.date - Kernel.start_time) + "] " + log.message;
                 parsed_kernel_logs += message_parse + "\n";
-                switch (log.level){
+                switch (log.level) {
                     case 0:
                         console.log(message_parse);
                         break;
@@ -94,15 +94,28 @@ let canvas, graphics, webgl;
         }
     }
 
+    //Javascript API reassignment
+    let set_timeout = setTimeout;
+    let set_interval = setInterval;
+    if (reassign_jsapi === true) {
+        debug("Reassigning Javascript APIs for security");
+        setTimeout = function () {
+            warn("setTimeout was called.");
+        }
+        setInterval = function () {
+            warn("setInterval was called.");
+        }
+    }
+
     //Kernel key management
     const kernel_key = Math.random();
     function get_kernel_key() {
         console.warn("[" + (Date.now() - Kernel.start_time) + "]: Kernel key was accessed.");
         let confirmation = true;
-        if(windowed === true){
-            confirmation =  confirm("A program is requesting root access. Accept?");
+        if (windowed === true) {
+            confirmation = confirm("A program is requesting root access. Accept?");
         }
-        if(confirmation === true){
+        if (confirmation === true) {
             warn("The kernel key was accessed");
             return kernel_key;
         } else {
@@ -113,13 +126,13 @@ let canvas, graphics, webgl;
 
     //Kernel daemons
     let kernel_daemons = [];
-    let add_kernel_daemon = function(handler){
+    let add_kernel_daemon = function (handler) {
         kernel_daemons.push(handler);
         return kernel_daemons.length - 1;
     }
-    let run_kernel_daemons = function(){
-        for(let i = 0; i < kernel_daemons.length; i++){
-            try{
+    let run_kernel_daemons = function () {
+        for (let i = 0; i < kernel_daemons.length; i++) {
+            try {
                 kernel_daemons[i]();
             } catch (e) {
                 console.error(e);
@@ -129,9 +142,9 @@ let canvas, graphics, webgl;
     }
 
     //Root execution
-    function run_as_root(command_string, key){
+    function run_as_root(command_string, key) {
         let command_output;
-        if(key === kernel_key){
+        if (key === kernel_key) {
             command_output = eval(command_string);
             debug("'" + command_string + "' was run at kernel level");
         } else {
@@ -143,7 +156,7 @@ let canvas, graphics, webgl;
     //Panic
     let panicked = false;
     let panic = function (message) {
-        if(panicked === false){
+        if (panicked === false) {
             panicked = true;
             clear_timers();
             kernel_daemons = [];
@@ -159,15 +172,15 @@ let canvas, graphics, webgl;
     }
 
     //Uptime
-    function raw_uptime(){
+    function raw_uptime() {
         return Date.now() - Kernel.start_time;
     }
-    function uptime(){
+    function uptime() {
         let uptime_buffer = raw_uptime();
         let seconds = Math.floor(uptime_buffer / 1000 % 60)
         let minutes = Math.floor(uptime_buffer / 1000 / 60 % 60);
         let hours = Math.floor(uptime_buffer / 1000 / 3600);
-        
+
         let uptime_message = hours + ":" + minutes + ":" + seconds;
         return uptime_message;
     }
@@ -175,7 +188,7 @@ let canvas, graphics, webgl;
     //Error management
     let error_screen;
     if (error_handler === true) {
-        let error_screen_handler = function(){//Default 
+        let error_screen_handler = function () {//Default 
 
         };
         error_screen = {
@@ -183,11 +196,11 @@ let canvas, graphics, webgl;
             process: undefined,
             error: undefined
         }
-        let error_screen_daemon = function(){
+        let error_screen_daemon = function () {
 
         }
         add_kernel_daemon(error_screen_daemon);
-        function set_error_screen(handler){
+        function set_error_screen(handler) {
             error_screen_handler = handler;
         }
     }
@@ -195,7 +208,7 @@ let canvas, graphics, webgl;
     //Users
     let users = [];
     let UIDs = 0;
-    let User = function(name, permission_level){
+    let User = function (name, permission_level) {
         /* Less permission level = more capable user 
            Root has permission level 0.*/
         this.permission_level = permission_level;
@@ -207,7 +220,7 @@ let canvas, graphics, webgl;
     //Processes
     let processes = [];
     let PIDs = 0;
-    let Process = function(command) {
+    let Process = function (command) {
         this.command = command;
         this.process_name = command.name;
         this.sleep_time = 0;
@@ -238,13 +251,13 @@ let canvas, graphics, webgl;
     function push_process(process) {
         processes.push(process);
     }
-    function find_by_pid (PID){
+    function find_by_pid(PID) {
         let result = {
             index: null,
             process: null
         };
-        for(let i = 0; i < processes.length; i++){
-            if(processes[i].PID === PID) {
+        for (let i = 0; i < processes.length; i++) {
+            if (processes[i].PID === PID) {
                 result = {
                     index: i,
                     process: processes[i]
@@ -258,11 +271,11 @@ let canvas, graphics, webgl;
         processes.splice(index, 1);
         debug("Killed " + PID);
     }
-    function suspend(PID){
+    function suspend(PID) {
         find_by_pid(PID).process.suspended = true;
         debug("Suspended " + PID);
     }
-    function resume(PID){
+    function resume(PID) {
         find_by_pid(PID).process.suspended = false;
         debug("Resumed " + PID);
     }
@@ -322,9 +335,9 @@ let canvas, graphics, webgl;
             debug("Device: Controller " + e.gamepad.index + " disconnected (" + e.gamepad.id + ")");
             devices.controllers.splice(e.gamepad, 1);
         });
-        function add_listener(type, handler){
-            switch(type){
-                
+        function add_listener(type, handler) {
+            switch (type) {
+
             }
         }
         function get_devices() {
@@ -373,18 +386,18 @@ let canvas, graphics, webgl;
 
     //Scheduler
     let ktasks = [];
-    let kTask = function(command){
+    let kTask = function (command) {
         this.command = command;
     }
-    kTask.prototype.run = function(){
-        try{
+    kTask.prototype.run = function () {
+        try {
             this.command();
         } catch (e) {
             console.error(e);
             panic("A critical kernel task has encountered an error");
         }
     }
-    let create_ktask = function(command) {
+    let create_ktask = function (command) {
         ktasks.push(new kTask(command));
     }
     let threads = [];
@@ -397,29 +410,29 @@ let canvas, graphics, webgl;
         if (suspend_system !== true) {
             const start_time = performance.now();
             if (threads.length === 0) {//Fill threads with processes
-                for(let i = 0; i < ktasks.length; i++)
+                for (let i = 0; i < ktasks.length; i++)
                     threads.push(ktasks[i]);
                 minimum_sleep_time = Infinity;
                 for (let i = 0; i < processes.length; i++) {
                     let process = processes[i];
-                    if(start_time >= process.sleep_time + process.time_marker){
+                    if (start_time >= process.sleep_time + process.time_marker) {
                         threads.push(processes[i]);
-                        if(process.time_marker !== 0 && process.sleep_time < minimum_sleep_time)
+                        if (process.time_marker !== 0 && process.sleep_time < minimum_sleep_time)
                             minimum_sleep_time = process.sleep_time
                     }
                 }
-                if(manage_power === true && minimum_sleep_time !== Infinity)
+                if (manage_power === true && minimum_sleep_time !== Infinity)
                     execution_time = Math.max(minimum_sleep_time, 0);
             }
             const target_time = 1000 / minimum_cycle_rate + start_time;
             while (threads.length > 0 && performance.now() < target_time) {
                 let thread = threads[0];
-                if(thread.PID !== undefined)
+                if (thread.PID !== undefined)
                     waiting_processes_average++;
                 thread_in_execution = thread;
                 thread.run();
-                if(thread.time_marker === 0 && thread.marked !== true){
-                    debug(thread.process_name + " (" + thread.PID +") did not call sleep().");
+                if (thread.time_marker === 0 && thread.marked !== true) {
+                    warn(thread.process_name + " (" + thread.PID + ") did not call sleep().");
                     thread.marked = true;
                 }
                 threads.splice(0, 1);
@@ -432,32 +445,39 @@ let canvas, graphics, webgl;
 
     //Process management APIs
     {
-        let run_kernel_api = function(handler){
-            if(thread_in_execution !== null){
+        let run_kernel_api = function (handler) {
+            if (thread_in_execution !== null) {
                 handler();
             } else {
-                warn("Thread in execution is null");
+                warn("A kernel API was called outside of a process context.");
             }
         }
-        function sleep(timeout){
+        function sleep(timeout) {
             run_kernel_api(() => {
                 thread_in_execution.sleep_time = timeout;
                 thread_in_execution.time_marker = performance.now();
             });
         }
-        function fork(){
+        function fork() {
             run_kernel_api(() => {
                 processes.push(thread_in_execution);
             });
+        }
+        function getpid() {
+            let pid;
+            run_kernel_api(() => {
+                pid = thread_in_execution.PID;
+            });
+            return pid;
         }
     }
 
     //Timer management
     /* I don't know whether to make this exposed as an API or make it kernel-level only */
     let timers = [];
-    let create_timeout = function(handler, time){
-        if(panicked === false){
-            let timer_id = setTimeout(() => {
+    function create_timeout(handler, time) {
+        if (panicked === false) {
+            let timer_id = set_timeout(() => {
                 handler();
                 timers.splice(timer_id);
             }, time);
@@ -465,8 +485,8 @@ let canvas, graphics, webgl;
             return timer_id;
         }
     }
-    let create_interval = function(handler, time){
-        let timer_id = setInterval(() => {
+    let create_interval = function (handler, time) {
+        let timer_id = set_interval(() => {
             handler();
             timers.splice(timer_id);
         }, time);
@@ -474,9 +494,9 @@ let canvas, graphics, webgl;
         timers.push(timer_id)
         return timer_id;
     }
-    let clear_timers = function(){
-        debug("All root timers were cleared")
-        while(timers.length > 0){
+    let clear_timers = function () {
+        warn("All timers were cleared")
+        while (timers.length > 0) {
             clearTimeout(timers[0]);
             timers.splice(0, 1);
         }
@@ -514,13 +534,13 @@ let canvas, graphics, webgl;
             return result;
         }
         create_interval(() => {
-            if(suspend_system !== true){
+            if (suspend_system !== true) {
                 waiting_processes_average = 0;
                 scheduler_run_count = 0;
             }
         }, 5000);
         create_interval(() => {
-            if(suspend_system !== true){
+            if (suspend_system !== true) {
                 runtime_sum = 0;
                 realtime_performance_sum = 0;
             }
@@ -560,20 +580,20 @@ let canvas, graphics, webgl;
     }
 
     //Overload protection
-    if(overload_protection === true){
+    if (overload_protection === true) {
         debug("Initializing overload protection")
         let scheduler_cycle_count = 0;
         let cycle_count_buffer = 0;
         let timer = 0;
         let overload_monitor = function () {
-            if(suspend_system !== true){
-                if(cycle_count_buffer === scheduler_cycle_count){
+            if (suspend_system !== true) {
+                if (cycle_count_buffer === scheduler_cycle_count) {
                     warn("Overload monitor has been detected");
-                } else if (cycle_count_buffer < scheduler_cycle_count){
+                } else if (cycle_count_buffer < scheduler_cycle_count) {
                     timer = Date.now();
                     cycle_count_buffer = scheduler_cycle_count;
                 }
-                if(Date.now() - timer > 3000){
+                if (Date.now() - timer > 3000) {
                     panic("System has been overloaded");
                 }
             } else {
@@ -581,19 +601,21 @@ let canvas, graphics, webgl;
             }
         }
         create_interval(overload_monitor, 2500);
-        create_ktask(() => {scheduler_cycle_count++;});
+        create_ktask(() => { scheduler_cycle_count++; });
     }
 
     //Main loop
     let execution_count = 0;
     let main = function () {
-        try{
+        try {
             scheduler();//Run processes
             run_kernel_daemons();
             execution_count++;
             //Rexecute loop
             if (run_loop === true && panicked === false) {
+                thread_in_execution = "";
                 create_timeout(main, execution_time);
+                thread_in_execution = null;
             }
         } catch (e) {
             console.error(e);

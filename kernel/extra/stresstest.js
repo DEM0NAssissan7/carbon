@@ -152,7 +152,7 @@ function testInputs() {
 function stress() {
   let processesBuffer = [processes];
   let processGroupsBuffer = [processGroups];
-  setTimeout(function () {
+  create_timeout(function () {
     let testFailed = false;
     var startTime = Date.now();
     try {
