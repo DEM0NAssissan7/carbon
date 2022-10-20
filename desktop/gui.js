@@ -201,7 +201,7 @@ class appDock{
       let iconX = canvas.width / 2 + (this.iconSize + this.iconPadding) * i - applications.length * this.iconSize / 2;
       let iconY = canvas.height - this.iconSize - this.iconPadding*2;
       var self = this;
-      setTimeout(() => { createIcon(applications[i].icon, iconX, iconY,
+      create_timeout(() => { createIcon(applications[i].icon, iconX, iconY,
         self.iconSize,applications[i].handler) }, 500 + (90 * i));
     }
   }

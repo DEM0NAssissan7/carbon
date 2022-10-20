@@ -6,7 +6,7 @@ class Autoclick{
     update(canvas, graphics){
         setBackground(canvas, graphics);
         this.clicking = booleanToggleButton(graphics, this.clicking, "Start autoclicker", "Stop autoclicker", 20, 20, canvas.width-40, canvas.height-40, () => {
-            setTimeout(() => {
+            create_timeout(() => {
                 if(this.clicking){
                     this.startClicking = true;
                 }else{

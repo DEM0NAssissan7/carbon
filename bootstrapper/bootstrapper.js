@@ -2,6 +2,8 @@
     const print_loadout_message = true;
     const boot_select_timeout = 500;
 
+    let set_timeout = setTimeout;
+
     let create_script_element = function(file){
         let script = document.createElement("script");
         script.src = file;
@@ -15,7 +17,7 @@
         let name = script_array[1];
         console.warn("Loading " + name + "...");
         for(let i = 0; i < scripts.length; i++){
-            setTimeout(() => {
+            set_timeout(() => {
                 load_script(scripts[i]);
                 if(print_loadout_message === true){
                     console.log("Bootstrapper: Loaded " + scripts[i]);
@@ -32,7 +34,7 @@
             }
         }
         window.addEventListener('keydown', prompt_interrupt);
-        setTimeout(() => {
+        set_timeout(() => {
             if(interrupted === true){
                 console.warn("The system has been interrupted. Prompting load selection.");
                 for(let i = 0; i < Math.min(scripts.length, 9); i++){
