@@ -227,18 +227,17 @@ let canvas, graphics, webgl;
         this.time_marker = 0;
         this.marked = false;
         this.suspended = false;
+        this.dead = false;
         this.PID = PIDs;
         PIDs++;
     }
     Process.prototype.run = function () {
-        if (this.suspended !== true) {
-            try {
-                this.command();
-            } catch (e) {
-                console.error("Process " + this.PID + " has encountered an error.");
-                console.error(e);
-                this.suspended = true;
-            }
+        try {
+            this.command();
+        } catch (e) {
+            console.error("Process " + this.PID + " has encountered an error.");
+            console.error(e);
+            this.dead = true;
         }
     }
     function create_process(command) {
@@ -415,7 +414,9 @@ let canvas, graphics, webgl;
                 minimum_sleep_time = Infinity;
                 for (let i = 0; i < processes.length; i++) {
                     let process = processes[i];
-                    if (start_time >= process.sleep_time + process.time_marker) {
+                    if (process.dead === true){
+                        processes.splice(i, 1);
+                    }else if (start_time >= process.sleep_time + process.time_marker && process.suspended === false) {
                         threads.push(processes[i]);
                         if (process.time_marker !== 0 && process.sleep_time < minimum_sleep_time)
                             minimum_sleep_time = process.sleep_time
@@ -469,6 +470,11 @@ let canvas, graphics, webgl;
                 pid = thread_in_execution.PID;
             });
             return pid;
+        }
+        function raise() {
+            run_kernel_api(() => {
+                kill(thread_in_execution.PID);
+            });
         }
     }
 

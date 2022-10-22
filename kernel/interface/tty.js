@@ -6,7 +6,7 @@ class TTY {
     this.promptArray = [];
     this.textLine = 0;
     this.textBuffer = [];
-    this.keys = [];
+    this.keys = get_devices().keyboard.keys;
     this.keyPressed = false;
     this.textOrder = 0;
     this.root = false;
@@ -33,7 +33,7 @@ class TTY {
       self.prompt = "[kernel]# ";
     }
     function exit () {
-      kill(getpid());
+      raise();
     }
     let devices = get_devices();
     if (devices.keyboard.keyCodes[13] && !this.keyPressed) {
