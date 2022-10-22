@@ -32,6 +32,9 @@ class TTY {
       self.root = true;
       self.prompt = "[kernel]# ";
     }
+    function exit () {
+      kill(getpid());
+    }
     let devices = get_devices();
     if (devices.keyboard.keyCodes[13] && !this.keyPressed) {
       this.textArray.push(this.textBuffer);

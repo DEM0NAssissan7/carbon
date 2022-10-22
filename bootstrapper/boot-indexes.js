@@ -6,11 +6,14 @@
             [
             //Kernel
             "kernel/extra/tools.js",
+            //App manager
+            "desktop/app-manager.js",
             //Applications
             "desktop/toolkit.js",
             "applications/system/settings.js",
             "applications/games/sotf.js",
             "applications/development/octane.js",
+            "applications/development/gcode.js",
             "applications/emulators/physics.js",
             "applications/system/monitor.js",
             "applications/games/cookieclicker.js",
@@ -20,7 +23,6 @@
             "applications/emulators/vm/vm.js",
             //Desktop
             "desktop/window-manager.js",
-            "desktop/app-manager.js",
             "desktop/gui.js",
             ],
             "Graphite Desktop"

@@ -443,7 +443,7 @@ let canvas, graphics, webgl;
         }
     }
 
-    //Process management APIs
+    //Thread management APIs
     {
         let run_kernel_api = function (handler) {
             if (thread_in_execution !== null) {
