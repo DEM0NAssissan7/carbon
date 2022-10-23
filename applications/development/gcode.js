@@ -4,6 +4,7 @@ class Gcode{
         this.mode = "menu";
         this.line_index = 0;
         this.existing_lines = 0;
+        this.live_reload = false;
         this.keys = get_devices().keyboard.keys;
         this.code_output = [];
         this.view_offset = 0;
@@ -54,7 +55,6 @@ class Gcode{
         graphics.lineTo(canvas.width, 20);
         graphics.stroke();
 
-        let self = this;
         labledButton(graphics, canvas.width - 44, 3, 40, 15, () => {
             let a = document.createElement("a");
             let text_buffer = [];
@@ -99,12 +99,20 @@ class Gcode{
         }, "Load");
 
         if(this.process === undefined){
-            labledButton(graphics, 4, 3, 40, 15, () => {
+            let convert_array = (array) => {
                 let code = "";
-                for(let i = 0; i < this.text_buffer.length; i++)
-                    code += this.text_buffer[i] + "\n";
+                for(let i = 0; i < array.length; i++)
+                    code += array[i] + "\n";
+                return code;
+            }
+            let exec_code;
+            if(this.live_reload !== true)
+                exec_code = convert_array(this.text_buffer);
+            labledButton(graphics, 4, 3, 40, 15, () => {
                 let gcode_proc = () => {
-                    let command = new Function(code)();
+                    if(this.live_reload === true)
+                        exec_code = convert_array(this.text_buffer);
+                    let command = new Function(exec_code)();
                     if(command !== undefined)
                         this.code_output.push(command);
                 };

@@ -11,50 +11,34 @@ function jskernelStresstest() {
   console.log("Stressing process manager and scheduler");
   create_process(function () { create_process(function () { create_process(recurseProcess) }) });
 }
+let kern_key;
 function overhead() {
-  systemSuspend = false;
-  processes = [];
-  const processCount = 1000000;
-  const beforeCreationTime = Date.now();
-  for (var i = 0; i < processCount; i++) {
-    create_process(() => {}, 1);
-  }
-  let creationTime = Date.now() - beforeCreationTime;
-
-  console.log("Processes have been created");
-  console.log("Kernel overhead for creating " + processCount + " processes (in ms): " + creationTime);
-  console.log("Kernel overhead for creating 1 processes (in ms): " + (creationTime / processCount));
-
-  const updateCount = 5;
-  let totalUpdateTimes = 0;
-  for (var i = 0; i < updateCount; i++) {
-    let beforeUpdateTime = Date.now();
-    for (let i = 0; i < processes.length; i++) {
-      processes[i].run();
+  if(!kern_key){
+    kern_key = get_kernel_key();
+    let procs = [];
+  
+  
+    let before_time = performance.now();
+  
+    for(let i = 0; i < 1000000; i++){
+      let proc = spawn_process(() => {sleep(0)})
+      procs.push(proc);
+      push_process(proc);
     }
-    totalUpdateTimes += Date.now() - beforeUpdateTime;
+    let creation_time = performance.now() - before_time;
+    run_as_root("scheduler()", kern_key);
+    let sched_time = performance.now() - before_time;
+  
+    console.log("Creation time: " + creation_time);
+    console.log("Scheduler cycle time: " + sched_time);
+  
+    console.log("Killing all processes")
+    for(let i = 0; i < procs.length; i++)
+      procs[i].dead = true;
+    console.log("All processes died")
+  
+    return 0;
   }
-  let updateTime = totalUpdateTimes / updateCount;
-
-  console.log("Processes have ran.");
-  console.log("Average kernel overhead for running " + processes.length + " processes (in ms): " + updateTime);
-  console.log("Kernel overhead for running 1 processes (in ms): " + (updateTime / processes.length));
-
-
-  //Test updateProcesses overhead
-  let rawUpdateTime = updateTime;
-  for (var i = 0; i < updateCount; i++) {
-    let beforeUpdateTime = Date.now();
-    scheduler();
-    totalUpdateTimes = Date.now() - beforeUpdateTime;
-  }
-  updateTime = totalUpdateTimes;
-
-  console.log("- updateProcesses() function overhead test -");
-  console.log("Processes have ran using scheduler.");
-  console.log("Average kernel overhead for running " + processes.length + " processes with scheduler (in ms): " + updateTime);
-  console.log("Kernel overhead for running 1 processes (in ms): " + (updateTime / processes.length));
-  console.log("Using updateProcesses is " + Math.round(rawUpdateTime / updateTime * 100) + "% the speed of process.update()");
 }
 
 function capacity() {

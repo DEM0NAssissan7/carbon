@@ -414,9 +414,9 @@ let canvas, graphics, webgl;
                 minimum_sleep_time = Infinity;
                 for (let i = 0; i < processes.length; i++) {
                     let process = processes[i];
-                    if (process.dead === true){
+                    if (process.dead === true) {
                         processes.splice(i, 1);
-                    }else if (start_time >= process.sleep_time + process.time_marker && process.suspended === false) {
+                    } else if (start_time >= process.sleep_time + process.time_marker && process.suspended === false) {
                         threads.push(processes[i]);
                         if (process.time_marker !== 0 && process.sleep_time < minimum_sleep_time)
                             minimum_sleep_time = process.sleep_time
@@ -476,6 +476,14 @@ let canvas, graphics, webgl;
                 kill(thread_in_execution.PID);
             });
         }
+        function thread(command) {
+            run_kernel_api(() => {
+                let thread = new Process(command);
+            });
+        }
+        function task(command) {
+
+        }
     }
 
     //Timer management
@@ -491,7 +499,7 @@ let canvas, graphics, webgl;
             return timer_id;
         }
     }
-    let create_interval = function(handler, time) {
+    let create_interval = function (handler, time) {
         let timer_id = set_interval(() => {
             handler();
             timers.splice(timer_id);
@@ -599,9 +607,8 @@ let canvas, graphics, webgl;
                     timer = Date.now();
                     cycle_count_buffer = scheduler_cycle_count;
                 }
-                if (Date.now() - timer > 3000) {
+                if (Date.now() - timer > 3000)
                     panic("System has been overloaded");
-                }
             } else {
                 timer = Date.now();
             }
