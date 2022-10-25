@@ -1,3 +1,47 @@
+//Window manager intialization
+const local_server = true;
+const monitor_refresh_rate = 60;
+{
+  let wm = spawn_window_manager(local_server);
+
+  let window_manager_update = function(){
+    wm.update();
+    wm.get_local_data();
+    sleep(13)
+  }
+  create_process(window_manager_update);
+
+  let window_manager_draw = function(){
+    let start_time = performance.now();
+    wm.draw();
+    sleep((1000/monitor_refresh_rate) - (performance.now() - start_time))
+  }
+  create_process(window_manager_draw);
+
+  //Defining functions
+  function create_window(window_processes, window_name){
+    wm.server.create_window(window_processes, window_name);
+    wm.get_local_data();
+  }
+  function set_background(background_function){
+    wm.set_background(background_function);
+  }
+  function set_cursor(handler){
+    wm.set_cursor(handler);
+  }
+  function push_window(window){
+    wm.server.push_window(window);
+  }
+  function quick_window(command, window_name){
+    wm.server.create_window([spawn_process(command)], window_name);
+  }
+  function get_background_graphics(){
+    return wm.background_graphics;
+  }
+  function get_windows(){
+    return [wm.windows, wm.server.windows]
+  }
+}
 //Mouse cursor
 function colorBlackCursor(graphics) {
   graphics.strokeStyle = 'white';
@@ -103,13 +147,13 @@ let renderMouseCursor = graphics => {
   cursorShape(graphics);
 }
 //Use kwm as the mouse cursor rendering engine
-setCursor(renderMouseCursor);
+set_cursor(renderMouseCursor);
 
 //Applications
 //Icon creation function
 let icons = [];
-function createIcon(iconFunction, x, y, size, createWindowFunction) {
-  var icon = new GraphiteWindow([], "icon");
+function createIcon(iconFunction, x, y, size, create_windowFunction) {
+  var icon = spawn_window([], "icon");
   let iconRender = spawn_process((canvas, graphics) => {
     try{
       graphics.clearRect(0, 0, canvas.width, canvas.height);
@@ -120,7 +164,7 @@ function createIcon(iconFunction, x, y, size, createWindowFunction) {
     sleep(15);
   });
   let iconKiller = spawn_process(() => {
-    if(icon.fadeFill === 1){
+    if(icon.fade === 1){
       icon.dead = true;
     }
     sleep(100);
@@ -129,22 +173,22 @@ function createIcon(iconFunction, x, y, size, createWindowFunction) {
     x: x, 
     y: y,
     size: size,
-    window_function: createWindowFunction
+    window_function: create_windowFunction
   });
 
 
-  icon.processesBuffer = [iconRender, iconKiller];
-  icon.originalProcesses = [iconRender, iconKiller];
+  icon.processes_buffer = [iconRender, iconKiller];
+  icon.original_processes = [iconRender, iconKiller];
   icon.x = x;
   icon.y = y;
   icon.canvas.width = size;
   icon.canvas.height = size;
-  icon.topBarHeight = 0;
+  icon.title_bar_height = 0;
   icon.focusable = false;
   icon.level = "foreground";
-  icon.initProcesses();
+  icon.initialize();
 
-  windows.push(icon);
+  push_window(icon);
 }
 let icon_response_daemon = function() {
   for(let i = 0; i < icons.length; i++){
@@ -174,8 +218,8 @@ rainbow.prototype.iconFunction = function (canvas, graphics) {
   graphics.fillStyle = "#6464FF";
   graphics.rect(0,canvas.height*(2/3),canvas.width,canvas.height/3);
 }
-rainbow.prototype.createWindow = function () {
-  quickWindow(RenderRainbow, "Rainbow (not gay)");
+rainbow.prototype.create_window = function () {
+  quick_window(RenderRainbow, "Rainbow (not gay)");
 }
 
 //Add applications
@@ -257,14 +301,15 @@ GenericBackground = (canvas, graphics) => {
 // backgroundFunction = BandaiNamco;
 backgroundFunction = creasedJacket;
 createBackgroundWindow = () => {
-  let backgroundCanvas = document.createElement("canvas");
-  backgroundCanvas.width = canvas.width;
-  backgroundCanvas.height = canvas.height;
-  let backgroundCanvasGraphics = backgroundCanvas.getContext("2d");
-  backgroundFunction(backgroundCanvas, backgroundCanvasGraphics);
+  // let backgroundCanvas = document.createElement("canvas");
+  // backgroundCanvas.width = canvas.width;
+  // backgroundCanvas.height = canvas.height;
+  // let backgroundCanvasGraphics = backgroundCanvas.getContext("2d");
+  // backgroundFunction(backgroundCanvas, backgroundCanvasGraphics);
 
+  set_background(backgroundFunction);
 
-  wmBackgroundGraphics.drawImage(backgroundCanvas, 0, 0);
+  // wmBackgroundGraphics.drawImage(backgroundCanvas, 0, 0);
   setTheme();
 }
 

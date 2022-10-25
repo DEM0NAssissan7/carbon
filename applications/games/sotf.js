@@ -1274,7 +1274,7 @@ class SOTF {
       this.menuState = "no players";
     }
   }
-  createWindow(mode) {
+  create_window(mode) {
     var self = new SOTF();
     //Functions for updating game mechanics
     function drawPlayers() {
@@ -1493,7 +1493,7 @@ class SOTF {
     // ]
 
     if (mode === "fullscreen") {
-      var sotfWindow = new GraphiteWindow("Survival of the Fittest", windowProcesses, false, self.logicProcesses);
+      var sotfWindow = spawn_window("Survival of the Fittest", windowProcesses, false, self.logicProcesses);
       sotfWindow.x = canvas.width / 2;
       sotfWindow.y = canvas.height / 2;
       sotfWindow.targetWidth = canvas.width;
@@ -1504,7 +1504,7 @@ class SOTF {
       addProcessGroup(self.logicProcesses);
     }else {
       //Add game processes to the window manager
-      var sotfWindow = new GraphiteWindow(windowProcesses, "Survival of the Fittest");
+      var sotfWindow = spawn_window(windowProcesses, "Survival of the Fittest");
       sotfWindow.maximize = true;
       sotfWindow.initProcesses();
       windows.push(sotfWindow);

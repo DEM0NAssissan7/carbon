@@ -1,2 +1,2 @@
 let sotf = new SOTF();
-sotf.createWindow("standalone")
+sotf.create_window("standalone")

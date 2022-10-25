@@ -45,12 +45,12 @@ class Octane{
         }
         graphics.resetTransform();
     }
-    createWindow(){
+    create_window(){
         let octaneObject = new Octane();
         let windowProcesses = [
             spawn_process(octaneObject.update),
         ]
-        let octaneWindow = new GraphiteWindow(windowProcesses, "Octane Game Engine");
+        let octaneWindow = spawn_window(windowProcesses, "Octane Game Engine");
         octaneWindow.width = 600;
         octaneWindow.height = 600;
         

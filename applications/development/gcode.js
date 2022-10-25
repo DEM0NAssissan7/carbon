@@ -193,9 +193,9 @@ class Gcode{
         }
         sleep(40)
     }
-    createWindow(){
+    create_window(){
         var self = new Gcode();
-        createWindow([
+        create_window([
           spawn_process((canvas, graphics) => {
             self.update(canvas, graphics);
           })

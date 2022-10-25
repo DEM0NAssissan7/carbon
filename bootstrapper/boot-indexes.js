@@ -14,6 +14,7 @@
             "applications/games/sotf.js",
             "applications/development/octane.js",
             "applications/development/gcode.js",
+            "applications/graphics/3d.js",
             "applications/emulators/physics.js",
             "applications/system/monitor.js",
             "applications/games/cookieclicker.js",
@@ -22,8 +23,9 @@
             //Machine Code Emulator
             "applications/emulators/vm/vm.js",
             //Desktop
-            "desktop/window-manager.js",
-            "desktop/gui.js",
+            "desktop/wm/window-system.js",
+            "desktop/wm/window-manager.js",
+            "desktop/shell.js",
             ],
             "Graphite Desktop"
         ];

@@ -78,9 +78,9 @@ class CookieClicker{
         this.money += getTransition(this.cps, 1000, this.timer);
         sleep(50);
     }
-    createWindow(){
+    create_window(){
         var self = new CookieClicker();
-        quickWindow((canvas, graphics) => {self.update(canvas, graphics)}, "Cookie Clicker");
+        quick_window((canvas, graphics) => {self.update(canvas, graphics)}, "Cookie Clicker");
     }
     iconFunction(canvas, graphics){
         graphics.fillStyle = "#964b00";

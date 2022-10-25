@@ -23,7 +23,7 @@ class Settings {
                 cursorColor(graphics);
                 cursorShape(graphics);
             }
-            setCursor(renderMouseCursor);
+            set_cursor(renderMouseCursor);
         });
         cursorColor = listSelector(graphics, cursorColor, [
             [colorWhiteCursor, "White"],
@@ -33,7 +33,7 @@ class Settings {
                 cursorColor(graphics);
                 cursorShape(graphics);
             }
-            setCursor(renderMouseCursor)
+            set_cursor(renderMouseCursor)
         });
     }
 
@@ -57,8 +57,8 @@ class Settings {
         graphics.resetTransform();
     }
 
-    createWindow (){
+    create_window (){
         var settingsSystem = new Settings();
-        quickWindow((canvas,graphics) => {settingsSystem.update(canvas,graphics)}, "Settings");
+        quick_window((canvas,graphics) => {settingsSystem.update(canvas,graphics)}, "Settings");
     }
 }

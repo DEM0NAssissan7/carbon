@@ -56,13 +56,13 @@ class SystemMonitor{
         graphics.stroke();
 
     }
-    createWindow(){
+    create_window(){
         let app = new SystemMonitor();
         create_process(() => {
             app.update();
             sleep(20);
         })
-        createWindow([
+        create_window([
             spawn_process((canvas, graphics) => {app.renderGraphics(canvas, graphics);sleep(100)}),
         ], "System Monitor");
     }

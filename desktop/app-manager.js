@@ -15,7 +15,7 @@ function addApplication(handler, icon){
 }
 function addApplicationFromClass (appClass) {
   var currentAppClass = new appClass;
-  addApplication(currentAppClass.createWindow, currentAppClass.iconFunction);
+  addApplication(currentAppClass.create_window, currentAppClass.iconFunction);
 }
 function renderApplicationIcon(application){
     push();

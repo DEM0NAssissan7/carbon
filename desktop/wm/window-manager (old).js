@@ -53,10 +53,10 @@ class GraphiteWindow {
         this.level = "middleground";
 
         this.dragged = false;
-        
+
         this.processes = [];
         this.processesBuffer = windowProcesses;
-        this.originalProcesses = windowProcesses;
+        this.original_processes = windowProcesses;
         this.timer = create_timer();
 
         this.canvas = document.createElement("canvas");
@@ -73,7 +73,7 @@ class GraphiteWindow {
         }
     }
     close() {
-        if(cheapGraphics === false){
+        if (cheapGraphics === false) {
             this.dying = true;
         } else {
             this.dead = true;
@@ -98,15 +98,15 @@ class GraphiteWindow {
             graphics.fillStyle = colorScheme.textColor;
             graphics.font = "12px Monospace";
             // graphics.fillText(this.windowName, this.canvas.width/2, this.canvas.height/2);
-            graphics.fillText(this.windowName, this.canvas.width/2 - (graphics.measureText(this.windowName).width / 2), (12 / 3) - this.topBarHeight/2);
+            graphics.fillText(this.windowName, this.canvas.width / 2 - (graphics.measureText(this.windowName).width / 2), (12 / 3) - this.topBarHeight / 2);
             //Close button
             graphics.fillStyle = "red";
             graphics.fillRect(this.canvas.width - windowButtonPadding - (this.topBarHeight - windowButtonPadding * 2),
                 windowButtonPadding - (this.topBarHeight - 1),
                 this.topBarHeight - windowButtonPadding * 2,
                 this.topBarHeight - windowButtonPadding * 2);
-                graphics.translate(-positionX, -positionY);
-            }
+            graphics.translate(-positionX, -positionY);
+        }
     }
     drawDecor(graphics, positionX, positionY) {
         graphics.save();
@@ -115,12 +115,12 @@ class GraphiteWindow {
         graphics.lineWidth = this.shadowLength * 2;
         let pointsMultiplier = this.shadowLength;
         function createShadowPattern(x1, y1, x2, y2, reverse) {
-            let gradient = graphics.createLinearGradient(x1 *  pointsMultiplier, y1 * pointsMultiplier, x2 * pointsMultiplier, y2 * pointsMultiplier);
-            if(reverse === true){
+            let gradient = graphics.createLinearGradient(x1 * pointsMultiplier, y1 * pointsMultiplier, x2 * pointsMultiplier, y2 * pointsMultiplier);
+            if (reverse === true) {
                 gradient.addColorStop(0, "rgba(0, 0, 0, 0)");
                 gradient.addColorStop(1, "rgba(0, 0, 0, 0.2)");
             }
-            if(reverse === false){
+            if (reverse === false) {
                 gradient.addColorStop(0, "rgba(0, 0, 0, 0.2)");
                 gradient.addColorStop(1, "rgba(0, 0, 0, 0)");
             }
@@ -157,7 +157,7 @@ class GraphiteWindow {
         graphics.beginPath();
         graphics.lineTo(0, windowBottom);
         graphics.lineTo(0, 0);
-        graphics.fill(); 
+        graphics.fill();
 
         graphics.restore();
 
@@ -168,7 +168,7 @@ class GraphiteWindow {
     }
     draw() {
         let drawSurfaceGraphics;
-        switch(this.level){
+        switch (this.level) {
             case "background":
                 drawSurfaceGraphics = wmBackgroundGraphics;
                 break;
@@ -195,7 +195,7 @@ class GraphiteWindow {
             drawSurfaceGraphics.restore();
         } else {
             // this.drawDecor(drawSurfaceGraphics, this.x, this.y);
-            drawSurfaceGraphics.drawImage(this.canvas, this.x, this.y);
+            drawSurfaceGraphics.drawImage(this.canvas, this.x, this.y, this.canvas.width, this.canvas.height);
             this.topBar(drawSurfaceGraphics, this.x, this.y);
         }
     }
@@ -204,18 +204,23 @@ class GraphiteWindow {
             let windowProcess = () => {
                 let devices = get_devices();
                 let old_get_devices = get_devices;
-                get_devices = function(){
+                get_devices = function () {
                     return devices;
                 }
-                let originalMouseX = devices.mouse.x;
-                let originalMouseY = devices.mouse.y;
                 devices.mouse.x -= this.x;
                 devices.mouse.y -= this.y;
+                if (this.hasFocus === false) {
+                    devices.mouse.clicked = false;
+                    devices.mouse.pressed = false;
+                    devices.keyboard.keys = [];
+                    devices.keyboard.keyCodes = [];
+                    devices.keyboard.keyCode = 0;
+                    devices.keyboard.pressed = false;
+                    devices.keyboard.info = {};
+                }
 
                 this.processesBuffer[i].command(this.canvas, this.graphics);
 
-                devices.mouse.x = originalMouseX;
-                devices.mouse.y = originalMouseY;
                 get_devices = old_get_devices;
             };
             let processBuffer = spawn_process(windowProcess, this.processesBuffer[i].priority, this.processesBuffer[i].interval);
@@ -231,17 +236,17 @@ class GraphiteWindow {
     updateLogic() {
         //Focus
         let devices = get_devices();
-        if(devices.mouse.x > this.x && devices.mouse.x < this.x + this.canvas.width && devices.mouse.y > this.y - this.topBarHeight && devices.mouse.y < this.y + this.canvas.height && this.focusable && devices.mouse.pressed){
+        if (devices.mouse.x > this.x && devices.mouse.x < this.x + this.canvas.width && devices.mouse.y > this.y - this.topBarHeight && devices.mouse.y < this.y + this.canvas.height && this.focusable && devices.mouse.pressed && !this.requestFocus) {
             this.requestFocus = true;
         }
         //Window dragging and top bar interaction
-        if(this.hasFocus){
+        if (this.hasFocus) {
             if (devices.mouse.x > this.x + this.canvas.width - windowButtonPadding - (this.topBarHeight - windowButtonPadding * 2) &&
-            devices.mouse.y > this.y + windowButtonPadding - (this.topBarHeight - 1) &&
-            devices.mouse.x < this.x + this.canvas.width - windowButtonPadding &&
-            devices.mouse.y < this.y + (windowButtonPadding - (this.topBarHeight - 1)) + (this.topBarHeight - windowButtonPadding * 2) && devices.mouse.pressed && this.dragged === false) {
-            this.close();
-            return;
+                devices.mouse.y > this.y + windowButtonPadding - (this.topBarHeight - 1) &&
+                devices.mouse.x < this.x + this.canvas.width - windowButtonPadding &&
+                devices.mouse.y < this.y + (windowButtonPadding - (this.topBarHeight - 1)) + (this.topBarHeight - windowButtonPadding * 2) && devices.mouse.pressed && this.dragged === false) {
+                this.close();
+                return;
             }
             if (devices.mouse.x > this.x && devices.mouse.x < this.x + this.canvas.width && devices.mouse.y > this.y - this.topBarHeight && devices.mouse.y < this.y && devices.mouse.pressed && this.dragged === false && this.hasFocus) {
                 this.initialDrag = {
@@ -250,7 +255,6 @@ class GraphiteWindow {
                     windowX: this.x,
                     windowY: this.y
                 }
-                this.previousState = this;
                 this.dragged = true;
             }
             if (this.dragged === true) {
@@ -262,26 +266,26 @@ class GraphiteWindow {
             }
         }
         //Animations
-        if(cheapGraphics !== true){
+        if (cheapGraphics !== true) {
             this.timer.update();
-            if(this.dying !== true){
-                if (Math.round(this.fadeFill*100)/100 < 1) {
+            if (this.dying !== true) {
+                if (Math.round(this.fadeFill * 100) / 100 < 1) {
                     this.fadeFill += (getTransition(1, 500, this.timer) - (getTransition(this.fadeFill, 500, this.timer))) * 2;
                 } else {
                     this.fadeFill = 1;
-                }    
-            }else {
-                if(Math.floor(this.fadeFill*100)/100 > 0){
-                    this.fadeFill -= (getTransition(1, 500, this.timer) - (getTransition(1-this.fadeFill, 500, this.timer))) * 2;
-                }else{
+                }
+            } else {
+                if (Math.floor(this.fadeFill * 100) / 100 > 0) {
+                    this.fadeFill -= (getTransition(1, 500, this.timer) - (getTransition(1 - this.fadeFill, 500, this.timer))) * 2;
+                } else {
                     this.fadeFill = 0;
                     this.dead = true;
                 }
             }
-        }else{
+        } else {
             this.fadeFill = 1;
         }
-        if(this.dead === true){
+        if (this.dead === true) {
             //Kill all processes linked to the window
             for (let i = 0; i < this.processes.length; i++) {
                 kill(this.processes[i].PID);
@@ -290,14 +294,14 @@ class GraphiteWindow {
     }
 }
 
-function createWindow(windowProcesses, name) {
-    let currentWindow = new GraphiteWindow(windowProcesses, name);
+function create_window(windowProcesses, name) {
+    let currentWindow = spawn_window(windowProcesses, name);
     currentWindow.init();
     currentWindow.initProcesses();
     windows.push(currentWindow);
 }
 function quickWindow(command, name) {
-    let currentWindow = new GraphiteWindow([spawn_process(command)], name);
+    let currentWindow = spawn_window([spawn_process(command)], name);
     currentWindow.init();
     currentWindow.initProcesses();
     windows.push(currentWindow);
@@ -312,7 +316,7 @@ function setCursor(cursorDrawHandler) {
     cursorOffscreenCanvas.width = 32;
     cursorOffscreenCanvas.height = 32;
     let cursorOffscreenGraphics = cursorOffscreenCanvas.getContext("2d");
-    if(cheapGraphics === false){
+    if (cheapGraphics === false) {
         cursorOffscreenGraphics.filter = "drop-shadow(6px 4px 1px rgba(0,0,0,0.5))";
     }
     cursorDrawHandler(cursorOffscreenGraphics);
@@ -344,32 +348,6 @@ setCursor(graphics => {//Default graphite wm cursor
     graphics.stroke();
 });
 
-//Manage the window manager
-function resetWindow(window){
-    let currentWindowBuffer = new GraphiteWindow(window.originalProcesses, window.windowName);
-    currentWindowBuffer.x = window.x;
-    currentWindowBuffer.y = window.y;
-    currentWindowBuffer.width = window.width;
-    currentWindowBuffer.height = window.height;
-    currentWindowBuffer.focusable = window.focusable;
-    currentWindowBuffer.topBarHeight = window.topBarHeight;
-    currentWindowBuffer.fadeFill = window.fadeFill;
-    currentWindowBuffer.hasFocus = window.hasFocus;
-
-    window.close();
-
-    currentWindowBuffer.initProcesses();
-    return currentWindowBuffer;
-}
-function reloadWindowManager(){
-    let windowsBuffer = [];
-    for(let i = 0; i < windows.length; i++){
-        windowsBuffer[i] = resetWindow(windows[i]);
-    }
-    setCursor(cursorHandler);
-    windows = windowsBuffer;
-}
-
 //Hide system cursor to replace with wm cursor
 document.body.style.cursor = 'none';
 //Generic background
@@ -377,40 +355,37 @@ graphics.fillStyle = 'gray';
 graphics.fillRect(0, 0, canvas.width, canvas.height);
 
 {
-    function clearCanvas(graphics){
+    let clearCanvas = function (graphics) {
         graphics.clearRect(0, 0, graphics.canvas.width, graphics.canvas.height);
     }
-    function drawCanvas(drawGraphics, targetCanvas){
-        drawGraphics.drawImage(targetCanvas, 0, 0);
+    let drawCanvas = function (drawGraphics, targetCanvas) {
+        drawGraphics.drawImage(targetCanvas, 0, 0, targetCanvas.width, targetCanvas.height, 0, 0, drawGraphics.canvas.width, drawGraphics.canvas.height);
+        // drawGraphics.drawImage(targetCanvas, 0, 0);
     }
-    let displayWmPerformance = function(){};
-    if(showWmPerformanceInfo === true){
+    let displayWmPerformance = function () { };
+    if (showWmPerformanceInfo === true) {
         let wmLatency = 1;
         let latencyTimer = performance.now();
-        displayWmPerformance = function (){
+        displayWmPerformance = function () {
             wmLatency = performance.now() - latencyTimer;
             latencyTimer = performance.now();
-            
+
             graphics.save();
-            graphics.translate(76,0)
+            graphics.translate(76, 0)
             graphics.fillStyle = '#7777FF';
             graphics.fillRect(0, 0, 38, 30);
             graphics.strokeStyle = 'black';
             graphics.fillStyle = 'black';
             graphics.font = '14px Monospace';
-            graphics.fillText(Math.round(1000/ wmLatency), 10, 19);
+            graphics.fillText(Math.round(1000 / wmLatency), 10, 19);
             graphics.restore();
         }
     }
-    function windowManagerDraw() {
+    let windowManagerDraw = function () {
         let start_time = performance.now();
         for (let i = 0; i < windows.length; i++) {
-            let drawWindow = function() {
-                if(windows[i]){
-                    windows[i].draw();
-                }
-            };
-            drawWindow();
+            if (windows[i])
+                windows[i].draw();
         }
         drawCanvas(firstFrameBufferGraphics, wmBackground);
         drawCanvas(firstFrameBufferGraphics, wmMiddleground);
@@ -423,30 +398,36 @@ graphics.fillRect(0, 0, canvas.width, canvas.height);
         displayWmPerformance();
 
         let wm_performance = performance.now() - start_time;
-        sleep(15 - wm_performance);
+        sleep((1000/monitorRefreshRate) - wm_performance);
         // create_thread(() => {clearCanvas(firstFrameBufferGraphics);});
     }
     create_process(windowManagerDraw, 1);
 }
 
 {
-    function windowManagerLogic() {
-        var requestedWindowIndex = -1;
+    let windowManagerLogic = function () {
+        let requestedWindowIndex;
         for (let i = 0; i < windows.length; i++) {
-            windows[i].updateLogic();
-            if (windows[i].dead === true) {
+            let window = windows[i];
+            window.updateLogic();
+            if (window.dead === true) {
                 windows.splice(i, 1);
                 break;
             }
-            if(windows[i].requestFocus === true && requestedWindowIndex === -1){
+            if (window.requestFocus === true) {
                 requestedWindowIndex = i;
+                window.requestFocus = false;
             }
         }
-        if(requestedWindowIndex !== -1){
-            let focusedWindow = windows[requestedWindowIndex];
-            focusedWindow.hasFocus = true;
+        if (requestedWindowIndex !== undefined) {
+            for (let i = 0; i < windows.length; i++) {
+                windows[i].requestFocus = false;
+                windows[i].hasFocus = false;
+            }
+            windows[requestedWindowIndex].hasFocus = true;
+            let window = windows[requestedWindowIndex];
             windows.splice(requestedWindowIndex, 1);
-            windows.push(focusedWindow);
+            windows.push(window);
         }
         sleep(14);
     }

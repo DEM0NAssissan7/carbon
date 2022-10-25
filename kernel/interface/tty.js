@@ -131,10 +131,10 @@ class TTY {
     graphics.fillText(this.prompt + this.textBuffer, 2, this.textArray.length * 12 + 12);
     sleep(40);
   }
-  createWindow(){
+  create_window(){
     var tty = new TTY();
   
-    createWindow([
+    create_window([
       spawn_process(() => {
         tty.update();
       }),

@@ -122,13 +122,13 @@ class Physics{
             graphics.drawImage(this.canvas, 0, 0, canvas.width, canvas.height);
         });
     }
-    createWindow(){
+    create_window(){
         let physics = new Physics();
         let updateEngine = (canvas, graphics) => {
             physics.update(canvas, graphics);
         }
 
-        quickWindow(updateEngine, "Physics");
+        quick_window(updateEngine, "Physics");
 
     }
     iconFunction(){

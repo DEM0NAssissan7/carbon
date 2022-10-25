@@ -225,15 +225,20 @@ let canvas, graphics, webgl;
         this.process_name = command.name;
         this.sleep_time = 0;
         this.time_marker = 0;
+        this.creation_time = performance.now();
+        this.exec_time = 0;
+        this.cpu_time = 0;
         this.marked = false;
         this.suspended = false;
         this.dead = false;
         this.PID = PIDs;
         PIDs++;
     }
-    Process.prototype.run = function () {
+    Process.prototype.run = function (time_marker) {
         try {
             this.command();
+            this.exec_time = performance.now() - time_marker;
+            this.cpu_time += this.exec_time;
         } catch (e) {
             console.error("Process " + this.PID + " has encountered an error.");
             console.error(e);
@@ -426,12 +431,15 @@ let canvas, graphics, webgl;
                     execution_time = Math.max(minimum_sleep_time, 0);
             }
             const target_time = 1000 / minimum_cycle_rate + start_time;
-            while (threads.length > 0 && performance.now() < target_time) {
+            while (threads.length > 0) {
                 let thread = threads[0];
                 if (thread.PID !== undefined)
                     waiting_processes_average++;
                 thread_in_execution = thread;
-                thread.run();
+                const time_marker = performance.now();
+                if(time_marker >= target_time)
+                    break;
+                thread.run(time_marker);
                 if (thread.time_marker === 0 && thread.marked !== true) {
                     warn(thread.process_name + " (" + thread.PID + ") did not call sleep().");
                     thread.marked = true;
@@ -461,7 +469,8 @@ let canvas, graphics, webgl;
         }
         function fork() {
             run_kernel_api(() => {
-                processes.push(thread_in_execution);
+                let forked_process = new Process(thread_in_execution.command);
+                processes.push(forked_process);
             });
         }
         function getpid() {
@@ -525,7 +534,8 @@ let canvas, graphics, webgl;
             let timer = performance.now();
             let performance_tracker = function () {
                 realtime_performance = performance.now() - timer;
-                realtime_performance_sum += realtime_performance;
+                if(suspend_system !== true)
+                    realtime_performance_sum += realtime_performance;
                 timer = performance.now();
             }
             add_kernel_daemon(performance_tracker);
@@ -546,6 +556,24 @@ let canvas, graphics, webgl;
                 percent: (runtime_sum / realtime_performance_sum) * 100
             }
             return result;
+        }
+        function perf_top() {
+            let output_text = "";
+            let add_text = function(line){
+                output_text += line + "\n"
+            }
+            add_text("CPU usage: " + Math.round(runtime_sum / realtime_performance_sum * 100) + "%");
+            add_text("Task count: " + (processes.length));
+            add_text("Load average: " + (waiting_processes_average / scheduler_run_count));
+            add_text("- Individual process usages - ");
+
+            let sorted_processes = processes.sort((a,b) => b.cpu_time - a.cpu_time)
+            for(let i = 0; i < sorted_processes.length; i++){
+                let process = sorted_processes[i];
+                add_text(process.process_name + "(" + process.PID +") - " + Math.round((process.cpu_time / (performance.now() - process.creation_time)) * 100) + "% CPU - " + Math.round(process.cpu_time / 1000) + " second(s) CPU time - " + process.exec_time + "ms");
+            }
+
+            return output_text;
         }
         create_interval(() => {
             if (suspend_system !== true) {
@@ -626,9 +654,7 @@ let canvas, graphics, webgl;
             execution_count++;
             //Rexecute loop
             if (run_loop === true && panicked === false) {
-                thread_in_execution = "";
                 create_timeout(main, execution_time);
-                thread_in_execution = null;
             }
         } catch (e) {
             console.error(e);

@@ -29,9 +29,9 @@ class Autoclick{
             }
         }
     }
-    createWindow(){
+    create_window(){
         let autoclick = new Autoclick();
-        quickWindow((canvas, graphics) =>{autoclick.update(canvas, graphics)}, "Autoclicker");
+        quick_window((canvas, graphics) =>{autoclick.update(canvas, graphics)}, "Autoclicker");
     }
     iconFunction(canvas, graphics) {
         graphics.fillStyle = "#8888FF"

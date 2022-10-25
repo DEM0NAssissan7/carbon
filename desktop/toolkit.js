@@ -153,7 +153,8 @@ function animateAcceleration(value, targetSize, time) {
 
 //Image tools
 function setTheme(){
-    let pictureData = wmBackgroundGraphics.getImageData(0, 0, wmBackground.width, wmBackground.height).data;
+    let background_canvas = get_background_graphics();
+    let pictureData = background_canvas.getImageData(0, 0, background_canvas.canvas.width, background_canvas.canvas.height).data;
 
     let a = 0;
     let r = 0;
