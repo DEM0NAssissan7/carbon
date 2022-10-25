@@ -1,8 +1,8 @@
 {
     const button_padding = 8;
-    let wm_window = function(window_id, window_name){
+    let wm_window = function (window_id, window_name, remote) {
         this.canvas;
-        this.image_data;
+        this.remote = remote
         this.window_name = window_name;
         this.window_id = window_id;
 
@@ -19,11 +19,10 @@
         this.fade = 0;
         this.timer = create_timer();
     }
-    wm_window.prototype.update_logic = function(){
+    wm_window.prototype.update_logic = function () {
         let devices = get_devices();
-        if (devices.mouse.x > this.x && devices.mouse.x < this.x + this.canvas.width && devices.mouse.y > this.y - this.title_bar_height && devices.mouse.y < this.y + this.canvas.height && this.focusable && devices.mouse.pressed && !this.request_focus && this.dying !== true && buttonClicked === false) {
+        if (devices.mouse.x > this.x && devices.mouse.x < this.x + this.canvas.width && devices.mouse.y > this.y - this.title_bar_height && devices.mouse.y < this.y + this.canvas.height && this.focusable && devices.mouse.pressed && !this.request_focus && this.dying !== true) {
             this.request_focus = true;
-            buttonClicked = true;
         }
         if (this.has_focus === true) {
             if (devices.mouse.x > this.x + this.canvas.width - button_padding - (this.title_bar_height - button_padding * 2) &&
@@ -51,9 +50,9 @@
             }
         }
     }
-    wm_window.prototype.update_movement = function(){
+    wm_window.prototype.update_movement = function () {
         let devices = get_devices();
-        if(this.has_focus === true){
+        if (this.has_focus === true) {
             if (devices.mouse.x > this.x && devices.mouse.x < this.x + this.canvas.width && devices.mouse.y > this.y - this.title_bar_height && devices.mouse.y < this.y && devices.mouse.pressed && this.dragged === false && this.has_focus) {
                 this.intital_drag = {
                     mouseX: devices.mouse.x,
@@ -72,7 +71,7 @@
             }
         }
     }
-    wm_window.prototype.draw_top_bar = function(graphics, positionX, positionY){
+    wm_window.prototype.draw_top_bar = function (graphics, positionX, positionY) {
         if (this.title_bar_height > 0) {
             graphics.translate(positionX, positionY);
 
@@ -101,7 +100,10 @@
             graphics.translate(-positionX, -positionY);
         }
     }
-    wm_window.prototype.draw = function(graphics, foreground_graphics){
+    wm_window.prototype.draw = function (graphics, foreground_graphics) {
+        if(this.remote === true){
+            this.fade = 1;
+        }
         if (this.fade < 1) {
             graphics.save();
 
@@ -118,16 +120,24 @@
             graphics.restore();
         } else {
             // this.drawDecor(graphics, this.x, this.y);
-            graphics.drawImage(this.canvas, this.x, this.y);
+            if(this.remote !== true){
+                graphics.drawImage(this.canvas, this.x, this.y);
+            } else {
+                graphics.putImageData(this.canvas, this.x, this.y);
+            }
             this.draw_top_bar(graphics, this.x, this.y);
         }
     }
-    wm_window.prototype.close = function() {
-        this.dying = true;
+    wm_window.prototype.close = function () {
+        if(this.remote !== true){
+            this.dying = true;
+        }else {
+            this.dead = true;
+        }
     }
 
-    function spawn_wm_window(processes, window_name){
-        return new wm_window(processes, window_name);
+    function spawn_wm_window(processes, window_name) {
+        return new wm_window(processes, window_name, false);
     }
 
     let default_cursor_handler = graphics => {//Default wm cursor
@@ -148,18 +158,20 @@
         //Base (right)
         graphics.lineTo(10, 9);
         graphics.lineTo(0, 0);
-    
+
         graphics.fill();
         graphics.stroke();
     }
 
-    let window_manager = function(local) {
+    let window_manager = function (remote) {
         //Hide system cursor to replace with wm cursor
         document.body.style.cursor = 'none';
 
-        if(local !== false){
-            this.local = true;
+        if (remote !== true) {
+            this.remote = false;
             this.server = spawn_window_server();
+        } else {
+            this.remote = true;
         }
         this.indexed_windows = [];
         this.windows = [];
@@ -170,28 +182,28 @@
         this.background_canvas.height = canvas.height;
         this.background_graphics = this.background_canvas.getContext("2d");
     }
-    window_manager.prototype.get_local_data = function(){
-        for(let i = 0; i < this.server.windows.length; i++){
+    window_manager.prototype.get_local_data = function () {
+        for (let i = 0; i < this.server.windows.length; i++) {
             let server_window = this.server.windows[i];
-            if(this.indexed_windows[server_window.window_id] === undefined){
-                this.indexed_windows[server_window.window_id] = new wm_window(server_window.window_id, server_window.window_name);
+            if (this.indexed_windows[server_window.window_id] === undefined) {
+                this.indexed_windows[server_window.window_id] = new wm_window(server_window.window_id, server_window.window_name, false);
                 this.windows.push(this.indexed_windows[server_window.window_id]);
             }
             this.indexed_windows[server_window.window_id].canvas = server_window.canvas;
         }
     }
-    window_manager.prototype.update = function() {
+    window_manager.prototype.update = function () {
         let requested_window_index;
-        for (let i = this.windows.length - 1; i >= 0; i--) {
+        for (let i = 0; i < this.windows.length; i++) {
             let window = this.windows[i];
             window.update_logic();
             if (window.dead === true) {
-                this.server.close(window.window_id);
+                // this.server.close(window.window_id);
                 this.windows.splice(i, 1);
                 break;
             }
             window.update_movement();
-            this.server.update_window_position(window.x, window.y, window.window_id);
+            // this.server.update_window_position(window.x, window.y, window.window_id);
             if (window.request_focus === true) {
                 requested_window_index = i;
                 window.request_focus = false;
@@ -202,26 +214,29 @@
                 this.windows[i].request_focus = false;
                 this.windows[i].has_focus = false;
             }
-            this.server.unfocus_all();
             this.windows[requested_window_index].has_focus = true;
             let window = this.windows[requested_window_index];
-            this.server.focus(window.window_id);
+            if(this.remote !== true){
+                this.server.unfocus_all();
+                this.server.focus(window.window_id);
+            }
             this.windows.splice(requested_window_index, 1);
             this.windows.push(window);
         }
-        this.server.update_devices(get_devices());
+        if(this.remote !== true)
+            this.server.update_devices(get_devices());
     }
-    window_manager.prototype.send_local_data = function(){
-        for(let i = 0; i < this.windows.length; i++){
-            if(this.windows[i].dead === true){
+    window_manager.prototype.send_local_data = function () {
+        for (let i = 0; i < this.windows.length; i++) {
+            if (this.windows[i].dead === true) {
                 this.server.close(this.windows[i].window_id);
             }
         }
     }
-    window_manager.prototype.set_background = function(handler){
+    window_manager.prototype.set_background = function (handler) {
         handler(this.background_canvas, this.background_graphics);
     }
-    window_manager.prototype.set_cursor = function(handler){
+    window_manager.prototype.set_cursor = function (handler) {
         this.cursor_handler = (graphics) => {
             let devices = get_devices();
             graphics.translate(devices.mouse.x, devices.mouse.y);
@@ -229,14 +244,40 @@
             graphics.resetTransform();
         };
     }
-    window_manager.prototype.draw = function(){
+    window_manager.prototype.send_data = function(){
+        let payload = {
+            windows: [],
+            devices: get_devices()
+        };
+        for(let i = 0; i < this.windows.length; i++){
+            let window = this.windows[i];
+            payload.windows[i] = {
+                has_focus: window.has_focus,
+                window_id: window.window_id,
+                x: window.x,
+                y: window.y
+            }
+        }
+        return payload;
+    }
+    window_manager.prototype.recieve_data = function(data){
+        for(let i = 0; i < data.length; i++){
+            let data_chunk = data[i];
+            if (this.indexed_windows[data_chunk.window_id] === undefined) {
+                this.indexed_windows[data_chunk.window_id] = new wm_window(data_chunk.window_id, data_chunk.window_name, true);
+                this.windows.push(this.indexed_windows[data_chunk.window_id]);
+            }
+            this.indexed_windows[data_chunk.window_id].canvas = data_chunk.canvas;
+        }
+    }
+    window_manager.prototype.draw = function () {
         graphics.drawImage(this.background_canvas, 0, 0);
-        for(let i = 0; i < this.windows.length; i++)
+        for (let i = 0; i < this.windows.length; i++)
             this.windows[i].draw(graphics);
         this.cursor_handler(graphics);
     }
 
-    function spawn_window_manager(){
-        return new window_manager();
+    function spawn_window_manager(remote) {
+        return new window_manager(remote);
     }
 }
