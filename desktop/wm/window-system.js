@@ -31,24 +31,31 @@
             let windowProcess = () => {
                 let devices = this.devices;
                 let old_get_devices = get_devices;
-                get_devices = function () {
-                    return devices;
-                }
                 devices.mouse.x -= this.x;
                 devices.mouse.y -= this.y;
+                let old_keyboard = {
+                    keys: devices.keyboard.keys,
+                    keyCodes: devices.keyboard.keyCodes,
+                    info: devices.keyboard.info,
+                    keyCode: devices.keyboard.keyCode,
+                    info: devices.keyboard.info
+                };
                 if (this.has_focus === false) {
-                    devices.mouse.clicked = false;
-                    devices.mouse.pressed = false;
                     devices.keyboard.keys = [];
                     devices.keyboard.keyCodes = [];
                     devices.keyboard.keyCode = 0;
                     devices.keyboard.pressed = false;
                     devices.keyboard.info = {};
                 }
-
+                get_devices = function () {
+                    return devices;
+                }
                 this.processes_buffer[i].command(this.canvas, this.graphics);
 
                 get_devices = old_get_devices;
+                devices.mouse.x += this.x;
+                devices.mouse.y += this.y;
+                devices.keyboard = old_keyboard;
             };
             let process_buffer = spawn_process(windowProcess, this.processes_buffer[i].priority, this.processes_buffer[i].interval);
             process_buffer.process_name = this.processes_buffer[i].process_name;
@@ -114,17 +121,40 @@
         window.window.close();
         this.windows.splice(window.index, 1);
     }
-    window_server.prototype.get_windows_data = function(){
-        let windows_data = [];
+    window_server.prototype.recieve_data = function(data){
+        //We need every wm call to be included in this.
+        /*
+            Here is an idea. We have a copy of the server running on the client (minus the processes), and we check to see if they are the same.
+            If not, the client takes priority and the server arranges itself accordingly.
+            We should only check for things like has_focus.
+        */
+        for(let i = 0; i < data.windows.length; i++){
+            let client_window = data.windows[i];
+            let window = this.windows[this.get_window(client_window.window_id).index];
+            /* Windows need to be able to die over remote connection */
+            if(client_window.dead === true){
+                this.windows.splice(this.get_window(client_window.window_id).index, 1);
+            }
+            window.has_focus = client_window.has_focus;
+            window.x = client_window.x;
+            window.y = client_window.y;
+        }
+        this.update_devices(data.devices);
+    }
+    window_server.prototype.send_data = function(){
+        let payload = [];
         for(let i = 0; i < this.windows.length; i++){
             let window = this.windows[i];
-            windows_data.push({
+            payload.push({
                 canvas: compression_algorithm(window.graphics.getImageData(0, 0, window.canvas.width, window.canvas.height)),
                 window_id: window.window_id,
-                window_name: window.window_name
-            });
+                window_name: window.window_name,
+                x: window.x,
+                y: window.y,
+                dead: window.dead
+            })
         }
-        return windows_data;
+        return payload;
     }
 
     function spawn_window_server(){

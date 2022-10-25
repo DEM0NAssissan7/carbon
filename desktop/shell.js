@@ -1,8 +1,9 @@
 //Window manager intialization
 const local_server = true;
+const simulate_remote_server = true;
 const monitor_refresh_rate = 60;
-{
-  let wm = spawn_window_manager(local_server);
+if(simulate_remote_server !== true) {
+  let wm = spawn_window_manager(false);
 
   let window_manager_update = function(){
     wm.update();
@@ -40,6 +41,52 @@ const monitor_refresh_rate = 60;
   }
   function get_windows(){
     return [wm.windows, wm.server.windows]
+  }
+} else {
+  let wm = spawn_window_manager(true);
+  let server = spawn_window_server();
+
+  let window_client_server_exchange = function(){
+    wm.recieve_data(server.send_data());
+    server.recieve_data(wm.send_data());
+    sleep(40);
+  }
+  create_process(window_client_server_exchange);
+
+  let window_manager_update = function(){
+    wm.update();
+    sleep(13)
+  }
+  create_process(window_manager_update);
+
+  let window_manager_draw = function(){
+    let start_time = performance.now();
+    wm.draw();
+    sleep((1000/monitor_refresh_rate) - (performance.now() - start_time))
+  }
+  create_process(window_manager_draw);
+
+  //Defining functions
+  function create_window(window_processes, window_name){
+    server.create_window(window_processes, window_name);
+  }
+  function set_background(background_function){
+    wm.set_background(background_function);
+  }
+  function set_cursor(handler){
+    wm.set_cursor(handler);
+  }
+  function push_window(window){
+    server.push_window(window);
+  }
+  function quick_window(command, window_name){
+    server.create_window([spawn_process(command)], window_name);
+  }
+  function get_background_graphics(){
+    return wm.background_graphics;
+  }
+  function get_windows(){
+    return [wm.windows, server.windows]
   }
 }
 //Mouse cursor
