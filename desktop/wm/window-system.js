@@ -133,11 +133,13 @@
             let window = this.windows[this.get_window(client_window.window_id).index];
             /* Windows need to be able to die over remote connection */
             if(client_window.dead === true){
+                window.close();
                 this.windows.splice(this.get_window(client_window.window_id).index, 1);
+            } else if (window !== undefined) {
+                window.has_focus = client_window.has_focus;
+                window.x = client_window.x;
+                window.y = client_window.y;
             }
-            window.has_focus = client_window.has_focus;
-            window.x = client_window.x;
-            window.y = client_window.y;
         }
         this.update_devices(data.devices);
     }
@@ -149,9 +151,6 @@
                 canvas: compression_algorithm(window.graphics.getImageData(0, 0, window.canvas.width, window.canvas.height)),
                 window_id: window.window_id,
                 window_name: window.window_name,
-                x: window.x,
-                y: window.y,
-                dead: window.dead
             })
         }
         return payload;

@@ -197,7 +197,7 @@
         for (let i = 0; i < this.windows.length; i++) {
             let window = this.windows[i];
             window.update_logic();
-            if (window.dead === true) {
+            if (window.dead === true && this.remote !== true) {
                 // this.server.close(window.window_id);
                 this.windows.splice(i, 1);
                 break;
@@ -255,7 +255,11 @@
                 has_focus: window.has_focus,
                 window_id: window.window_id,
                 x: window.x,
-                y: window.y
+                y: window.y,
+                dead: window.dead
+            }
+            if(window.dead === true){
+                this.windows.splice(i, 1);
             }
         }
         return payload;
