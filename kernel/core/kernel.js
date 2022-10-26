@@ -205,18 +205,6 @@ let canvas, graphics, webgl;
         }
     }
 
-    //Users
-    let users = [];
-    let UIDs = 0;
-    let User = function (name, permission_level) {
-        /* Less permission level = more capable user 
-           Root has permission level 0.*/
-        this.permission_level = permission_level;
-        this.name = name;
-        this.UID = UIDs;
-        UIDs++;
-    }
-
     //Processes
     let processes = [];
     let PIDs = 0;
