@@ -10,6 +10,7 @@ const Kernel = {
         "Power Management",
         "Overload Protection",
         "Modular",
+        "Networking"
     ],
     start_time: Date.now()
 }
@@ -30,6 +31,7 @@ let canvas, graphics, webgl;
 
     const use_graphics = true;
     const use_devices = true;
+    const use_networking = true;
     const reassign_jsapi = true;
 
     const do_logging = true;
@@ -54,21 +56,18 @@ let canvas, graphics, webgl;
         }
         debug = function (message) {
             debug_logs.push(new debug_object(message, 0));
-            if (print_debug_logs === true) {
-                console.log(message);
-            }
+            if (print_debug_logs === true)
+                console.debug(message);
         }
         warn = function (message) {
             debug_logs.push(new debug_object(message, 1));
-            if (print_debug_logs === true) {
+            if (print_debug_logs === true)
                 console.warn(message);
-            }
         }
         error = function (message) {
             debug_logs.push(new debug_object(message, 2));
-            if (print_debug_logs === true) {
+            if (print_debug_logs === true)
                 console.error(message);
-            }
         }
         function print_kernel_debug() {
             debug("Printing kernel debug logs");
@@ -80,7 +79,7 @@ let canvas, graphics, webgl;
                 parsed_kernel_logs += message_parse + "\n";
                 switch (log.level) {
                     case 0:
-                        console.log(message_parse);
+                        console.debug(message_parse);
                         break;
                     case 1:
                         console.warn(message_parse)
@@ -180,9 +179,17 @@ let canvas, graphics, webgl;
         let seconds = Math.floor(uptime_buffer / 1000 % 60)
         let minutes = Math.floor(uptime_buffer / 1000 / 60 % 60);
         let hours = Math.floor(uptime_buffer / 1000 / 3600);
+        let uptime_message = "Total: " + hours + ":" + minutes + ":" + seconds;
 
-        let uptime_message = hours + ":" + minutes + ":" + seconds;
-        return uptime_message;
+        let active_uptime = uptime_buffer - time_suspended;
+        seconds = Math.floor(active_uptime / 1000 % 60)
+        minutes = Math.floor(active_uptime / 1000 / 60 % 60);
+        hours = Math.floor(active_uptime / 1000 / 3600);
+        let running_message = "Running: " + hours + ":" + minutes + ":" + seconds;
+        
+        let message = uptime_message + "\n" + running_message;
+
+        return message;
     }
 
     //Error management
@@ -232,6 +239,9 @@ let canvas, graphics, webgl;
             console.error(e);
             this.dead = true;
         }
+    }
+    Process.prototype.get_cpu_time = function(){
+        return 
     }
     function create_process(command) {
         processes.push(new Process(command));
@@ -338,21 +348,65 @@ let canvas, graphics, webgl;
         }
     }
 
+    //Networking
+    if(use_networking === true){
+        let init_networking = function () {
+            let xml_http = new XMLHttpRequest();
+            xml_http.addEventListener('error', (event) => {
+              error("A network request failed");
+            });
+            return xml_http;
+        }
+        let run_network_request = function(handler){
+            try{
+                handler();
+            } catch (e) {
+                console.error(e);
+                console.error("A network request encountered an error.");
+                error("A network request has encountered an error");
+            }
+        }
+        function net_get(url, handler){
+            run_network_request(() => {
+                let xml_http = init_networking();
+                xml_http.onreadystatechange = function() {
+                    if (this.readyState == 4 && this.status == 200)
+                        handler(this.responseText);
+                }
+                xml_http.open("GET", url, true);
+                xml_http.send(null);
+            });
+        }
+        function net_send(url, data){
+            run_network_request(() => {
+                let xml_http = init_networking();
+                const urlEncodedDataPairs = [];
+                for (const [name, value] of Object.entries(data)) {
+                urlEncodedDataPairs.push(`${encodeURIComponent(name)}=${encodeURIComponent(value)}`);
+                }
+                xml_http.addEventListener('load', (event) => {
+                    debug("Network send request successful");
+                });
+                const urlEncodedData = urlEncodedDataPairs.join('&').replace(/%20/g, '+');
+                xml_http.open('POST', url);
+                xml_http.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+                xml_http.send(urlEncodedData);
+            });
+        }
+    }
+
     //Graphics
     if (use_graphics === true && windowed === true) {
         debug("Initializing graphics stack");
         canvas = document.createElement("canvas");
-        if (!canvas) {
+        if (!canvas)
             debug("Graphics: Failed to create canvas.");
-        }
         graphics = canvas.getContext('2d');
-        if (!graphics) {
+        if (!graphics)
             debug("Graphics: Failed to load 2d context.");
-        }
         webgl = canvas.getContext('webgl');
-        if (!webgl) {
+        if (!webgl)
             debug("Graphics: Failed to load webgl context.");
-        }
         canvas.id = "canvas";
         canvas.width = window.innerWidth - 20;
         canvas.height = window.innerHeight - 21;
@@ -360,20 +414,38 @@ let canvas, graphics, webgl;
     }
 
     //Suspension
-    let suspend_system = false;
+    let system_suspended = false;
     let execution_time = 0;
-    if (suspend_on_unfocus === true && windowed === true) {
-        let suspend_daemon = function () {
-            if (document.hasFocus() && suspend_system !== false) {
-                execution_time = 0;
-                suspend_system = false;
-            }
-            if (!document.hasFocus() && suspend_system !== true) {
-                suspend_system = true;
+    let time_suspended = 0;
+    {
+        let time_marker = performance.now();
+        let final_time_marker = 0;
+        let suspend_system = function(){
+            if(system_suspended !== true){
                 execution_time = 500;
+                system_suspended = true;
+                time_marker = performance.now();
             }
         }
-        add_kernel_daemon(suspend_daemon);
+        let resume_system = function(){
+            if(system_suspended !== false){
+                execution_time = 0;
+                system_suspended = false;
+                final_time_marker += performance.now() - time_marker;
+                time_suspended = final_time_marker;
+            }
+        }
+        if (suspend_on_unfocus === true && windowed === true) {
+            let suspend_daemon = function () {
+                if(system_suspended === true)
+                    time_suspended = performance.now() - time_marker;
+                if (document.hasFocus())
+                    resume_system();
+                if (!document.hasFocus())
+                    suspend_system();
+            }
+            add_kernel_daemon(suspend_daemon);
+        }
     }
 
     //Scheduler
@@ -399,7 +471,7 @@ let canvas, graphics, webgl;
     let runtime_sum = 0;
     let minimum_sleep_time = Infinity;
     let scheduler = function () {
-        if (suspend_system !== true) {
+        if (system_suspended !== true) {
             const start_time = performance.now();
             if (threads.length === 0) {//Fill threads with processes
                 for (let i = 0; i < ktasks.length; i++)
@@ -425,7 +497,7 @@ let canvas, graphics, webgl;
                     waiting_processes_average++;
                 thread_in_execution = thread;
                 const time_marker = performance.now();
-                if(time_marker >= target_time)
+                if (time_marker >= target_time)
                     break;
                 thread.run(time_marker);
                 if (thread.time_marker === 0 && thread.marked !== true) {
@@ -518,11 +590,12 @@ let canvas, graphics, webgl;
         let realtime_performance = 0;
         let scheduler_performance = 0;
         let realtime_performance_sum = 0;
+        let low_performance_mode = false;
         {
             let timer = performance.now();
             let performance_tracker = function () {
                 realtime_performance = performance.now() - timer;
-                if(suspend_system !== true)
+                if (system_suspended !== true)
                     realtime_performance_sum += realtime_performance;
                 timer = performance.now();
             }
@@ -534,6 +607,18 @@ let canvas, graphics, webgl;
             scheduler_performance = current_time - scheduler_performance_timer;
             scheduler_performance_timer = current_time;
         });
+        //Gauge performance
+        {
+            let time_marker = performance.now();
+            for(let i = 0; i < 10000; i++){
+                let hi = function(){};
+                hi();
+            }
+            let execution_time = performance.now() - time_marker;
+            console.log(execution_time);
+            if(execution_time > 8)
+                low_performance_mode = true;
+        }
         function get_performance() {
             let const_realtime_performance = realtime_performance;
             let const_scheduler_performance = scheduler_performance;
@@ -541,13 +626,15 @@ let canvas, graphics, webgl;
                 realtime: const_realtime_performance,
                 scheduler: const_scheduler_performance,
                 average: waiting_processes_average / scheduler_run_count,
-                percent: (runtime_sum / realtime_performance_sum) * 100
+                percent: (runtime_sum / realtime_performance_sum) * 100,
+                low_performance: low_performance_mode,
             }
             return result;
         }
         function perf_top() {
             let output_text = "";
-            let add_text = function(line){
+            let add_text = function (line) {
+                console.log(line);
                 output_text += line + "\n"
             }
             add_text("CPU usage: " + Math.round(runtime_sum / realtime_performance_sum * 100) + "%");
@@ -555,22 +642,22 @@ let canvas, graphics, webgl;
             add_text("Load average: " + (waiting_processes_average / scheduler_run_count));
             add_text("- Individual process usages - ");
 
-            let sorted_processes = processes.sort((a,b) => b.cpu_time - a.cpu_time)
-            for(let i = 0; i < sorted_processes.length; i++){
+            let sorted_processes = processes.sort((a, b) => b.cpu_time - a.cpu_time)
+            for (let i = 0; i < sorted_processes.length; i++) {
                 let process = sorted_processes[i];
-                add_text(process.process_name + "(" + process.PID +") - " + Math.round((process.cpu_time / (performance.now() - process.creation_time)) * 100) + "% CPU - " + Math.round(process.cpu_time / 1000) + " second(s) CPU time - " + process.exec_time + "ms");
+                add_text(process.process_name + "(" + process.PID + ") - " + (Math.round((process.cpu_time / (performance.now() - process.creation_time - time_suspended)) * 10000) / 100) + "% CPU - " + (Math.round(process.cpu_time) / 100) + " seconds CPU time - " + process.exec_time + "ms");
             }
 
             return output_text;
         }
         create_interval(() => {
-            if (suspend_system !== true) {
+            if (system_suspended !== true) {
                 waiting_processes_average = 0;
                 scheduler_run_count = 0;
             }
         }, 5000);
         create_interval(() => {
-            if (suspend_system !== true) {
+            if (system_suspended !== true) {
                 runtime_sum = 0;
                 realtime_performance_sum = 0;
             }
@@ -616,7 +703,7 @@ let canvas, graphics, webgl;
         let cycle_count_buffer = 0;
         let timer = 0;
         let overload_monitor = function () {
-            if (suspend_system !== true) {
+            if (system_suspended !== true) {
                 if (cycle_count_buffer === scheduler_cycle_count) {
                     warn("Overload monitor has been detected");
                 } else if (cycle_count_buffer < scheduler_cycle_count) {
@@ -649,7 +736,7 @@ let canvas, graphics, webgl;
             panic("Kernel execution encountered an error.");
         }
     }
-    console.log(Kernel.name + " " + Kernel.version);
+    console.debug(Kernel.name + " " + Kernel.version);
     try {
         debug("Starting kernel");
         main();

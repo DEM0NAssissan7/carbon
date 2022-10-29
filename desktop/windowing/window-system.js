@@ -106,15 +106,13 @@
         this.windows[this.get_window(id).index].has_focus = true;
     }
     window_server.prototype.unfocus_all = function(){
-        for(let i = 0; i < this.windows.length; i++){
+        for(let i = 0; i < this.windows.length; i++)
             this.windows[i].has_focus = false;
-        }
     }
     window_server.prototype.update_devices = function(devices){
         this.devices = devices;
-        for(let i = 0; i < this.windows.length; i++){
+        for(let i = 0; i < this.windows.length; i++)
             this.windows[i].devices = devices;
-        }
     }
     window_server.prototype.close = function(window_id){
         let window = this.get_window(window_id);
@@ -130,11 +128,12 @@
         */
         for(let i = 0; i < data.windows.length; i++){
             let client_window = data.windows[i];
-            let window = this.windows[this.get_window(client_window.window_id).index];
+            let index = this.get_window(client_window.window_id).index;
+            let window = this.windows[index];
             /* Windows need to be able to die over remote connection */
             if(client_window.dead === true){
                 window.close();
-                this.windows.splice(this.get_window(client_window.window_id).index, 1);
+                this.windows.splice(index, 1);
             } else if (window !== undefined) {
                 window.has_focus = client_window.has_focus;
                 window.x = client_window.x;
@@ -149,6 +148,18 @@
             let window = this.windows[i];
             payload.push({
                 canvas: compression_algorithm(window.graphics.getImageData(0, 0, window.canvas.width, window.canvas.height)),
+                window_id: window.window_id,
+                window_name: window.window_name,
+            })
+        }
+        return payload;
+    }
+    window_server.prototype.send_local_data = function(){
+        let payload = [];
+        for(let i = 0; i < this.windows.length; i++){
+            let window = this.windows[i];
+            payload.push({
+                canvas: window.canvas,
                 window_id: window.window_id,
                 window_name: window.window_name,
             })

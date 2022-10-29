@@ -1,13 +1,14 @@
 //Window manager intialization
 const local_server = true;
-const simulate_remote_server = true;
+// const simulate_remote_server = false;
+const simulate_remote_server = get_performance().low_performance;
 const monitor_refresh_rate = 60;
 if(simulate_remote_server !== true) {
   let wm = spawn_window_manager(false);
 
   let window_manager_update = function(){
     wm.update();
-    wm.get_local_data();
+    wm.update_local_server();
     sleep(13)
   }
   create_process(window_manager_update);
@@ -22,7 +23,7 @@ if(simulate_remote_server !== true) {
   //Defining functions
   function create_window(window_processes, window_name){
     wm.server.create_window(window_processes, window_name);
-    wm.get_local_data();
+    wm.update_local_server();
   }
   function set_background(background_function){
     wm.set_background(background_function);
