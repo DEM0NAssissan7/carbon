@@ -49,9 +49,7 @@
                 this.dead = true;
             }
         }
-    }
-    wm_window.prototype.update_movement = function () {
-        let devices = get_devices();
+        //Movement
         if (this.has_focus === true) {
             if (devices.mouse.x > this.x && devices.mouse.x < this.x + this.canvas.width && devices.mouse.y > this.y - this.title_bar_height && devices.mouse.y < this.y && devices.mouse.pressed && this.dragged === false && this.has_focus) {
                 this.intital_drag = {
@@ -184,7 +182,7 @@
     }
     window_manager.prototype.update_local_server = function () {
         //Update window manager
-        this.recieve_data(this.server.send_local_data());
+        this.recieve_data(this.server.send_data(true));
         this.server.recieve_data(this.send_data());
     }
     window_manager.prototype.update = function () {
@@ -192,13 +190,6 @@
         for (let i = 0; i < this.windows.length; i++) {
             let window = this.windows[i];
             window.update_logic();
-            if (window.dead === true && this.remote !== true) {
-                // this.server.close(window.window_id);
-                this.windows.splice(i, 1);
-                break;
-            }
-            window.update_movement();
-            // this.server.update_window_position(window.x, window.y, window.window_id);
             if (window.request_focus === true) {
                 requested_window_index = i;
                 window.request_focus = false;
@@ -211,19 +202,8 @@
             }
             this.windows[requested_window_index].has_focus = true;
             let window = this.windows[requested_window_index];
-            if(this.remote !== true){
-                this.server.unfocus_all();
-                this.server.focus(window.window_id);
-            }
             this.windows.splice(requested_window_index, 1);
             this.windows.push(window);
-        }
-    }
-    window_manager.prototype.send_local_data = function () {
-        for (let i = 0; i < this.windows.length; i++) {
-            if (this.windows[i].dead === true) {
-                this.server.close(this.windows[i].window_id);
-            }
         }
     }
     window_manager.prototype.set_background = function (handler) {

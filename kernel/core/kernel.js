@@ -5,7 +5,6 @@ const Kernel = {
         "Preemptive",
         "Scheduler",
         "Advanced Performance Tracking",
-        "Power States",
         "Live Reclocking",
         "Power Management",
         "Overload Protection",
@@ -21,6 +20,7 @@ let canvas, graphics, webgl;
     //Option variables
     const suspend_on_unfocus = true;
     const print_debug_logs = false;
+    const print_error_logs = true;
     const minimum_cycle_rate = 10;
     const display_performance = true;
 
@@ -66,7 +66,7 @@ let canvas, graphics, webgl;
         }
         error = function (message) {
             debug_logs.push(new debug_object(message, 2));
-            if (print_debug_logs === true)
+            if (print_error_logs === true)
                 console.error(message);
         }
         function print_kernel_debug() {
@@ -107,7 +107,7 @@ let canvas, graphics, webgl;
     }
 
     //Kernel key management
-    const kernel_key = Math.random();
+    const kernel_key = Math.random() * 1000;
     function get_kernel_key() {
         console.warn("[" + (Date.now() - Kernel.start_time) + "]: Kernel key was accessed.");
         let confirmation = true;
@@ -203,9 +203,7 @@ let canvas, graphics, webgl;
             process: undefined,
             error: undefined
         }
-        let error_screen_daemon = function () {
-
-        }
+        let error_screen_daemon = () => {}
         add_kernel_daemon(error_screen_daemon);
         function set_error_screen(handler) {
             error_screen_handler = handler;
@@ -239,9 +237,6 @@ let canvas, graphics, webgl;
             console.error(e);
             this.dead = true;
         }
-    }
-    Process.prototype.get_cpu_time = function(){
-        return 
     }
     function create_process(command) {
         processes.push(new Process(command));
@@ -466,9 +461,9 @@ let canvas, graphics, webgl;
     }
     let threads = [];
     let thread_in_execution;
-    let waiting_processes_average = 0;
+    let waiting_processes = 0;
     let scheduler_run_count = 0;
-    let runtime_sum = 0;
+    let sched_time = 0;
     let minimum_sleep_time = Infinity;
     let scheduler = function () {
         if (system_suspended !== true) {
@@ -494,10 +489,10 @@ let canvas, graphics, webgl;
             while (threads.length > 0) {
                 let thread = threads[0];
                 if (thread.PID !== undefined)
-                    waiting_processes_average++;
+                waiting_processes++;
                 thread_in_execution = thread;
                 const time_marker = performance.now();
-                if (time_marker >= target_time)
+                if (time_marker >= target_time) //Scheduler watchdog
                     break;
                 thread.run(time_marker);
                 if (thread.time_marker === 0 && thread.marked !== true) {
@@ -506,7 +501,7 @@ let canvas, graphics, webgl;
                 }
                 threads.splice(0, 1);
             }
-            runtime_sum += performance.now() - start_time;
+            sched_time = performance.now() - start_time;
             scheduler_run_count++;
             thread_in_execution = null;
         }
@@ -587,17 +582,29 @@ let canvas, graphics, webgl;
 
     //Performance tracking
     if (track_performance === true) {
-        let realtime_performance = 0;
+        let realtime_performance = 1;
         let scheduler_performance = 0;
-        let realtime_performance_sum = 0;
         let low_performance_mode = false;
+        let percent_usage_average = 100;
+        let load_average = 0;
         {
             let timer = performance.now();
             let performance_tracker = function () {
                 realtime_performance = performance.now() - timer;
-                if (system_suspended !== true)
-                    realtime_performance_sum += realtime_performance;
+                if(percent_usage_average === NaN){
+                    percent_usage_average = 0;
+                }
                 timer = performance.now();
+                if (system_suspended !== true && realtime_performance > 0){
+                    let n = Math.min(scheduler_run_count - 1, 1000/realtime_performance);
+                    percent_usage_average = ((sched_time / realtime_performance) + n * percent_usage_average)/(n+1);
+
+                    if(scheduler_run_count >= 1){
+                        let n = Math.min(scheduler_run_count - 1, 5000 / realtime_performance);
+                        load_average = (waiting_processes + n * load_average) / (n + 1);
+                        waiting_processes = 0;
+                    }
+                }
             }
             add_kernel_daemon(performance_tracker);
         }
@@ -609,24 +616,42 @@ let canvas, graphics, webgl;
         });
         //Gauge performance
         {
-            let time_marker = performance.now();
-            for(let i = 0; i < 10000; i++){
-                let hi = function(){};
-                hi();
+            let performance_tracker = handler => {
+                let time_marker = performance.now();
+                handler();
+                return performance.now() - time_marker;
             }
-            let execution_time = performance.now() - time_marker;
-            console.log(execution_time);
-            if(execution_time > 8)
+            let test = () => {
+                for(let i = 0; i < 1000000; i++){
+                    let hi = function(){};
+                    hi();
+                }
+            }
+            let test_scores = [];
+            const test_count = 3;
+            let median_score = 0;
+            for(let i = 0; i < test_count; i++){
+                test_scores.push(performance_tracker(test));
+            }
+            test_scores = test_scores.sort((a, b) => a - b);
+            if(test_count%2 === 1){
+                median_score = test_scores[Math.round(test_count/2) - 1];
+            } else {
+                median_score = (test_scores[Math.round(test_count/2)] + test_scores[Math.floor(test_count/2) - 1]) / 2;
+            }
+            const score = Math.floor(100/median_score);
+            debug("Performance test score: " + score);
+            if(score < 26)
                 low_performance_mode = true;
         }
         function get_performance() {
-            let const_realtime_performance = realtime_performance;
-            let const_scheduler_performance = scheduler_performance;
+            const const_realtime_performance = realtime_performance;
+            const const_scheduler_performance = scheduler_performance;
             let result = {
                 realtime: const_realtime_performance,
                 scheduler: const_scheduler_performance,
-                average: waiting_processes_average / scheduler_run_count,
-                percent: (runtime_sum / realtime_performance_sum) * 100,
+                average: load_average,
+                percent: percent_usage_average * 100,
                 low_performance: low_performance_mode,
             }
             return result;
@@ -637,31 +662,19 @@ let canvas, graphics, webgl;
                 console.log(line);
                 output_text += line + "\n"
             }
-            add_text("CPU usage: " + Math.round(runtime_sum / realtime_performance_sum * 100) + "%");
+            add_text("CPU usage: " + Math.round(percent_usage_average * 100) + "%");
             add_text("Task count: " + (processes.length));
-            add_text("Load average: " + (waiting_processes_average / scheduler_run_count));
+            add_text("Load average: " + load_average);
             add_text("- Individual process usages - ");
 
             let sorted_processes = processes.sort((a, b) => b.cpu_time - a.cpu_time)
             for (let i = 0; i < sorted_processes.length; i++) {
                 let process = sorted_processes[i];
-                add_text(process.process_name + "(" + process.PID + ") - " + (Math.round((process.cpu_time / (performance.now() - process.creation_time - time_suspended)) * 10000) / 100) + "% CPU - " + (Math.round(process.cpu_time) / 100) + " seconds CPU time - " + process.exec_time + "ms");
+                add_text(process.process_name + "(" + process.PID + ") - " + (Math.round((process.cpu_time / (performance.now() - process.creation_time - (time_suspended - process.creation_time))) * 10000) / 100) + "% CPU - " + (Math.round(process.cpu_time) / 100) + " seconds CPU time - " + process.exec_time + "ms");
             }
 
             return output_text;
         }
-        create_interval(() => {
-            if (system_suspended !== true) {
-                waiting_processes_average = 0;
-                scheduler_run_count = 0;
-            }
-        }, 5000);
-        create_interval(() => {
-            if (system_suspended !== true) {
-                runtime_sum = 0;
-                realtime_performance_sum = 0;
-            }
-        }, 1000);
     }
 
     //Performance display

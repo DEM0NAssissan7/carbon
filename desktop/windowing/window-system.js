@@ -22,13 +22,13 @@
     }
     gwindow.prototype.close = function() {
         //Kill all processes linked to the window
-        for (let i = 0; i < this.processes.length; i++) {
+        for (let i = 0; i < this.processes.length; i++)
             kill(this.processes[i].PID);
-        }
     }
     gwindow.prototype.initialize = function() {
         for (let i = 0; i < this.processes_buffer.length; i++) {
-            let windowProcess = () => {
+            let command = this.processes_buffer[i].command;
+            let window_process = () => {
                 let devices = this.devices;
                 let old_get_devices = get_devices;
                 devices.mouse.x -= this.x;
@@ -50,15 +50,15 @@
                 get_devices = function () {
                     return devices;
                 }
-                this.processes_buffer[i].command(this.canvas, this.graphics);
+                command(this.canvas, this.graphics);
 
                 get_devices = old_get_devices;
                 devices.mouse.x += this.x;
                 devices.mouse.y += this.y;
                 devices.keyboard = old_keyboard;
             };
-            let process_buffer = spawn_process(windowProcess, this.processes_buffer[i].priority, this.processes_buffer[i].interval);
-            process_buffer.process_name = this.processes_buffer[i].process_name;
+            let process_buffer = this.processes_buffer[i];
+            process_buffer.command = window_process;
             this.processes.push(process_buffer);
             push_process(process_buffer);
         }
@@ -114,11 +114,6 @@
         for(let i = 0; i < this.windows.length; i++)
             this.windows[i].devices = devices;
     }
-    window_server.prototype.close = function(window_id){
-        let window = this.get_window(window_id);
-        window.window.close();
-        this.windows.splice(window.index, 1);
-    }
     window_server.prototype.recieve_data = function(data){
         //We need every wm call to be included in this.
         /*
@@ -142,24 +137,18 @@
         }
         this.update_devices(data.devices);
     }
-    window_server.prototype.send_data = function(){
+    window_server.prototype.send_data = function(local){
         let payload = [];
         for(let i = 0; i < this.windows.length; i++){
             let window = this.windows[i];
+            let canvas;
+            if(local !== true){
+                canvas = compression_algorithm(window.graphics.getImageData(0, 0, window.canvas.width, window.canvas.height));
+            } else {
+                canvas = window.canvas;
+            }
             payload.push({
-                canvas: compression_algorithm(window.graphics.getImageData(0, 0, window.canvas.width, window.canvas.height)),
-                window_id: window.window_id,
-                window_name: window.window_name,
-            })
-        }
-        return payload;
-    }
-    window_server.prototype.send_local_data = function(){
-        let payload = [];
-        for(let i = 0; i < this.windows.length; i++){
-            let window = this.windows[i];
-            payload.push({
-                canvas: window.canvas,
+                canvas: canvas,
                 window_id: window.window_id,
                 window_name: window.window_name,
             })
