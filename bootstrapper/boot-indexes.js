@@ -23,7 +23,6 @@
             //Machine Code Emulator
             "applications/emulators/vm/vm.js",
             //Desktop
-            "desktop/windowing/window-system.js",
             "desktop/windowing/window-manager.js",
             "desktop/shell.js",
             ],

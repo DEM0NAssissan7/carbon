@@ -1,72 +1,86 @@
 {
+    let windows = [];
     const button_padding = 8;
-    let wm_window = function (window_id, window_name, remote) {
-        this.canvas;
-        this.remote = remote
-        this.window_name = window_name;
-        this.window_id = window_id;
+    let wm_window = function(processes, window_name)
+    {
+        this.canvas = document.createElement("canvas");
+        this.canvas.width = 450;
+        this.canvas.height = 450;
+        this.graphics = this.canvas.getContext("2d");
 
-        this.x = canvas.width / 2;
-        this.y = canvas.height / 2;
+        this.x = canvas.width / 2 - this.canvas.width / 2;
+        this.y = canvas.height / 2 - this.canvas.height / 2;
+        this.window_name = "window";
+        if(window_name !== undefined)
+            this.window_name = window_name;
+
+        this.processes = [];
+        this.processes_buffer = processes;
+        this.direct_render = false;
+        this.foreground = false;
+
         this.title_bar_height = 40;
         this.dragged = false;
         this.has_focus = false;
         this.request_focus = false;
         this.focusable = true;
 
-        this.foreground = false;
-
         this.fade = 0;
         this.timer = create_timer();
     }
-    wm_window.prototype.update_logic = function () {
-        let devices = get_devices();
-        if (devices.mouse.x > this.x && devices.mouse.x < this.x + this.canvas.width && devices.mouse.y > this.y - this.title_bar_height && devices.mouse.y < this.y + this.canvas.height && this.focusable && devices.mouse.pressed && !this.request_focus && this.dying !== true) {
-            this.request_focus = true;
-        }
-        if (this.has_focus === true) {
-            if (devices.mouse.x > this.x + this.canvas.width - button_padding - (this.title_bar_height - button_padding * 2) &&
-                devices.mouse.y > this.y + button_padding - (this.title_bar_height - 1) &&
-                devices.mouse.x < this.x + this.canvas.width - button_padding &&
-                devices.mouse.y < this.y + (button_padding - (this.title_bar_height - 1)) + (this.title_bar_height - button_padding * 2) && devices.mouse.pressed && this.dragged === false) {
-                this.close();
-                return;
-            }
-        }
-        //Animations
-        this.timer.update();
-        if (this.dying !== true) {
-            if (Math.round(this.fade * 100) / 100 < 1) {
-                this.fade += (getTransition(1, 500, this.timer) - (getTransition(this.fade, 500, this.timer))) * 2;
-            } else {
-                this.fade = 1;
-            }
-        } else {
-            if (Math.floor(this.fade * 100) / 100 > 0) {
-                this.fade -= (getTransition(1, 500, this.timer) - (getTransition(1 - this.fade, 500, this.timer))) * 2;
-            } else {
-                this.fade = 0;
-                this.dead = true;
-            }
-        }
-        //Movement
-        if (this.has_focus === true) {
-            if (devices.mouse.x > this.x && devices.mouse.x < this.x + this.canvas.width && devices.mouse.y > this.y - this.title_bar_height && devices.mouse.y < this.y && devices.mouse.pressed && this.dragged === false && this.has_focus) {
-                this.intital_drag = {
-                    mouseX: devices.mouse.x,
-                    mouseY: devices.mouse.y,
-                    windowX: this.x,
-                    windowY: this.y
+    wm_window.prototype.kill = function() {
+        //Kill all processes linked to the window
+        for (let i = 0; i < this.processes.length; i++)
+            kill(this.processes[i].PID);
+    }
+    wm_window.prototype.close = function () {
+        this.dying = true;
+    }
+    wm_window.prototype.initialize = function() {
+        for (let i = 0; i < this.processes_buffer.length; i++) {
+            let command = this.processes_buffer[i].command;
+            let window_process = () => {
+                let devices = get_devices();
+                let old_get_devices = get_devices;
+                if(this.direct_render !== true)
+                {
+                    devices.mouse.x -= this.x;
+                    devices.mouse.y -= this.y;
                 }
-                this.dragged = true;
-            }
-            if (this.dragged === true) {
-                if (!devices.mouse.pressed) {
-                    this.dragged = false;
+                let old_keyboard = {
+                    keys: devices.keyboard.keys,
+                    keyCodes: devices.keyboard.keyCodes,
+                    info: devices.keyboard.info,
+                    keyCode: devices.keyboard.keyCode,
+                    info: devices.keyboard.info
+                };
+                if (this.has_focus === false) {
+                    devices.keyboard.keys = [];
+                    devices.keyboard.keyCodes = [];
+                    devices.keyboard.keyCode = 0;
+                    devices.keyboard.pressed = false;
+                    devices.keyboard.info = {};
                 }
-                this.x = (devices.mouse.x - this.intital_drag.mouseX) + this.intital_drag.windowX;
-                this.y = (devices.mouse.y - this.intital_drag.mouseY) + this.intital_drag.windowY;
-            }
+                get_devices = function () {
+                    return devices;
+                }
+                if(this.direct_render !== true)
+                    command(this.canvas, this.graphics);
+                else
+                    command(canvas, graphics);
+
+                get_devices = old_get_devices;
+                if(this.direct_render !== true)
+                {
+                    devices.mouse.x += this.x;
+                    devices.mouse.y += this.y;
+                }
+                devices.keyboard = old_keyboard;
+            };
+            let process_buffer = this.processes_buffer[i];
+            process_buffer.command = window_process;
+            this.processes.push(process_buffer);
+            push_process(process_buffer);
         }
     }
     wm_window.prototype.draw_top_bar = function (graphics, positionX, positionY) {
@@ -106,7 +120,6 @@
             graphics.save();
 
             graphics.globalAlpha = this.fade;
-            const scaled_fade = 1 / this.fade * this.canvas.width;
 
             graphics.translate((this.x + this.canvas.width / 2) - (this.canvas.width / 2 * this.fade), (this.y + this.canvas.height / 2) - (this.canvas.height / 2 * this.fade));
             graphics.scale(this.fade, this.fade);
@@ -117,28 +130,105 @@
 
             graphics.restore();
         } else {
+            this.canvas_image = this.graphics.getImageData(0, 0, this.canvas.width, this.canvas.height);
             // this.drawDecor(graphics, this.x, this.y);
-            if(this.remote !== true){
-                graphics.drawImage(this.canvas, this.x, this.y);
-            } else {
-                graphics.putImageData(this.canvas, this.x, this.y);
-            }
+            graphics.putImageData(this.canvas_image, this.x, this.y);
             this.draw_top_bar(graphics, this.x, this.y);
         }
     }
-    wm_window.prototype.close = function () {
-        if(this.remote !== true){
-            this.dying = true;
-        }else {
-            this.dead = true;
+    wm_window.prototype.update_logic = function()
+    {
+        let devices = get_devices();
+        if (devices.mouse.x > this.x && devices.mouse.x < this.x + this.canvas.width && devices.mouse.y > this.y - this.title_bar_height && devices.mouse.y < this.y + this.canvas.height && this.focusable && devices.mouse.pressed && !this.request_focus && this.dying !== true)
+            this.request_focus = true;
+        if (this.has_focus === true) {
+            if (devices.mouse.x > this.x + this.canvas.width - button_padding - (this.title_bar_height - button_padding * 2) &&
+                devices.mouse.y > this.y + button_padding - (this.title_bar_height - 1) &&
+                devices.mouse.x < this.x + this.canvas.width - button_padding &&
+                devices.mouse.y < this.y + (button_padding - (this.title_bar_height - 1)) + (this.title_bar_height - button_padding * 2) && devices.mouse.pressed && this.dragged === false) {
+                this.close();
+                return;
+            }
+        }
+        //Animations
+        this.timer.update();
+        if (this.dying !== true) {
+            if (Math.round(this.fade * 100) / 100 < 1)
+                this.fade += (getTransition(1, 500, this.timer) - (getTransition(this.fade, 500, this.timer))) * 2;
+            else
+                this.fade = 1;
+        } else {
+            if (Math.floor(this.fade * 100) / 100 > 0)
+                this.fade -= (getTransition(1, 500, this.timer) - (getTransition(1 - this.fade, 500, this.timer))) * 2;
+            else {
+                this.fade = 0;
+                this.dead = true;
+            }
+        }
+        //Movement
+        if (this.has_focus === true) {
+            if (devices.mouse.x > this.x && devices.mouse.x < this.x + this.canvas.width && devices.mouse.y > this.y - this.title_bar_height && devices.mouse.y < this.y && devices.mouse.pressed && this.dragged === false && this.has_focus) {
+                this.intital_drag = {
+                    mouseX: devices.mouse.x,
+                    mouseY: devices.mouse.y,
+                    windowX: this.x,
+                    windowY: this.y
+                }
+                this.dragged = true;
+            }
+            if (this.dragged === true) {
+                if (!devices.mouse.pressed)
+                    this.dragged = false;
+                this.x = (devices.mouse.x - this.intital_drag.mouseX) + this.intital_drag.windowX;
+                this.y = (devices.mouse.y - this.intital_drag.mouseY) + this.intital_drag.windowY;
+            }
         }
     }
 
-    function spawn_wm_window(processes, window_name) {
-        return new wm_window(processes, window_name, false);
+    function spawn_window(processes, window_name){
+        return new wm_window(processes, window_name);
+    }
+    function create_window(processes, window_name){
+        let window = new wm_window(processes, window_name);
+        window.initialize();
+        windows.push(window);
+    }
+    function quick_window(handler, window_name)
+    {
+        create_window([spawn_process(handler)], window_name);
+    }
+    function push_window(window){
+        windows.push(window);
     }
 
-    let default_cursor_handler = graphics => {//Default wm cursor
+    //Background
+    let background_image;
+    function set_background(handler)
+    {
+        let bg_canvas = document.createElement("canvas");
+        bg_canvas.width = canvas.width;
+        bg_canvas.height = canvas.height;
+        let bg_graphics = this.canvas.getContext('2d');
+        handler(bg_canvas, bg_graphics);
+        background_image = bg_graphics.getImageData(0, 0, canvas.width, canvas.height);
+    }
+    function get_background_image()
+    {
+        return background_image;
+    }
+    // Default background
+    set_background((canvas, graphics) => {
+        graphics.fillStyle = "gray";
+        graphics.fillRect(0, 0, canvas.width, canvas.height);
+    })
+
+    //Cursor
+    let cursor_handler;
+    function set_cursor(handler)
+    {
+        cursor_handler = handler;
+    }
+    set_cursor(graphics => {//Default wm cursor
         graphics.strokeStyle = 'black';
         graphics.fillStyle = 'white';
         graphics.lineWidth = 1;
@@ -159,36 +249,42 @@
 
         graphics.fill();
         graphics.stroke();
-    }
+    });
 
-    let window_manager = function (remote) {
-        //Hide system cursor to replace with wm cursor
-        document.body.style.cursor = 'none';
 
-        if (remote !== true) {
-            this.remote = false;
-            this.server = spawn_window_server();
-        } else {
-            this.remote = true;
+    //Init
+    document.body.style.cursor = 'none';
+    let window_manager = function()
+    {
+        let time_before = performance.now();
+        graphics.putImageData(background_image, 0, 0);
+        for(let i = 0; i < windows.length; i++)
+            windows[i].draw(graphics);
+        {
+            let devices = get_devices();
+            graphics.translate(devices.mouse.x, devices.mouse.y);
+            cursor_handler(graphics);
+            graphics.translate(-devices.mouse.x, -devices.mouse.y);
         }
-        this.indexed_windows = [];
-        this.windows = [];
-        this.cursor_handler = default_cursor_handler;
+        
+        sleep(16.6 - (performance.now() - time_before));
+    }
+    create_process(window_manager);
 
-        this.background_canvas = document.createElement("canvas");
-        this.background_canvas.width = canvas.width;
-        this.background_canvas.height = canvas.height;
-        this.background_graphics = this.background_canvas.getContext("2d");
-    }
-    window_manager.prototype.update_local_server = function () {
-        //Update window manager
-        this.recieve_data(this.server.send_data(true));
-        this.server.recieve_data(this.send_data());
-    }
-    window_manager.prototype.update = function () {
+    let window_logic = function()
+    {
+        for(let i = 0; i < windows.length; i++)
+        {
+            windows[i].update_logic();
+            if(windows[i].dead === true)
+            {
+                windows[i].kill();
+                windows.splice(i, 1);
+            }
+        }
         let requested_window_index;
-        for (let i = 0; i < this.windows.length; i++) {
-            let window = this.windows[i];
+        for (let i = 0; i < windows.length; i++) {
+            let window = windows[i];
             window.update_logic();
             if (window.request_focus === true) {
                 requested_window_index = i;
@@ -196,65 +292,15 @@
             }
         }
         if (requested_window_index !== undefined) {
-            for (let i = 0; i < this.windows.length; i++) {
-                this.windows[i].request_focus = false;
-                this.windows[i].has_focus = false;
+            for (let i = 0; i < windows.length; i++) {
+                windows[i].request_focus = false;
+                windows[i].has_focus = false;
             }
-            this.windows[requested_window_index].has_focus = true;
-            let window = this.windows[requested_window_index];
-            this.windows.splice(requested_window_index, 1);
-            this.windows.push(window);
+            windows[requested_window_index].has_focus = true;
+            let window = windows[requested_window_index];
+            windows.splice(requested_window_index, 1);
+            windows.push(window);
         }
     }
-    window_manager.prototype.set_background = function (handler) {
-        handler(this.background_canvas, this.background_graphics);
-    }
-    window_manager.prototype.set_cursor = function (handler) {
-        this.cursor_handler = (graphics) => {
-            let devices = get_devices();
-            graphics.translate(devices.mouse.x, devices.mouse.y);
-            handler(graphics);
-            graphics.resetTransform();
-        };
-    }
-    window_manager.prototype.send_data = function(){
-        let payload = {
-            windows: [],
-            devices: get_devices()
-        };
-        for(let i = 0; i < this.windows.length; i++){
-            let window = this.windows[i];
-            payload.windows[i] = {
-                has_focus: window.has_focus,
-                window_id: window.window_id,
-                x: window.x,
-                y: window.y,
-                dead: window.dead
-            }
-            if(window.dead === true){
-                this.windows.splice(i, 1);
-            }
-        }
-        return payload;
-    }
-    window_manager.prototype.recieve_data = function(data){
-        for(let i = 0; i < data.length; i++){
-            let data_chunk = data[i];
-            if (this.indexed_windows[data_chunk.window_id] === undefined) {
-                this.indexed_windows[data_chunk.window_id] = new wm_window(data_chunk.window_id, data_chunk.window_name, this.remote);
-                this.windows.push(this.indexed_windows[data_chunk.window_id]);
-            }
-            this.indexed_windows[data_chunk.window_id].canvas = data_chunk.canvas;
-        }
-    }
-    window_manager.prototype.draw = function () {
-        graphics.drawImage(this.background_canvas, 0, 0);
-        for (let i = 0; i < this.windows.length; i++)
-            this.windows[i].draw(graphics);
-        this.cursor_handler(graphics);
-    }
-
-    function spawn_window_manager(remote) {
-        return new window_manager(remote);
-    }
+    create_process(window_logic);
 }

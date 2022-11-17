@@ -1,3 +1,4 @@
+/*
 //Window manager intialization
 const local_server = true;
 // const simulate_remote_server = true;
@@ -89,6 +90,7 @@ if(simulate_remote_server !== true) {
     return [wm.windows, server.windows]
   }
 }
+*/
 //Mouse cursor
 function colorBlackCursor(graphics) {
   graphics.strokeStyle = 'white';
