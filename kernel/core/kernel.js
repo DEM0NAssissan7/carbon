@@ -106,8 +106,29 @@ let canvas, graphics, webgl;
         }
     }
 
+    //Hashing
+    function hash(num){
+        let result = 0;
+        for(let i = 0; i <= num; i++){
+            result += num * (Math.sqrt(i) * (i + 1)) - num;
+            result = result >> 1;
+        }
+        result += num;
+        result = Math.round(result);
+        return result;
+    }
+    function hash_string(string){
+        let result = 0;
+        for(let i = 0; i < string.length; i++){
+            let char = string[i].charCodeAt();
+            result += char * (Math.sqrt(char) * (i + 1)) - char;
+            result = result >> 1;
+        }
+        return result;
+    }
+
     //Kernel key management
-    const kernel_key = Math.random() * 1000;
+    const kernel_key = hash(Math.random() * 1000);
     function get_kernel_key() {
         console.warn("[" + (Date.now() - Kernel.start_time) + "]: Kernel key was accessed.");
         let confirmation = true;
