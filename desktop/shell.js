@@ -234,7 +234,7 @@ function createIcon(iconFunction, x, y, size, create_windowFunction) {
   icon.canvas.height = size;
   icon.title_bar_height = 0;
   icon.focusable = false;
-  icon.level = "foreground";
+  icon.foreground = true;
   icon.initialize();
 
   push_window(icon);
