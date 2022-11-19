@@ -108,17 +108,26 @@ class Gcode{
             let exec_code;
             if(this.live_reload !== true)
                 exec_code = convert_array(this.text_buffer);
-            labledButton(graphics, 4, 3, 40, 15, () => {
-                let gcode_proc = () => {
-                    if(this.live_reload === true)
-                        exec_code = convert_array(this.text_buffer);
-                    let command = new Function(exec_code)();
-                    if(command !== undefined)
-                        this.code_output.push(command);
-                };
-                this.process = spawn_process(gcode_proc);
-                push_process(this.process);
-            }, "Run");
+                labledButton(graphics, 4, 3, 40, 15, () => {
+                    let gcode_proc = () => {
+                        if(this.live_reload === true)
+                            exec_code = convert_array(this.text_buffer);
+                        let command = new Function(exec_code)();
+                        if(command !== undefined)
+                            this.code_output.push(command);
+                    };
+                    this.process = spawn_process(gcode_proc);
+                    push_process(this.process);
+                }, "Run");
+                labledButton(graphics, 48, 3, 40, 15, () => {
+                    try {
+                        let command = new Function(exec_code)();
+                        if(command !== undefined)
+                            this.code_output.push(command);
+                    } catch (e) {
+                        this.code_output.push(e);
+                    }
+                }, "Exec");
         }
 
         if(this.process !== undefined){
