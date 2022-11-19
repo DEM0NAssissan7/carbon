@@ -12,7 +12,7 @@ class TTY {
     this.root = false;
     this.kernel_key = null;
   }
-  update(){
+  update() {
     //Commandline functions
     var self = this;
     function clr() {
@@ -27,44 +27,51 @@ class TTY {
         self.textArray.push(obj);
       }
     }
-    function su () {
+    function su() {
       self.kernel_key = get_kernel_key();
       self.root = true;
       self.prompt = "[kernel]# ";
     }
-    function exit () {
+    function exit() {
       raise();
     }
     let devices = get_devices();
     if (devices.keyboard.keyCodes[13] && !this.keyPressed) {
       this.textArray.push(this.textBuffer);
       this.promptArray[this.textArray.length - 1] = this.prompt;
+      let parse_text = string => {
+        let string_buffer = "";
+        for (let i = 0; i < string.length; i++) {
+          let character = string[i];
+          if (character !== "\n" && i < string.length - 1) {
+            string_buffer += character;
+          } else {
+            this.textArray.push(string_buffer)
+            string_buffer = "";
+          }
+        }
+      }
       if (this.textBuffer) {
+        let stringToCommand, stringToCommandToString;
         try {
-          var stringToCommand;
-          if(this.root !== true){
+          if (this.root !== true) {
             stringToCommand = eval(this.textBuffer);
           } else {
-            if(this.textBuffer === "clr()"){
+            if (this.textBuffer === "clr()")
               self.textArray = [];
-            } else {
+            else if (this.textBuffer === "clr()")
+              raise();
+            else
               stringToCommand = run_as_root(this.textBuffer, this.kernel_key);
-            }
           }
-          if (stringToCommand !== undefined) {
-            let stringToCommandToString = stringToCommand.toString();
-            let line_count = 1;
-            for(let i = 0; i < stringToCommandToString.length; i++){
-              if(stringToCommandToString[i] === "\n"){
-                line_count++;
-              }
-            }
-            for(let i = 0; i < line_count; i++){
-              this.textArray.push(stringToCommandToString.replace(/[^\x20-\x7E]/gmi, ""));
-            }
+          if (stringToCommand !== undefined){
+            stringToCommandToString = stringToCommand.toString();
+            parse_text(stringToCommandToString);
           }
-        } catch (error) {
-          this.textArray.push(error);
+        } catch (e) {
+          this.textArray.push(e);
+          parse_text(e);
+          stringToCommandToString = e;
         }
       }
       this.textBuffer = "";
@@ -72,7 +79,7 @@ class TTY {
       return;
     } else {
       if (devices.keyboard.keyCodes[8] && !this.keyPressed) {
-        if(this.textBuffer.length > 0){
+        if (this.textBuffer.length > 0) {
           this.textBuffer = this.textBuffer.slice(0, -1);
         }
         this.keyPressed = true;
@@ -99,26 +106,26 @@ class TTY {
         this.keyPressed = false;
       }
       for (let i in devices.keyboard.keys) {
-        if(this.keys[i] !== devices.keyboard.keys[i]){
+        if (this.keys[i] !== devices.keyboard.keys[i]) {
           this.keys[i] = devices.keyboard.keys[i];
           let key = this.keys[i];
           if (key !== "Enter" && key !== "Backspace" && key !== "ArrowUp" && key !== "ArrowDown" && key !== "Alt" && key !== "Shift" && key !== "Tab" && key !== "Control") {
             this.textBuffer += key;
-          }  
+          }
         }
       }
     }
     sleep(40);
   }
-  draw(canvas, graphics){
+  draw(canvas, graphics) {
     graphics.font = '12px Monospace';
-    try{
-      if(stress){
+    try {
+      if (stress) {
         graphics.fillStyle = 'black';
         graphics.fillRect(0, 0, canvas.width, canvas.height);
         graphics.fillStyle = 'white';
       }
-    } catch (e){
+    } catch (e) {
       setBackground(canvas, graphics);
       graphics.fillStyle = colorScheme.textColor;
     }
@@ -131,9 +138,9 @@ class TTY {
     graphics.fillText(this.prompt + this.textBuffer, 2, this.textArray.length * 12 + 12);
     sleep(40);
   }
-  create_window(){
+  create_window() {
     var tty = new TTY();
-  
+
     create_window([
       spawn_process(() => {
         tty.update();
@@ -143,7 +150,7 @@ class TTY {
       })
     ], "Terminal");
   }
-  iconFunction(canvas, graphics){
+  iconFunction(canvas, graphics) {
     graphics.fillStyle = 'black';
     graphics.fillRect(0, 0, canvas.width, canvas.height, 10);
     graphics.fillStyle = 'white';
@@ -151,17 +158,17 @@ class TTY {
     graphics.fillText(">_", 5, canvas.height / 2);
   }
 }
-try{
-  if(stress){
+try {
+  if (stress) {
     console.log("Starting TTY standalone")
     var ttySystem = new TTY();
-    let updateTTY = function() {
+    let updateTTY = function () {
       ttySystem.update();
     }
-    let drawTTY = function() {
+    let drawTTY = function () {
       ttySystem.draw(canvas, graphics);
     }
     create_process(updateTTY);
     create_process(drawTTY);
   }
-} catch(error){}
+} catch (error) { }
