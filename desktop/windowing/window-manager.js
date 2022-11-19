@@ -1,6 +1,7 @@
 {
     let windows = [];
     const button_padding = 8;
+    let foreground_image;
     let wm_window = function(processes, window_name)
     {
         this.canvas = document.createElement("canvas");
@@ -113,27 +114,25 @@
         }
     }
     wm_window.prototype.draw = function (graphics, foreground_graphics) {
-        if(this.remote === true){
-            this.fade = 1;
-        }
+        let draw_surface = graphics;
+        if(this.foreground === true)
+            draw_surface = foreground_graphics;
         if (this.fade < 1) {
-            graphics.save();
+            draw_surface.save();
 
-            graphics.globalAlpha = this.fade;
+            draw_surface.globalAlpha = this.fade;
 
-            graphics.translate((this.x + this.canvas.width / 2) - (this.canvas.width / 2 * this.fade), (this.y + this.canvas.height / 2) - (this.canvas.height / 2 * this.fade));
-            graphics.scale(this.fade, this.fade);
+            draw_surface.translate((this.x + this.canvas.width / 2) - (this.canvas.width / 2 * this.fade), (this.y + this.canvas.height / 2) - (this.canvas.height / 2 * this.fade));
+            draw_surface.scale(this.fade, this.fade);
 
-            // this.drawDecor(graphics, 0, 0);
-            graphics.drawImage(this.canvas, 0, 0);
-            this.draw_top_bar(graphics, 0, 0);
+            // this.drawDecor(draw_surface, 0, 0);
+            draw_surface.drawImage(this.canvas, 0, 0);
+            this.draw_top_bar(draw_surface, 0, 0);
 
-            graphics.restore();
+            draw_surface.restore();
         } else {
-            this.canvas_image = this.graphics.getImageData(0, 0, this.canvas.width, this.canvas.height);
-            // this.drawDecor(graphics, this.x, this.y);
-            graphics.putImageData(this.canvas_image, this.x, this.y);
-            this.draw_top_bar(graphics, this.x, this.y);
+            draw_surface.drawImage(this.canvas, this.x, this.y);
+            this.draw_top_bar(draw_surface, this.x, this.y);
         }
     }
     wm_window.prototype.update_logic = function()
@@ -203,12 +202,12 @@
 
     //Background
     let background_image;
+    let bg_canvas = document.createElement("canvas");
+    bg_canvas.width = canvas.width;
+    bg_canvas.height = canvas.height;
+    let bg_graphics = bg_canvas.getContext('2d');
     function set_background(handler)
     {
-        let bg_canvas = document.createElement("canvas");
-        bg_canvas.width = canvas.width;
-        bg_canvas.height = canvas.height;
-        let bg_graphics = this.canvas.getContext('2d');
         handler(bg_canvas, bg_graphics);
         background_image = bg_graphics.getImageData(0, 0, canvas.width, canvas.height);
     }
@@ -251,23 +250,53 @@
         graphics.stroke();
     });
 
+    //Foreground
+    let foreground_graphics;
+    {
+        let fg_canvas = document.createElement("canvas");
+        fg_canvas.width = canvas.width;
+        fg_canvas.height = canvas.height;
+        foreground_graphics = fg_canvas.getContext("2d");    
+    }
 
     //Init
     document.body.style.cursor = 'none';
+    let time_marker = performance.now();
+    let wm_round_trip = 0;
+
+    let performance_display = () => {
+        graphics.save();
+        graphics.translate(76,0)
+        graphics.strokeStyle = 'black';
+        graphics.fillStyle = 'black';
+        graphics.font = '14px Monospace';
+        graphics.fillStyle = '#AAAAEE';
+        graphics.fillRect(0, 0, 38, 30);
+        graphics.fillStyle = 'black';
+        graphics.fillText(Math.round(1000 / wm_round_trip), 10, 19);
+        graphics.restore();
+    };
+
     let window_manager = function()
     {
-        let time_before = performance.now();
-        graphics.putImageData(background_image, 0, 0);
-        for(let i = 0; i < windows.length; i++)
-            windows[i].draw(graphics);
+        graphics.drawImage(bg_canvas, 0, 0);
+        // graphics.putImageData(background_image, 0, 0);
+        for(let i = 0; i < windows.length; i++){
+            windows[i].draw(graphics, foreground_graphics);
+        }
+        graphics.drawImage(foreground_graphics.canvas, 0, 0);
         {
             let devices = get_devices();
             graphics.translate(devices.mouse.x, devices.mouse.y);
             cursor_handler(graphics);
             graphics.translate(-devices.mouse.x, -devices.mouse.y);
         }
+        let time_buffer = performance.now();
+        wm_round_trip = time_buffer - time_marker;
+        time_marker = time_buffer;
+        performance_display();
         
-        sleep(16.6 - (performance.now() - time_before));
+        sleep(16);
     }
     create_process(window_manager);
 
@@ -301,6 +330,7 @@
             windows.splice(requested_window_index, 1);
             windows.push(window);
         }
+        sleep(14);
     }
     create_process(window_logic);
 }
