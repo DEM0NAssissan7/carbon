@@ -1,5 +1,5 @@
 const System = {
-    version: "1.6 Alpha",
+    version: "1.7 Alpha",
     name: "Graphite",
     startup: Date.now(),
 }
