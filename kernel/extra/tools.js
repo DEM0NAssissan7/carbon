@@ -26,7 +26,7 @@ set_performance_display(() => {
     graphics.strokeStyle = 'black';
     graphics.fillStyle = 'black';
     graphics.font = '14px Monospace';
-    graphics.fillText(Math.round(1000/get_performance().realtime), 10, 19);
+    graphics.fillText(Math.round(get_performance().realtime), 10, 19);
 
     graphics.translate(38,0)
     graphics.fillStyle = '#EEAAAA';
