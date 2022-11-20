@@ -14,6 +14,7 @@
             "applications/games/sotf.js",
             "applications/development/octane.js",
             "applications/development/gcode.js",
+            "applications/experimentation/signal-processing.js",
             "applications/graphics/3d.js",
             "applications/emulators/physics.js",
             "applications/system/monitor.js",
