@@ -277,28 +277,6 @@
         graphics.restore();
     };
 
-    let window_manager = function()
-    {
-        graphics.drawImage(bg_canvas, 0, 0);
-        // graphics.putImageData(background_image, 0, 0);
-        for(let i = 0; i < windows.length; i++){
-            windows[i].draw(graphics, foreground_graphics);
-        }
-        graphics.drawImage(foreground_graphics.canvas, 0, 0);
-        {
-            let devices = get_devices();
-            graphics.translate(devices.mouse.x, devices.mouse.y);
-            cursor_handler(graphics);
-            graphics.translate(-devices.mouse.x, -devices.mouse.y);
-        }
-        let time_buffer = performance.now();
-        wm_round_trip = time_buffer - time_marker;
-        time_marker = time_buffer;
-        performance_display();
-        
-        sleep(16);
-    }
-    create_process(window_manager);
 
     let window_logic = function()
     {
@@ -330,7 +308,28 @@
             windows.splice(requested_window_index, 1);
             windows.push(window);
         }
-        sleep(14);
     }
-    create_process(window_logic);
+    let window_manager = function()
+    {
+        window_logic();
+        graphics.drawImage(bg_canvas, 0, 0);
+        // graphics.putImageData(background_image, 0, 0);
+        for(let i = 0; i < windows.length; i++){
+            windows[i].draw(graphics, foreground_graphics);
+        }
+        graphics.drawImage(foreground_graphics.canvas, 0, 0);
+        {
+            let devices = get_devices();
+            graphics.translate(devices.mouse.x, devices.mouse.y);
+            cursor_handler(graphics);
+            graphics.translate(-devices.mouse.x, -devices.mouse.y);
+        }
+        let time_buffer = performance.now();
+        wm_round_trip = time_buffer - time_marker;
+        time_marker = time_buffer;
+        performance_display();
+        
+        sleep(16);
+    }
+    create_process(window_manager);
 }
