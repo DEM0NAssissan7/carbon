@@ -131,13 +131,13 @@ function listSelector(graphics, variable, options, x, y, w, h, text, customFunct
     return result;
 }
 //Reset button clicked status
-function toolkitClickMonitor(){
+let toolkit_input_daemon = function(){
     if(get_devices().mouse.clicked === false){
         buttonClicked = false;
     }
     sleep(20)
 }
-create_process(toolkitClickMonitor, 2);
+create_process(toolkit_input_daemon);
 //Animation handler
 function animateAcceleration(value, targetSize, time) {
     if(animateSystem === true){
