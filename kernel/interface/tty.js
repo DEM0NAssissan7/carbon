@@ -161,8 +161,8 @@ class TTY {
 try {
   if (stress) {
     console.log("Starting TTY standalone");
-    var ttySystem = new TTY();
-    let terminal = function(canvas, graphics){
+    var tty = new TTY();
+    let terminal = function(){
       tty.draw(canvas, graphics);
       tty.update();
     }

@@ -572,7 +572,7 @@ let canvas, graphics, webgl;
                 else {
                     let common_exec_time = Math.floor(threads[ktasks.length].time_marker + threads[ktasks.length].sleep_time);
                     let is_consistent = true;
-                    for (let i = ktasks.length + 1; i < threads.length; i++) {
+                    for (let i = ktasks.length; i < threads.length; i++) {
                         let thread = threads[i];
                         let execution_point = Math.floor(thread.time_marker + thread.sleep_time);
                         if (execution_point !== common_exec_time)
@@ -838,7 +838,7 @@ let canvas, graphics, webgl;
                     }
                 }
                 if (manage_power === true && minimum_execution_point !== Infinity)
-                    execution_time = Math.max(minimum_execution_point, 4);
+                    execution_time = Math.max(minimum_execution_point, 0);
             }
         }
         add_kernel_daemon(power_manager);
@@ -853,10 +853,10 @@ let canvas, graphics, webgl;
             if (previous_execution_count === execution_count) {
                 warn("Watchdog has been triggered");
             } else if (previous_execution_count < execution_count) {
-                timer = Date.now();
+                timer = get_time();
                 previous_execution_count = execution_count;
             }
-            if (Date.now() - timer > 2000) {
+            if (get_time() - timer > 2000) {
                 panic("Watchdog has detected that the kernel is hung.");
             }
         }
@@ -874,13 +874,13 @@ let canvas, graphics, webgl;
                 if (cycle_count_buffer === scheduler_cycle_count) {
                     warn("Overload monitor has been detected");
                 } else if (cycle_count_buffer < scheduler_cycle_count) {
-                    timer = Date.now();
+                    timer = get_time();
                     cycle_count_buffer = scheduler_cycle_count;
                 }
-                if (Date.now() - timer > 3000)
+                if (get_time() - timer > 3000)
                     panic("System has been overloaded");
             } else {
-                timer = Date.now();
+                timer = get_time();
             }
         }
         create_interval(overload_monitor, 2500);
