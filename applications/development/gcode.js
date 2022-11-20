@@ -92,7 +92,7 @@ class Gcode{
                     reader.onerror = (evt) => {
                         console.error("Failed to load file.")
                     }
-                    raise();
+                    exit();
                 }
                 sleep(200);
             })

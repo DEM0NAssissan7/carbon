@@ -203,7 +203,7 @@ set_cursor(renderMouseCursor);
 let icons = [];
 function createIcon(iconFunction, x, y, size, create_windowFunction) {
   var icon = spawn_window([], "icon");
-  let iconRender = spawn_process((canvas, graphics) => {
+  let iconRender = spawn_process(() => {
     try{
       graphics.clearRect(0, 0, canvas.width, canvas.height);
       iconFunction(canvas, graphics);  
@@ -408,6 +408,8 @@ errorScreenFunction = kshellErrorScreenDaemon;
 createBackgroundWindow();
 //Create dock icons
 appDockSystem.createIcons();
+//Play startup sound
+play_sound("desktop/assets/startup.ogg");
 
 //Create functions for each set of processes
 function updateAppDockSystem() {

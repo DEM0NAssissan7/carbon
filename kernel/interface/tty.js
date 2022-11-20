@@ -32,9 +32,6 @@ class TTY {
       self.root = true;
       self.prompt = "[kernel]# ";
     }
-    function exit() {
-      raise();
-    }
     let devices = get_devices();
     if (devices.keyboard.keyCodes[13] && !this.keyPressed) {
       this.textArray.push(this.textBuffer);
@@ -43,9 +40,10 @@ class TTY {
         let string_buffer = "";
         for (let i = 0; i < string.length; i++) {
           let character = string[i];
-          if (character !== "\n" && i < string.length - 1) {
+          if (character !== "\n") {
             string_buffer += character;
-          } else {
+          }
+          if(character === "\n" || i === string.length - 1){
             this.textArray.push(string_buffer)
             string_buffer = "";
           }
@@ -54,18 +52,21 @@ class TTY {
       if (this.textBuffer) {
         let stringToCommand, stringToCommandToString;
         try {
-          if (this.root !== true) {
+          if (this.root !== true){
             stringToCommand = eval(this.textBuffer);
           } else {
             if (this.textBuffer === "clr()")
               self.textArray = [];
-            else if (this.textBuffer === "clr()")
-              raise();
+            else if (this.textBuffer === "exit()")
+              exit();
             else
               stringToCommand = run_as_root(this.textBuffer, this.kernel_key);
           }
           if (stringToCommand !== undefined){
-            stringToCommandToString = stringToCommand.toString();
+            if(typeof stringToCommand === "object")
+             stringToCommandToString = JSON.stringify(stringToCommand);
+            else
+              stringToCommandToString = stringToCommand.toString();
             parse_text(stringToCommandToString);
           }
         } catch (e) {
@@ -141,13 +142,12 @@ class TTY {
   create_window() {
     var tty = new TTY();
 
+    let terminal = function(canvas, graphics){
+      tty.draw(canvas, graphics);
+      tty.update();
+    }
     create_window([
-      spawn_process(() => {
-        tty.update();
-      }),
-      spawn_process((canvas, graphics) => {
-        tty.draw(canvas, graphics);
-      })
+      spawn_process(terminal)
     ], "Terminal");
   }
   iconFunction(canvas, graphics) {
@@ -160,15 +160,12 @@ class TTY {
 }
 try {
   if (stress) {
-    console.log("Starting TTY standalone")
+    console.log("Starting TTY standalone");
     var ttySystem = new TTY();
-    let updateTTY = function () {
-      ttySystem.update();
+    let terminal = function(canvas, graphics){
+      tty.draw(canvas, graphics);
+      tty.update();
     }
-    let drawTTY = function () {
-      ttySystem.draw(canvas, graphics);
-    }
-    create_process(updateTTY);
-    create_process(drawTTY);
+    create_process(terminal);
   }
 } catch (error) { }

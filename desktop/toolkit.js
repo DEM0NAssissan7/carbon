@@ -79,12 +79,12 @@ function booleanToggleButton(graphics, bool, textFalse, textTrue, x, y, w, h, cu
     function changeBoolean(){
         if(!bool){
             result = true;
-            currentCustomFunction(bool);
+            currentCustomFunction(result);
             return;
         }
         if(bool){
             result = false;
-            currentCustomFunction(bool);
+            currentCustomFunction(result);
             return;
         }
     }
@@ -131,13 +131,13 @@ function listSelector(graphics, variable, options, x, y, w, h, text, customFunct
     return result;
 }
 //Reset button clicked status
-let toolkit_input_daemon = function(){
+let toolkit_daemon = function(){
     if(get_devices().mouse.clicked === false){
         buttonClicked = false;
     }
     sleep(20)
 }
-create_process(toolkit_input_daemon);
+create_process(toolkit_daemon);
 //Animation handler
 function animateAcceleration(value, targetSize, time) {
     if(animateSystem === true){
@@ -152,7 +152,9 @@ function animateAcceleration(value, targetSize, time) {
 }
 
 //Image tools
-function setTheme(){
+function setTheme(is_darkmode){
+    if(is_darkmode !== undefined)
+        darkmode = is_darkmode;
     let pictureData = get_background_image().data;
 
     let a = 0;
@@ -183,7 +185,6 @@ function setTheme(){
             return (color/primaryColor)*128
         }
     }
-
     let newAccent = "rgb(" + scaleColor(result.r) + ", " + scaleColor(result.g) + ", " + scaleColor(result.b) + ")";
 
     if(darkmode === true){
@@ -194,7 +195,7 @@ function setTheme(){
             elementColors: "#1E1E1E",
             textColor: "white",
         };
-    }else{
+    } else {
         colorScheme = {
             accent: newAccent,
             background: "white",

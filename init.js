@@ -1,5 +1,4 @@
 const System = {
-    version: "1.7 Alpha",
-    name: "Graphite",
-    startup: Date.now(),
+    version: "1.8 Alpha",
+    name: "Graphite"
 }

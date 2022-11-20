@@ -43,6 +43,12 @@
             let window_process = () => {
                 let devices = get_devices();
                 let old_get_devices = get_devices;
+                let old_canvas = canvas;
+                let old_graphics = graphics;
+                if(this.direct_render !== true){
+                    canvas = this.canvas;
+                    graphics = this.graphics;
+                }
                 if(this.direct_render !== true)
                 {
                     devices.mouse.x -= this.x;
@@ -65,11 +71,11 @@
                 get_devices = function () {
                     return devices;
                 }
-                if(this.direct_render !== true)
-                    command(this.canvas, this.graphics);
-                else
-                    command(canvas, graphics);
 
+                command();
+
+                canvas = old_canvas;
+                graphics = old_graphics;
                 get_devices = old_get_devices;
                 if(this.direct_render !== true)
                 {
@@ -90,7 +96,18 @@
 
             //Actual top bar
             // graphics.fillStyle = "#222222";
-            graphics.fillStyle = colorScheme.background;
+            if(darkmode === true){
+                if(this.has_focus !== true)
+                graphics.fillStyle = colorScheme.elementColors;
+            else
+                graphics.fillStyle = colorScheme.background;
+            } else {
+                if(this.has_focus !== true)
+                    graphics.fillStyle = colorScheme.background;
+                else
+                    graphics.fillStyle = colorScheme.elementColors;
+            }
+
             graphics.strokeStyle = colorScheme.elementColors;
             graphics.lineWidth = 1;
             graphics.fillRect(0, -this.title_bar_height, this.canvas.width, this.title_bar_height);

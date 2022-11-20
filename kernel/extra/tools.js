@@ -20,18 +20,12 @@
     }
 }
 set_performance_display(() => {
-    graphics.save();
+    let counter_count = 2;
     graphics.fillStyle = '#AAAAAA';
-    graphics.fillRect(0, 0, 38, 30);
-    graphics.strokeStyle = 'black';
+    graphics.fillRect(0, 0, 38 * counter_count, 30);
     graphics.fillStyle = 'black';
     graphics.font = '14px Monospace';
     graphics.fillText(Math.round(get_performance().realtime), 10, 19);
 
-    graphics.translate(38,0)
-    graphics.fillStyle = '#EEAAAA';
-    graphics.fillRect(0, 0, 38, 30);
-    graphics.fillStyle = 'black';
-    graphics.fillText(Math.round(get_performance().percent), 10, 19);
-    graphics.restore();
+    graphics.fillText(Math.round(get_performance().percent), 10 + (38 * 1), 19);
 })
