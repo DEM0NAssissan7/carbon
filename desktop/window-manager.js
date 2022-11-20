@@ -72,7 +72,7 @@
                     return devices;
                 }
 
-                command();
+                command(canvas, graphics);
 
                 canvas = old_canvas;
                 graphics = old_graphics;
