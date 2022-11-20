@@ -543,7 +543,6 @@ let canvas, graphics, webgl;
                             on_time_threads++;
                         else
                             is_consistent = false
-                        threads_run++;
                     }
                     if(is_consistent === true)
                         perfect_cycles++;
