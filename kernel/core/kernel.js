@@ -93,7 +93,7 @@ let canvas, graphics, webgl;
     }
 
     //Timing profile
-    let get_time = function(){
+    let get_time = function () {
         return Math.floor(performance.now() * 100) / 100;
     }
     console.log(get_time())
@@ -112,9 +112,9 @@ let canvas, graphics, webgl;
     }
 
     //Hashing
-    function hash(num){
+    function hash(num) {
         let result = 0;
-        for(let i = 0; i <= num; i++){
+        for (let i = 0; i <= num; i++) {
             result += num * (Math.sqrt(i) * (i + 1)) - num;
             result = result >> 1;
         }
@@ -122,9 +122,9 @@ let canvas, graphics, webgl;
         result = Math.round(result);
         return result;
     }
-    function hash_string(string){
+    function hash_string(string) {
         let result = 0;
-        for(let i = 0; i < string.length; i++){
+        for (let i = 0; i < string.length; i++) {
             let char = string[i].charCodeAt();
             result += char * (Math.sqrt(char) * (i + 1)) - char;
             result = result >> 1;
@@ -207,7 +207,7 @@ let canvas, graphics, webgl;
             let seconds = Math.floor(uptime_buffer / 1000 % 60)
             let minutes = Math.floor(uptime_buffer / 1000 / 60 % 60);
             let hours = Math.floor(uptime_buffer / 1000 / 3600);
-            uptime_message = "Total: " + hours + ":" + minutes + ":" + seconds;    
+            uptime_message = "Total: " + hours + ":" + minutes + ":" + seconds;
         }
 
         let running_message;
@@ -218,7 +218,7 @@ let canvas, graphics, webgl;
             console.log(seconds);
             let minutes = Math.floor(seconds / 60 % 60);
             let hours = Math.floor(active_uptime / 1000 / 3600);
-            running_message = "Running: " + hours + ":" + minutes + ":" + seconds;    
+            running_message = "Running: " + hours + ":" + minutes + ":" + seconds;
         }
 
         return uptime_message + "\n" + running_message;
@@ -235,7 +235,7 @@ let canvas, graphics, webgl;
             process: undefined,
             error: undefined
         }
-        let error_screen_daemon = () => {}
+        let error_screen_daemon = () => { }
         add_kernel_daemon(error_screen_daemon);
         function set_error_screen(handler) {
             error_screen_handler = handler;
@@ -383,16 +383,16 @@ let canvas, graphics, webgl;
     }
 
     //Networking
-    if(use_networking === true){
+    if (use_networking === true) {
         let init_networking = function () {
             let xml_http = new XMLHttpRequest();
             xml_http.addEventListener('error', (event) => {
-              error("A network request failed");
+                error("A network request failed");
             });
             return xml_http;
         }
-        let run_network_request = function(handler){
-            try{
+        let run_network_request = function (handler) {
+            try {
                 handler();
             } catch (e) {
                 console.error(e);
@@ -400,10 +400,10 @@ let canvas, graphics, webgl;
                 error("A network request has encountered an error");
             }
         }
-        function net_get(url, handler){
+        function net_get(url, handler) {
             run_network_request(() => {
                 let xml_http = init_networking();
-                xml_http.onreadystatechange = function() {
+                xml_http.onreadystatechange = function () {
                     if (this.readyState == 4 && this.status == 200)
                         handler(this.responseText);
                 }
@@ -411,12 +411,12 @@ let canvas, graphics, webgl;
                 xml_http.send(null);
             });
         }
-        function net_send(url, data){
+        function net_send(url, data) {
             run_network_request(() => {
                 let xml_http = init_networking();
                 const urlEncodedDataPairs = [];
                 for (const [name, value] of Object.entries(data)) {
-                urlEncodedDataPairs.push(`${encodeURIComponent(name)}=${encodeURIComponent(value)}`);
+                    urlEncodedDataPairs.push(`${encodeURIComponent(name)}=${encodeURIComponent(value)}`);
                 }
                 xml_http.addEventListener('load', (event) => {
                     debug("Network send request successful");
@@ -454,22 +454,22 @@ let canvas, graphics, webgl;
         let time_suspended = 0;
         let time_marker = get_time();
         let final_time_marker = 0;
-        let suspend_system = function(){
-            if(system_suspended !== true){
+        let suspend_system = function () {
+            if (system_suspended !== true) {
                 execution_time = 500;
                 system_suspended = true;
                 time_marker = get_time();
             }
         }
-        let resume_system = function(){
-            if(system_suspended !== false){
+        let resume_system = function () {
+            if (system_suspended !== false) {
                 execution_time = 0;
                 system_suspended = false;
                 time_suspended += get_time() - time_marker;
             }
         }
-        function get_suspended_time(){
-            if(system_suspended !== true)
+        function get_suspended_time() {
+            if (system_suspended !== true)
                 return time_suspended;
             else
                 return time_suspended + get_time() - time_marker;
@@ -524,27 +524,27 @@ let canvas, graphics, webgl;
                 }
             }
             const target_time = 1000 / minimum_cycle_rate + start_time;
-            if(track_cycle_info === true){
-                if(threads.length - ktasks.length < 1)
+            if (track_cycle_info === true) {
+                if (threads.length - ktasks.length < 1)
                     useless_cycles++;
                 else {
                     let common_exec_time = Math.floor(threads[ktasks.length].time_marker + threads[ktasks.length].sleep_time);
                     let is_consistent = true;
-                    for(let i = ktasks.length + 1; i < threads.length; i++){
+                    for (let i = ktasks.length + 1; i < threads.length; i++) {
                         let thread = threads[i];
                         let execution_point = Math.floor(thread.time_marker + thread.sleep_time);
-                        if(execution_point !== common_exec_time)
+                        if (execution_point !== common_exec_time)
                             is_consistent = false;
-                        if(execution_point < Math.floor(start_time)){
+                        if (execution_point < Math.floor(start_time)) {
                             late_threads++
                             is_consistent = false;
                         }
-                        if(execution_point === Math.floor(start_time))
+                        if (execution_point === Math.floor(start_time))
                             on_time_threads++;
                         else
                             is_consistent = false
                     }
-                    if(is_consistent === true)
+                    if (is_consistent === true)
                         perfect_cycles++;
                 }
             }
@@ -552,7 +552,7 @@ let canvas, graphics, webgl;
             while (threads.length > 0) {
                 let thread = threads[0];
                 if (thread.PID !== undefined)
-                waiting_processes++;
+                    waiting_processes++;
                 thread_in_execution = thread;
                 const time_marker = get_time();
                 if (time_marker >= target_time) //Scheduler watchdog
@@ -611,7 +611,7 @@ let canvas, graphics, webgl;
         function task(command) {
 
         }
-        function proc(){
+        function proc() {
             return thread_in_execution;
         }
     }
@@ -659,14 +659,14 @@ let canvas, graphics, webgl;
                 let time_buffer = get_time();
                 realtime_performance = time_buffer - timer;
                 timer = time_buffer;
-                if(percent_usage_average === NaN){
+                if (percent_usage_average === NaN) {
                     percent_usage_average = 0;
                 }
-                if (system_suspended !== true && realtime_performance > 0){
-                    let n = Math.min(scheduler_run_count - 1, 1000/realtime_performance);
-                    percent_usage_average = ((system_time / realtime_performance) + n * percent_usage_average)/(n+1);
+                if (system_suspended !== true && realtime_performance > 0) {
+                    let n = Math.min(scheduler_run_count - 1, 1000 / realtime_performance);
+                    percent_usage_average = ((system_time / realtime_performance) + n * percent_usage_average) / (n + 1);
 
-                    if(scheduler_run_count >= 1){
+                    if (scheduler_run_count >= 1) {
                         let n = Math.min(scheduler_run_count - 1, 5000 / realtime_performance);
                         load_average = (waiting_processes + n * load_average) / (n + 1);
                         waiting_processes = 0;
@@ -689,26 +689,26 @@ let canvas, graphics, webgl;
                 return get_time() - time_marker;
             }
             let test = () => {
-                for(let i = 0; i < 1000000; i++){
-                    let hi = function(){};
+                for (let i = 0; i < 1000000; i++) {
+                    let hi = function () { };
                     hi();
                 }
             }
             let test_scores = [];
             const test_count = 3;
             let median_score = 0;
-            for(let i = 0; i < test_count; i++){
+            for (let i = 0; i < test_count; i++) {
                 test_scores.push(performance_tracker(test));
             }
             test_scores = test_scores.sort((a, b) => a - b);
-            if(test_count%2 === 1){
-                median_score = test_scores[Math.round(test_count/2) - 1];
+            if (test_count % 2 === 1) {
+                median_score = test_scores[Math.round(test_count / 2) - 1];
             } else {
-                median_score = (test_scores[Math.round(test_count/2)] + test_scores[Math.floor(test_count/2) - 1]) / 2;
+                median_score = (test_scores[Math.round(test_count / 2)] + test_scores[Math.floor(test_count / 2) - 1]) / 2;
             }
-            const score = Math.floor(100/median_score);
+            const score = Math.floor(100 / median_score);
             debug("Performance test score: " + score);
-            if(score < 26)
+            if (score < 26)
                 low_performance_mode = true;
         }
         function get_performance() {
@@ -731,10 +731,10 @@ let canvas, graphics, webgl;
                 console.log(line);
                 output_text += line + "\n"
             }
-            let round_hundredth = function(number){
+            let round_hundredth = function (number) {
                 return Math.round(number * 100) / 100;
             }
-            let get_percent = function(number){
+            let get_percent = function (number) {
                 return Math.round(number * 100)
             }
             let total_threads_run = late_threads + on_time_threads;
@@ -747,7 +747,7 @@ let canvas, graphics, webgl;
             add_text("Realtime performance: " + round_hundredth(realtime_performance));
             add_text("JS engine overhead: " + round_hundredth(system_overhead));
             add_text("Useless cycles: " + useless_cycles + " (" + Math.round(useless_cycles / scheduler_run_count * 100) + "%)");
-            if(total_threads_run > 0){
+            if (total_threads_run > 0) {
                 add_text("Perfect cycles: " + perfect_cycles + " (" + Math.round(perfect_cycles / (scheduler_run_count - useless_cycles) * 100) + "%, " + Math.round(perfect_cycles / scheduler_run_count * 100) + "%)");
                 add_text("Late threads: " + late_threads + " (" + Math.round(late_threads / total_threads_run * 100) + "%)");
                 add_text("On-time threads: " + on_time_threads + " (" + Math.round(on_time_threads / total_threads_run * 100) + "%)");
@@ -778,14 +778,14 @@ let canvas, graphics, webgl;
     }
 
     //Power manager
-    if(manage_power === true) {
-        let power_manager = function() {
-            if(system_suspended !== true){
+    if (manage_power === true) {
+        let power_manager = function () {
+            if (system_suspended !== true) {
                 let minimum_execution_point = Infinity;
                 let time_buffer = get_time();
-                for(let i = 0; i < processes.length; i++) {
+                for (let i = 0; i < processes.length; i++) {
                     let process = processes[i];
-                    if(process.time_marker !== 0) {
+                    if (process.time_marker !== 0) {
                         let process_scheduled_exec = process.time_marker + process.sleep_time - time_buffer;
                         if (process_scheduled_exec < minimum_execution_point)
                             minimum_execution_point = process_scheduled_exec;
@@ -850,7 +850,7 @@ let canvas, graphics, webgl;
         let main = function () {
             try {
                 let time_marker = get_time();
-                system_overhead =  time_marker - overhead_time_marker;
+                system_overhead = time_marker - overhead_time_marker;
                 scheduler();//Run processes
                 run_kernel_daemons();
                 execution_count++;
