@@ -2,9 +2,7 @@ const Kernel = {
     name: System.name + " Kernel",
     version: System.version,
     capibilities: [
-        "Preemptive",
         "Scheduler",
-        "Advanced Performance Tracking",
         "Live Reclocking",
         "Power Management",
         "Overload Protection",
@@ -507,12 +505,10 @@ let canvas, graphics, webgl;
     let thread_in_execution;
     let waiting_processes = 0;
     let scheduler_run_count = 0;
-    let sched_time = 0;
     let useless_cycles = 0;
     let perfect_cycles = 0;
     let late_threads = 0;
     let on_time_threads = 0;
-    let threads_run = 0;
     let scheduler = function () {
         if (system_suspended !== true) {
             const start_time = get_time();
@@ -570,8 +566,6 @@ let canvas, graphics, webgl;
                 threads.splice(0, 1);
             }
             process_time = process_time_buffer
-            let time_buffer = get_time();
-            sched_time = time_buffer - start_time;
             scheduler_run_count++;
             thread_in_execution = null;
         }
