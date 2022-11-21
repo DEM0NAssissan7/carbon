@@ -11,13 +11,14 @@
         }
         return freq_amp;
     }
+    let coeff = -6.28318530718;
     function process_signal(signal){
-        let result = [];
-        let pi_over_length = Math.PI / signal.length
-        for(let i = 0; i < signal.length; i++){
-            result.push(find_freq(signal, i, pi_over_length));
-        }
-        return result;
+        return signal.map((sng, i) => {
+            let sum = 0;
+            for(let i = 0; i < signal.length; i++)
+                sum += signal[i] * (Math.pow(Math.E, (coeff * i)))
+            return sum
+        })
     }
     console.log(process_signal([2, 1, 0]));
 }
