@@ -1,6 +1,8 @@
 {
     let windows = [];
     const button_padding = 8;
+    const monitor_refresh_rate = 60;
+    const animation_time = 450;
     let foreground_image;
     let wm_window = function(processes, window_name)
     {
@@ -98,9 +100,9 @@
             // graphics.fillStyle = "#222222";
             if(darkmode === true){
                 if(this.has_focus !== true)
-                graphics.fillStyle = colorScheme.elementColors;
-            else
-                graphics.fillStyle = colorScheme.background;
+                    graphics.fillStyle = colorScheme.elementColors;
+                else
+                    graphics.fillStyle = colorScheme.background;
             } else {
                 if(this.has_focus !== true)
                     graphics.fillStyle = colorScheme.background;
@@ -131,13 +133,30 @@
         }
     }
     wm_window.prototype.draw = function (graphics, foreground_graphics) {
+        //Animations
+        this.timer.update();
+        if (this.dying !== true) {
+            if (Math.round(this.fade * 100) / 100 < 1)
+                this.fade += (getTransition(1, animation_time, this.timer) - (getTransition(this.fade, animation_time, this.timer))) * 2;
+            else
+                this.fade = 1;
+        } else {
+            if (Math.floor(this.fade * 100) / 100 > 0)
+                this.fade -= (getTransition(1, animation_time, this.timer) - (getTransition(1 - this.fade, animation_time, this.timer))) * 2;
+            else {
+                this.fade = 0;
+                this.dead = true;
+            }
+        }
         let draw_surface = graphics;
         if(this.foreground === true)
             draw_surface = foreground_graphics;
         if (this.fade < 1) {
+
             draw_surface.save();
 
-            draw_surface.globalAlpha = this.fade;
+            if(this.dying === true)
+                draw_surface.globalAlpha = this.fade;
 
             draw_surface.translate((this.x + this.canvas.width / 2) - (this.canvas.width / 2 * this.fade), (this.y + this.canvas.height / 2) - (this.canvas.height / 2 * this.fade));
             draw_surface.scale(this.fade, this.fade);
@@ -164,21 +183,6 @@
                 devices.mouse.y < this.y + (button_padding - (this.title_bar_height - 1)) + (this.title_bar_height - button_padding * 2) && devices.mouse.pressed && this.dragged === false) {
                 this.close();
                 return;
-            }
-        }
-        //Animations
-        this.timer.update();
-        if (this.dying !== true) {
-            if (Math.round(this.fade * 100) / 100 < 1)
-                this.fade += (getTransition(1, 500, this.timer) - (getTransition(this.fade, 500, this.timer))) * 2;
-            else
-                this.fade = 1;
-        } else {
-            if (Math.floor(this.fade * 100) / 100 > 0)
-                this.fade -= (getTransition(1, 500, this.timer) - (getTransition(1 - this.fade, 500, this.timer))) * 2;
-            else {
-                this.fade = 0;
-                this.dead = true;
             }
         }
         //Movement
@@ -346,7 +350,7 @@
         time_marker = time_buffer;
         performance_display();
         
-        sleep(16);
+        sleep(1000/monitor_refresh_rate);
     }
     create_process(window_manager);
 }
