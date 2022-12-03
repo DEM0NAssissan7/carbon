@@ -16,6 +16,8 @@
             "applications/development/gcode.js",
             "applications/experimentation/signal-processing.js",
             "applications/graphics/3d.js",
+            "applications/graphics/paint.js",
+            "applications/graphics/raycast.js",
             "applications/emulators/physics.js",
             "applications/system/monitor.js",
             "applications/games/cookieclicker.js",

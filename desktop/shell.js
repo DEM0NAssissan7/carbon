@@ -1,96 +1,7 @@
-/*
+const play_startup = false;
 //Window manager intialization
-const local_server = true;
-// const simulate_remote_server = true;
-const simulate_remote_server = get_performance().low_performance;
-const monitor_refresh_rate = 60;
-if(simulate_remote_server !== true) {
-  let wm = spawn_window_manager(false);
-
-  let window_manager_update = function(){
-    wm.update();
-    wm.update_local_server();
-    sleep(13)
-  }
-  create_process(window_manager_update);
-
-  let window_manager_draw = function(){
-    let start_time = performance.now();
-    wm.draw();
-    sleep((1000/monitor_refresh_rate) - (performance.now() - start_time))
-  }
-  create_process(window_manager_draw);
-
-  //Defining functions
-  function create_window(window_processes, window_name){
-    wm.server.create_window(window_processes, window_name);
-  }
-  function set_background(background_function){
-    wm.set_background(background_function);
-  }
-  function set_cursor(handler){
-    wm.set_cursor(handler);
-  }
-  function push_window(window){
-    wm.server.push_window(window);
-  }
-  function quick_window(command, window_name){
-    wm.server.create_window([spawn_process(command)], window_name);
-  }
-  function get_background_graphics(){
-    return wm.background_graphics;
-  }
-  function get_windows(){
-    return [wm.windows, wm.server.windows]
-  }
-} else {
-  let wm = spawn_window_manager(true);
-  let server = spawn_window_server();
-
-  let window_client_server_exchange = function(){
-    wm.recieve_data(server.send_data());
-    server.recieve_data(wm.send_data());
-    sleep(40);
-  }
-  create_process(window_client_server_exchange);
-
-  let window_manager_update = function(){
-    wm.update();
-    sleep(13)
-  }
-  create_process(window_manager_update);
-
-  let window_manager_draw = function(){
-    let start_time = performance.now();
-    wm.draw();
-    sleep((1000/monitor_refresh_rate) - (performance.now() - start_time))
-  }
-  create_process(window_manager_draw);
-
-  //Defining functions
-  function create_window(window_processes, window_name){
-    server.create_window(window_processes, window_name);
-  }
-  function set_background(background_function){
-    wm.set_background(background_function);
-  }
-  function set_cursor(handler){
-    wm.set_cursor(handler);
-  }
-  function push_window(window){
-    server.push_window(window);
-  }
-  function quick_window(command, window_name){
-    server.create_window([spawn_process(command)], window_name);
-  }
-  function get_background_graphics(){
-    return wm.background_graphics;
-  }
-  function get_windows(){
-    return [wm.windows, server.windows]
-  }
-}
-*/
+//Glass UI
+// set_alpha(0.9);
 //Mouse cursor
 function colorBlackCursor(graphics) {
   graphics.strokeStyle = 'white';
@@ -276,7 +187,9 @@ addApplicationFromClass(TTY);//JSTerm
 addApplicationFromClass(Settings);//Settings
 addApplicationFromClass(SOTF);//Survival of the Fittest
 addApplicationFromClass(Octane);//Game Engine
+addApplicationFromClass(Paint);//Physics
 addApplicationFromClass(Physics);//Physics
+addApplicationFromClass(RayCast);//Physics
 addApplicationFromClass(CookieClicker);//Cookie Clicker
 addApplicationFromClass(Gcode);//Gcode
 addApplicationFromClass(SystemMonitor);//System Monitor
@@ -409,7 +322,8 @@ createBackgroundWindow();
 //Create dock icons
 appDockSystem.createIcons();
 //Play startup sound
-play_sound("desktop/assets/startup.ogg");
+if(play_startup === true)
+  play_sound("desktop/assets/startup.ogg");
 
 //Create functions for each set of processes
 function updateAppDockSystem() {

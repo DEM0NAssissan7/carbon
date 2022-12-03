@@ -178,18 +178,30 @@ function setTheme(is_darkmode){
     // return result
 
     let primaryColor = Math.max(result.r, result.g, result.b);
-    function scaleColor(color){
-        if(darkmode === true){
+    let scaleColor = function(color){
+        if(darkmode === true)
             return (color/primaryColor)*255
-        }else{
+        else
             return (color/primaryColor)*128
-        }
     }
-    let newAccent = "rgb(" + scaleColor(result.r) + ", " + scaleColor(result.g) + ", " + scaleColor(result.b) + ")";
+
+    let accent_color = "rgb(" + scaleColor(result.r) + ", " + scaleColor(result.g) + ", " + scaleColor(result.b) + ")";
+
+    let background_opacity = 160;
+    let scaleBg = function(color){
+        if(darkmode === true)
+            return color * (background_opacity / 255);
+        else
+            return 255 - ((primaryColor - color) * (background_opacity / 255));
+    }
+    let bg_color = "rgb(" + scaleBg(result.r) + ", " + scaleBg(result.g) + ", " + scaleBg(result.b) + ")";
+    // background = "white"
+
+    console.log(accent_color, bg_color);
 
     if(darkmode === true){
         colorScheme = {
-            accent: newAccent,
+            accent: accent_color,
             background: "black",
             dialogueBackground: "#1E1E1E",
             elementColors: "#1E1E1E",
@@ -197,7 +209,7 @@ function setTheme(is_darkmode){
         };
     } else {
         colorScheme = {
-            accent: newAccent,
+            accent: accent_color,
             background: "white",
             dialogueBackground: "#E1E1E1",
             elementColors: "#E1E1E1",

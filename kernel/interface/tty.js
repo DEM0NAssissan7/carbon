@@ -38,12 +38,15 @@ class TTY {
       this.promptArray[this.textArray.length - 1] = this.prompt;
       let parse_text = string => {
         let string_buffer = "";
+        let delimiter = "\n";
+        if(string[0] === "{" || string[0] === "[")
+          delimiter = ",";
         for (let i = 0; i < string.length; i++) {
           let character = string[i];
-          if (character !== "\n") {
+          if (character !== delimiter) {
             string_buffer += character;
           }
-          if(character === "\n" || i === string.length - 1){
+          if(character === delimiter || i === string.length - 1){
             this.textArray.push(string_buffer)
             string_buffer = "";
           }
@@ -57,8 +60,6 @@ class TTY {
           } else {
             if (this.textBuffer === "clr()")
               self.textArray = [];
-            else if (this.textBuffer === "exit()")
-              exit();
             else
               stringToCommand = run_as_root(this.textBuffer, this.kernel_key);
           }

@@ -204,11 +204,10 @@ class Gcode{
     }
     create_window(){
         var self = new Gcode();
-        create_window([
-          spawn_process((canvas, graphics) => {
+        let gcode = (canvas, graphics) => {
             self.update(canvas, graphics);
-          })
-        ], "Gcode");
+        };
+        quick_window(gcode, "GCode");
     }
     iconFunction(canvas, graphics){
         graphics.fillStyle = 'blue';

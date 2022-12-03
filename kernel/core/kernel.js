@@ -1,3 +1,17 @@
+/* Copyright Abdurahman Elmawi 2022
+
+The kernel is the javascript hypervisor. All functions that a program runs should go 
+through the kernel, either from create_process() or push_process()
+
+The job of the hypervisor is to:
+    1. Provide simple APIs for programmers to do what they want with their programs
+    2. Centralize and coordinate all programs running on the system
+    3. Keep track of program performance and help developers understand their programs
+    4. Create a set of security and stability protocols in order to maintain the system
+    5. Correct the faults of javascript
+
+*/
+
 const Kernel = {
     name: undefined,
     version: undefined,
@@ -156,6 +170,31 @@ let canvas, graphics, webgl;
         setInterval = function () {
             warn("setInterval was called.");
         }
+    }
+
+    //Statistics
+    let statistics = [];
+    let Statistic = function(name){
+        this.statistic_name = name;
+        this.value = 0;
+    }
+    let create_statistic = function(name){
+        statistics.push(new Statistic(name));
+    }
+    let find_statistic = function(name){
+        for(let i = 0; i < statistics.length; i++)
+            if(statistics[i].statistic_name === name)
+                return statistics[i];
+        return null;
+    }
+    let increment_statistic = function(name){
+        find_statistic(name).value++;
+    }
+    let get_statistic = function(name){
+        return find_statistic(name).value;
+    }
+    function get_kernel_statistics(){
+        return JSON.parse(JSON.parse(statistics));
     }
 
     //Hashing
@@ -361,10 +400,10 @@ let canvas, graphics, webgl;
             clicked: false
         };
         document.onmousemove = event => {
-            devices.mouse.vectorX = devices.mouse.x - event.pageX;
-            devices.mouse.vectorY = devices.mouse.y - event.pageY;
-            devices.mouse.x = event.pageX;
-            devices.mouse.y = event.pageY;
+            devices.mouse.vectorX = devices.mouse.x - event.pageX + 8;
+            devices.mouse.vectorY = devices.mouse.y - event.pageY + 8;
+            devices.mouse.x = event.pageX - 8;
+            devices.mouse.y = event.pageY - 8;
         };
         document.onmousedown = () => {
             devices.mouse.clicked = true;
@@ -485,7 +524,7 @@ let canvas, graphics, webgl;
         try{
             new Audio(url).play();
         } catch (e) {
-            console.error("Sound '" + url + "' failed to play.");
+            error("Sound '" + url + "' failed to play.");
         }
     }
 
@@ -530,6 +569,7 @@ let canvas, graphics, webgl;
     let ktasks = [];
     let kTask = function (command) {
         this.command = command;
+        this.nice = 10;
     }
     kTask.prototype.run = function () {
         try {
@@ -547,10 +587,10 @@ let canvas, graphics, webgl;
     let waiting_processes = 0;
     let scheduler_run_count = 0;
     let sched_overhead = 0;
-    let useless_cycles = 0;
-    let perfect_cycles = 0;
-    let late_threads = 0;
-    let on_time_threads = 0;
+    create_statistic("useless_cycles");
+    create_statistic("perfect_cycles");
+    create_statistic("late_threads");
+    create_statistic("on_time_threads");
     let scheduler = function () {
         if (system_suspended !== true) {
             const start_time = get_time();
@@ -566,10 +606,12 @@ let canvas, graphics, webgl;
                 }
             }
             const target_time = 1000 / minimum_cycle_rate + start_time;
+            waiting_processes = threads.length - ktasks.length;
             if (track_cycle_info === true) {
-                if (threads.length - ktasks.length < 1)
-                    useless_cycles++;
-                else {
+                if (waiting_processes < 1){
+                    increment_statistic("useless_cycles");
+                    threads = [];
+                } else {
                     let common_exec_time = Math.floor(threads[ktasks.length].time_marker + threads[ktasks.length].sleep_time);
                     let is_consistent = true;
                     for (let i = ktasks.length; i < threads.length; i++) {
@@ -578,24 +620,24 @@ let canvas, graphics, webgl;
                         if (execution_point !== common_exec_time)
                             is_consistent = false;
                         if (execution_point < Math.floor(start_time)) {
-                            late_threads++
+                            increment_statistic("late_threads");
                             is_consistent = false;
                         }
                         if (execution_point === Math.floor(start_time))
-                            on_time_threads++;
+                            increment_statistic("on_time_threads");
                         else
                             is_consistent = false;
                     }
                     if (is_consistent === true)
-                        perfect_cycles++;
+                        increment_statistic("perfect_cycles");
                 }
             }
             process_time_buffer = 0;
+            //Prioritize light tasks to run first
+            threads.sort((a, b) => a.exec_time - b.exec_time);
             let time_marker;
             while (threads.length > 0) {
                 let thread = threads[0];
-                if (thread.PID !== undefined)
-                    waiting_processes++;
                 thread_in_execution = thread;
                 time_marker = get_time();
                 if (time_marker >= target_time) //Scheduler watchdog
@@ -774,7 +816,7 @@ let canvas, graphics, webgl;
         function ktop() {
             let output_text = "";
             let add_text = function (line) {
-                console.log(line);
+                // console.log(line);
                 output_text += line + "\n";
             }
             let round_hundredth = function (number) {
@@ -783,18 +825,24 @@ let canvas, graphics, webgl;
             let get_percent = function (number) {
                 return Math.round(number * 100);
             }
+            let late_threads = get_statistic("late_threads");
+            let on_time_threads = get_statistic("on_time_threads");
             let total_threads_run = late_threads + on_time_threads;
             add_text("-- ktop --");
             add_text("CPU usage: " + get_percent(percent_total) + "% total (" + get_percent(percent_total - percent_system) + "% user, " + get_percent(percent_system) + "% system, " + get_percent(1 - percent_total) + "% idle)");
             add_text("Task count: " + (processes.length));
+            add_text("Uptime: " + uptime());
             add_text("Load average: " + round_hundredth(load_average));
             add_text("- Kernel info -");
             add_text("System time: " + round_hundredth(system_time) + "ms");
             add_text("Kernel overhead: " + round_hundredth(kernel_overhead) + "ms (" + round_hundredth(sched_overhead) + "ms sched)");
             add_text("Realtime performance: " + round_hundredth(realtime_performance) + "ms");
             add_text("JS engine overhead: " + round_hundredth(system_overhead));
+            add_text("- Statistics -");
+            let useless_cycles = get_statistic("useless_cycles");
             add_text("Useless cycles: " + useless_cycles + " (" + Math.round(useless_cycles / scheduler_run_count * 100) + "%)");
             if (total_threads_run > 0) {
+                let perfect_cycles = get_statistic("perfect_cycles");
                 add_text("Perfect cycles: " + perfect_cycles + " (" + Math.round(perfect_cycles / (scheduler_run_count - useless_cycles) * 100) + "%, " + Math.round(perfect_cycles / scheduler_run_count * 100) + "%)");
                 add_text("Late threads: " + late_threads + " (" + Math.round(late_threads / total_threads_run * 100) + "%)");
                 add_text("On-time threads: " + on_time_threads + " (" + Math.round(on_time_threads / total_threads_run * 100) + "%)");
@@ -894,7 +942,7 @@ let canvas, graphics, webgl;
         let main = function () {
             try {
                 let time_marker = get_time();
-                system_overhead = time_marker - overhead_time_marker;
+                system_overhead = time_marker - overhead_time_marker - execution_time;
                 scheduler();//Run processes
                 run_kernel_daemons();
                 execution_count++;
