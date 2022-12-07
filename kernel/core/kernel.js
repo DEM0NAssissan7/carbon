@@ -334,11 +334,11 @@ let canvas, graphics, webgl;
     let Process = function (command) {
         this.process_name = command.name;
         this.threads = [];
-        if(use_init === true){
+        if (use_init === true) {
             if (process_in_execution === null)
-            error("Process '" + this.process_name + "' was created outside of a process context.");
-        else
-            this.parent = process_in_execution.PID;
+                error("Process '" + this.process_name + "' was created outside of a process context.");
+            else
+                this.parent = process_in_execution.PID;
         }
         this.creation_time = get_time();
         this.starting_uptime = raw_uptime().active;
@@ -956,7 +956,7 @@ let canvas, graphics, webgl;
     }
 
     //Init
-    if(use_init === true){
+    if (use_init === true) {
         let inits = [];
         system_process.thread(() => {
             if (inits.length !== 0) {
