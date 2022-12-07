@@ -26,6 +26,5 @@ set_performance_display(() => {
     graphics.fillStyle = 'black';
     graphics.font = '14px Monospace';
     graphics.fillText(Math.round(get_performance().realtime), 10, 19);
-
     graphics.fillText(Math.round(get_performance().percent), 10 + (38 * 1), 19);
 })

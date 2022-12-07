@@ -3,7 +3,7 @@
     const button_padding = 8;
     let monitor_refresh_rate = 60;
     const animation_time = 450;
-    let animation = 1;
+    let animation = 0;
     let alpha_value = 1;
     let window_exec = null;
     let window_tint = [0, 0, 0, 0];
@@ -67,53 +67,55 @@
     }
     wm_window.prototype.initialize = function () {
         for (let i = 0; i < this.processes_buffer.length; i++) {
-            let command = this.processes_buffer[i].command;
-            let window_process = () => {
-                let devices = get_devices();
-                let old_get_devices = get_devices;
-                let old_canvas = canvas;
-                let old_graphics = graphics;
-                if (this.direct_render !== true) {
-                    canvas = this.canvas;
-                    graphics = this.graphics;
-                }
-                if (this.direct_render !== true) {
-                    devices.mouse.x -= this.x;
-                    devices.mouse.y -= this.y;
-                }
-                let old_keyboard = {
-                    keys: devices.keyboard.keys,
-                    keyCodes: devices.keyboard.keyCodes,
-                    info: devices.keyboard.info,
-                    keyCode: devices.keyboard.keyCode,
-                    info: devices.keyboard.info
-                };
-                if (this.has_focus === false) {
-                    devices.keyboard.keys = [];
-                    devices.keyboard.keyCodes = [];
-                    devices.keyboard.keyCode = 0;
-                    devices.keyboard.pressed = false;
-                    devices.keyboard.info = {};
-                }
-                get_devices = function () {
-                    return devices;
-                }
-
-                window_exec = this;
-                command(canvas, graphics);
-                window_exec = null;
-
-                canvas = old_canvas;
-                graphics = old_graphics;
-                get_devices = old_get_devices;
-                if (this.direct_render !== true) {
-                    devices.mouse.x += this.x;
-                    devices.mouse.y += this.y;
-                }
-                devices.keyboard = old_keyboard;
-            };
             let process_buffer = this.processes_buffer[i];
-            process_buffer.command = window_process;
+            for(let l = 0; l < process_buffer.threads.length; l++){
+                let command = process_buffer.threads[l].command;
+                process_buffer.threads[l].command = () => {
+                    let devices = get_devices();
+                    let old_get_devices = get_devices;
+                    let old_canvas = canvas;
+                    let old_graphics = graphics;
+                    let old_dimensions = {};
+                    if (this.direct_render !== true) {
+                        canvas = this.canvas;
+                        graphics = this.graphics;
+                    }
+                    if (this.direct_render !== true) {
+                        devices.mouse.x -= this.x;
+                        devices.mouse.y -= this.y;
+                    }
+                    let old_keyboard = {
+                        keys: devices.keyboard.keys,
+                        keyCodes: devices.keyboard.keyCodes,
+                        info: devices.keyboard.info,
+                        keyCode: devices.keyboard.keyCode,
+                        info: devices.keyboard.info
+                    };
+                    if (this.has_focus === false) {
+                        devices.keyboard.keys = [];
+                        devices.keyboard.keyCodes = [];
+                        devices.keyboard.keyCode = 0;
+                        devices.keyboard.pressed = false;
+                        devices.keyboard.info = {};
+                    }
+                    get_devices = function () {
+                        return devices;
+                    }
+    
+                    window_exec = this;
+                    command(canvas, graphics);
+                    window_exec = null;
+    
+                    canvas = old_canvas;
+                    graphics = old_graphics;
+                    get_devices = old_get_devices;
+                    if (this.direct_render !== true) {
+                        devices.mouse.x += this.x;
+                        devices.mouse.y += this.y;
+                    }
+                    devices.keyboard = old_keyboard;
+                };
+            }
             this.processes.push(process_buffer);
             push_process(process_buffer);
         }
@@ -182,8 +184,6 @@
         if (this.foreground === true)
             draw_surface = foreground_graphics;
         if (this.fade < 1) {
-
-            draw_surface.save();
             switch (animation) {
                 case 0:
                     draw_surface.globalAlpha = this.fade * alpha_value;
@@ -191,6 +191,9 @@
                     draw_surface.scale(this.fade, this.fade);
                     draw_surface.drawImage(this.canvas, 0, 0);
                     this.draw_top_bar(draw_surface, 0, 0, 1);
+                    draw_surface.resetTransform();
+                    draw_surface.globalAlpha = 1;
+                    draw_surface.scale(1, 1);
                     break;
                 case 1:
                     let adjusted_fade = Math.max(this.fade, 1 / this.canvas.width);
@@ -207,10 +210,10 @@
                     break;
 
             }
-
-            draw_surface.restore();
         } else {
-            draw_surface.drawImage(this.canvas, this.x, this.y);
+            // let image = this.graphics.getImageData(0, 0, this.canvas.width, this.canvas.height);
+            // draw_surface.putImageData(image, this.x, this.y);
+            draw_surface.drawImage(this.canvas, Math.round(this.x), Math.round(this.y));
             this.draw_top_bar(draw_surface, this.x, this.y, 1);
         }
     }
@@ -226,9 +229,7 @@
                 this.close();
                 return;
             }
-        }
-        //Movement
-        if (this.has_focus === true) {
+            //Movement
             if (devices.mouse.x > this.x && devices.mouse.x < this.x + this.canvas.width && devices.mouse.y > this.y - this.title_bar_height && devices.mouse.y < this.y && devices.mouse.pressed && this.dragged === false && this.has_focus) {
                 this.intital_drag = {
                     mouseX: devices.mouse.x,
@@ -341,33 +342,26 @@
     document.body.style.cursor = 'none';
     let time_marker = performance.now();
     let wm_round_trip = 0;
+    graphics.imageSmoothingEnabled = false
 
     let performance_display = () => {
-        graphics.save();
-        graphics.translate(76, 0)
-        graphics.strokeStyle = 'black';
-        graphics.fillStyle = 'black';
         graphics.font = '14px Monospace';
         graphics.fillStyle = '#AAAAEE';
-        graphics.fillRect(0, 0, 38, 30);
+        graphics.fillRect(76, 0, 38, 30);
         graphics.fillStyle = 'black';
-        graphics.fillText(Math.round(1000 / wm_round_trip), 10, 19);
-        graphics.restore();
+        graphics.fillText(Math.round(1000 / wm_round_trip), 86, 19);
     };
 
 
     let window_logic = function () {
-        for (let i = 0; i < windows.length; i++) {
-            windows[i].update_logic();
-            if (windows[i].dead === true) {
-                windows[i].kill();
-                windows.splice(i, 1);
-            }
-        }
         let requested_window_index;
         for (let i = 0; i < windows.length; i++) {
             let window = windows[i];
             window.update_logic();
+            if (window.dead === true) {
+                window.kill();
+                windows.splice(i, 1);
+            }
             if (window.request_focus === true) {
                 requested_window_index = i;
                 window.request_focus = false;
@@ -387,8 +381,6 @@
     let window_manager = function () {
         window_logic();
         graphics.drawImage(bg_canvas, 0, 0);
-        graphics.globalAlpha = alpha_value;
-        // graphics.putImageData(background_image, 0, 0);
         for (let i = 0; i < windows.length; i++)
             windows[i].draw(graphics, foreground_graphics);
         graphics.drawImage(foreground_graphics.canvas, 0, 0);
@@ -398,7 +390,6 @@
             cursor_handler(graphics);
             graphics.translate(-devices.mouse.x, -devices.mouse.y);
         }
-        graphics.globalAlpha = 1;
         let time_buffer = performance.now();
         wm_round_trip = time_buffer - time_marker;
         time_marker = time_buffer;
@@ -406,5 +397,5 @@
 
         sleep(1000 / monitor_refresh_rate);
     }
-    create_process(window_manager);
+    create_init(window_manager);
 }

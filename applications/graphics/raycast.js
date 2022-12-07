@@ -3,9 +3,9 @@ class RayCast{
         this.lights = [];
         this.objects = [];
         this.cycleCount = 0;
-        this.execSpeed = 1;
+        this.execSpeed = 10;
         this.lightness = 1;
-        this.lightQuality = 10; //The quality of the ray rendering
+        this.lightQuality = 40; //The quality of the ray rendering
         this.radConst = (1 / 360) * (2 * Math.PI);
         this.init = false;
 

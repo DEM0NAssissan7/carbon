@@ -150,7 +150,7 @@ function createIcon(iconFunction, x, y, size, create_windowFunction) {
 
   push_window(icon);
 }
-let icon_response_daemon = function() {
+let icond = function() {
   for(let i = 0; i < icons.length; i++){
     let icon = icons[i];
     let devices = get_devices();
@@ -164,9 +164,9 @@ let icon_response_daemon = function() {
       buttonClicked = true;
     }
   }
-  sleep(20);
+  sleep(40);
 }
-create_process(icon_response_daemon);
+create_init(icond);
 
 //Rayhamburger
 function rainbow() { }
@@ -252,6 +252,15 @@ creasedJacket = (canvas, graphics) => {
   graphics.fillRect(0, 0, canvas.width, canvas.height);
 }
 
+let epic = (canvas, graphics) => {
+  let gradient = graphics.createLinearGradient(0, 0, 0, canvas.height);
+  gradient.addColorStop("0", "white");
+  // gradient.addColorStop("0.5" ,"purple");
+  gradient.addColorStop("1.0", "gray");
+  graphics.fillStyle = gradient;
+  graphics.fillRect(0, 0, canvas.width, canvas.height);
+}
+
 GenericBackground = (canvas, graphics) => {
   graphics.fillStyle = "gray";
   graphics.fillRect(0, 0, canvas.width, canvas.height);
@@ -262,6 +271,7 @@ GenericBackground = (canvas, graphics) => {
 // backgroundFunction = imageBackground;
 // backgroundFunction = BandaiNamco;
 backgroundFunction = creasedJacket;
+backgroundFunction = epic;
 createBackgroundWindow = () => {
   // let backgroundCanvas = document.createElement("canvas");
   // backgroundCanvas.width = canvas.width;
@@ -320,7 +330,14 @@ errorScreenFunction = kshellErrorScreenDaemon;
 //Create background window
 createBackgroundWindow();
 //Create dock icons
-appDockSystem.createIcons();
+{
+  let shell = function(){
+    appDockSystem.createIcons();
+    sleep(100);
+    exit();
+  }
+  create_init(shell);  
+}
 //Play startup sound
 if(play_startup === true)
   play_sound("desktop/assets/startup.ogg");

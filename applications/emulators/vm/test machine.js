@@ -29,4 +29,4 @@ let vm_kernel = {
 }
 VM.set_program(test_program);
 VM.print_debug();
-create_process (() => {runVM(VM, 3)});
+create_init (() => {runVM(VM, 3)});

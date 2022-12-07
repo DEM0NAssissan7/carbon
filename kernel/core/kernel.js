@@ -155,7 +155,7 @@ let canvas, graphics, webgl;
         if (continue_testing === true)
             panic("No time tracker was able to be established.");
     }
-    let get_time = function () {
+    function get_time() {
         return Math.floor(time_tracker() * 100) / 100;
     }
 
@@ -174,26 +174,26 @@ let canvas, graphics, webgl;
 
     //Statistics
     let statistics = [];
-    let Statistic = function(name){
+    let Statistic = function (name) {
         this.statistic_name = name;
         this.value = 0;
     }
-    let create_statistic = function(name){
+    let create_statistic = function (name) {
         statistics.push(new Statistic(name));
     }
-    let find_statistic = function(name){
-        for(let i = 0; i < statistics.length; i++)
-            if(statistics[i].statistic_name === name)
+    let find_statistic = function (name) {
+        for (let i = 0; i < statistics.length; i++)
+            if (statistics[i].statistic_name === name)
                 return statistics[i];
         return null;
     }
-    let increment_statistic = function(name){
+    let increment_statistic = function (name) {
         find_statistic(name).value++;
     }
-    let get_statistic = function(name){
+    let get_statistic = function (name) {
         return find_statistic(name).value;
     }
-    function get_kernel_statistics(){
+    function get_kernel_statistics() {
         return JSON.parse(JSON.parse(statistics));
     }
 
@@ -234,18 +234,20 @@ let canvas, graphics, webgl;
         }
     }
 
+    //Internal use functions
+    let run_command_buffer = function (command) {
+        (function () { command(); })();
+    }
+
     //Kernel daemons
     let kernel_daemons = [];
     let Kernel_daemon = function (handler) {
         this.command = handler;
         this.daemon_name = handler.name;
-        this.exec_time = 0;
     }
     Kernel_daemon.prototype.run = function () {
         try {
-            let time_marker = get_time();
-            this.command();
-            this.exec_time = get_time() - time_marker;
+            run_command_buffer(this.command);
         } catch (e) {
             console.error(e);
             panic("Kernel daemon '" + this.daemon_name + "' encountered an error.");
@@ -273,12 +275,19 @@ let canvas, graphics, webgl;
 
     //Uptime
     function raw_uptime() {
-        return Date.now() - Kernel.start_time;
+        let full_uptime = Date.now() - Kernel.start_time
+        let suspended_time = get_suspended_time();
+        let result = {
+            total: full_uptime,
+            suspended: suspended_time,
+            active: full_uptime - suspended_time
+        }
+        return result;
     }
     function uptime() {
         let uptime_message;
         {
-            let uptime_buffer = raw_uptime();
+            let uptime_buffer = raw_uptime().total;
             let seconds = Math.floor(uptime_buffer / 1000 % 60)
             let minutes = Math.floor(uptime_buffer / 1000 / 60 % 60);
             let hours = Math.floor(uptime_buffer / 1000 / 3600);
@@ -287,7 +296,7 @@ let canvas, graphics, webgl;
 
         let running_message;
         {
-            let active_uptime = raw_uptime() - get_suspended_time();
+            let active_uptime = raw_uptime().active;
             let seconds = Math.floor(active_uptime / 1000 % 60);
             let minutes = Math.floor(active_uptime / 1000 / 60 % 60);
             let hours = Math.floor(active_uptime / 1000 / 3600);
@@ -315,40 +324,84 @@ let canvas, graphics, webgl;
         }
     }
 
-    //Processes
-    let processes = [];
+    //Threads
     let PIDs = 0;
-    let process_time = 0;
-    let process_time_buffer = 0;
-    let Process = function (command) {
+    let thread_in_execution = null;
+    let Thread = function (command) {
         this.command = command;
-        this.process_name = command.name;
+        this.process = process_in_execution.PID;
+        if (process_in_execution === null)
+            error("A thread was created outside of a process context.");
         this.sleep_time = 0;
-        this.time_marker = 0;
-        this.creation_time = get_time();
-        this.full_execution_time = 0;
         this.last_execution = 0;
-        this.exec_time = 0;
-        this.cpu_time = 0;
         this.marked = false;
-        this.suspended = false;
         this.dead = false;
         this.PID = PIDs;
         PIDs++;
     }
-    Process.prototype.run = function (time_marker) {
+    Thread.prototype.run = function () {
+        this.last_execution = get_time();
+        thread_in_execution = this;
         try {
-            this.full_execution_time = time_marker - this.last_execution;
-            this.last_execution = time_marker;
-            this.command();
-            this.exec_time = get_time() - time_marker;
-            process_time_buffer += this.exec_time;
-            this.cpu_time += Math.floor(this.exec_time);
+            run_command_buffer(this.command);
         } catch (e) {
-            console.error("Process " + this.process_name + " (" + this.PID + ") has encountered an error.");
-            console.error(e);
-            this.dead = true;
+            if (e !== "interrupt") {
+                console.error("Process " + this.process_name + " (" + this.PID + ") has encountered an error.");
+                console.error(e);
+                this.dead = true;
+            }
         }
+    }
+    //Processes
+    let processes = [];
+    let process_time = 0;
+    let user_time_buffer = 0;
+    let process_in_execution = null;
+    let Process = function (command) {
+        this.process_name = command.name;
+        this.threads = [];
+        if (process_in_execution === null)
+            error("Process '" + this.process_name + "' was created outside of a process context.");
+        this.parent = process_in_execution.PID;
+        this.creation_time = get_time();
+        this.starting_uptime = raw_uptime().active;
+        this.full_execution_time = 0;
+        this.exec_time = 0;
+        this.cpu_time = 0;
+        this.suspended = false;
+        this.dead = false;
+        this.PID = PIDs;
+
+        //Main thread creation
+        process_in_execution = this;
+        this.threads.push(new Thread(command));
+    }
+    Process.prototype.run = function (time_marker, start_time, target_time) {
+        process_in_execution = this;
+        this.full_execution_time = time_marker - this.last_execution;
+        this.last_execution = time_marker;
+        if (this.suspended === false) {
+            for (let i = 0; i < this.threads.length; i++) {//Run all threads
+                let thread = this.threads[i];
+                if (thread.dead === true)
+                    this.threads.splice(i, 1);
+                else if (thread.sleep_time + thread.last_execution <= start_time)
+                    thread.run();
+                if (thread.last_execution >= target_time) //Scheduler watchdog
+                    break;
+            }
+        }
+        if (this.threads.length === 0)
+            this.dead = true;
+        let time_buffer = get_time();
+        this.exec_time = time_buffer - time_marker;
+        user_time_buffer += this.exec_time;
+        this.cpu_time += Math.floor(this.exec_time * 100) / 100;
+        return time_buffer;
+    }
+    Process.prototype.thread = function (command) {
+        process_in_execution = this;
+        this.threads.push(new Thread(command));
     }
     function create_process(command) {
         processes.push(new Process(command));
@@ -360,7 +413,7 @@ let canvas, graphics, webgl;
     function push_process(process) {
         processes.push(process);
     }
-    function find_by_pid(PID) {
+    let find_by_pid = function (PID) {
         let result = {
             index: {},
             process: {}
@@ -520,8 +573,8 @@ let canvas, graphics, webgl;
     }
 
     //Sound
-    function play_sound(url){
-        try{
+    function play_sound(url) {
+        try {
             new Audio(url).play();
         } catch (e) {
             error("Sound '" + url + "' failed to play.");
@@ -565,25 +618,20 @@ let canvas, graphics, webgl;
         }
     }
 
+    //System process
+    let system_process;
+    {
+        let system = () => {
+            sleep(10000);
+        };
+        process_in_execution = { PID: 0 };
+        thread_in_execution = {};
+        system_process = new Process(system);
+        process_in_execution = null;
+        thread_in_execution = null;
+    }
+
     //Scheduler
-    let ktasks = [];
-    let kTask = function (command) {
-        this.command = command;
-        this.nice = 10;
-    }
-    kTask.prototype.run = function () {
-        try {
-            this.command();
-        } catch (e) {
-            console.error(e);
-            panic("A critical kernel task has encountered an error");
-        }
-    }
-    let create_ktask = function (command) {
-        ktasks.push(new kTask(command));
-    }
-    let threads = [];
-    let thread_in_execution;
     let waiting_processes = 0;
     let scheduler_run_count = 0;
     let sched_overhead = 0;
@@ -593,89 +641,56 @@ let canvas, graphics, webgl;
     create_statistic("on_time_threads");
     let scheduler = function () {
         if (system_suspended !== true) {
-            const start_time = get_time();
-            if (threads.length === 0) {//Fill threads with processes
-                for (let i = 0; i < ktasks.length; i++)
-                    threads.push(ktasks[i]);
-                for (let i = 0; i < processes.length; i++) {
-                    let process = processes[i];
-                    if (process.dead === true)
-                        processes.splice(i, 1);
-                    else if (process.sleep_time + process.time_marker <= start_time && process.suspended === false)
-                        threads.push(processes[i]);
-                }
+            let start_time = get_time();
+            let target_time = 1000 / minimum_cycle_rate + start_time;
+            let time_marker = start_time;
+            processes.sort((a, b) => a.exec_time - b.exec_time);//Prioritize light processes
+            user_time_buffer = 0;
+            for (let i = 0; i < processes.length; i++) {
+                let process = processes[i];
+                time_marker = process.run(time_marker, start_time, target_time);
+                if (process.dead === true)
+                    processes.splice(i, 1);
             }
-            const target_time = 1000 / minimum_cycle_rate + start_time;
-            waiting_processes = threads.length - ktasks.length;
-            if (track_cycle_info === true) {
-                if (waiting_processes < 1){
-                    increment_statistic("useless_cycles");
-                    threads = [];
-                } else {
-                    let common_exec_time = Math.floor(threads[ktasks.length].time_marker + threads[ktasks.length].sleep_time);
-                    let is_consistent = true;
-                    for (let i = ktasks.length; i < threads.length; i++) {
-                        let thread = threads[i];
-                        let execution_point = Math.floor(thread.time_marker + thread.sleep_time);
-                        if (execution_point !== common_exec_time)
-                            is_consistent = false;
-                        if (execution_point < Math.floor(start_time)) {
-                            increment_statistic("late_threads");
-                            is_consistent = false;
-                        }
-                        if (execution_point === Math.floor(start_time))
-                            increment_statistic("on_time_threads");
-                        else
-                            is_consistent = false;
-                    }
-                    if (is_consistent === true)
-                        increment_statistic("perfect_cycles");
-                }
-            }
-            process_time_buffer = 0;
-            //Prioritize light tasks to run first
-            threads.sort((a, b) => a.exec_time - b.exec_time);
-            let time_marker;
-            while (threads.length > 0) {
-                let thread = threads[0];
-                thread_in_execution = thread;
-                time_marker = get_time();
-                if (time_marker >= target_time) //Scheduler watchdog
-                    break;
-                thread.run(time_marker);
-                if (thread.time_marker === 0 && thread.marked !== true) {
-                    warn(thread.process_name + " (" + thread.PID + ") did not call sleep().");
-                    thread.marked = true;
-                }
-                threads.splice(0, 1);
-            }
-            sched_overhead = get_time() - start_time - process_time_buffer;
-            process_time = process_time_buffer;
-            scheduler_run_count++;
+            process_in_execution = null;
             thread_in_execution = null;
+            sched_overhead = get_time() - start_time - user_time_buffer;
+            process_time = user_time_buffer;
+            scheduler_run_count++;
         }
     }
 
-    //Thread management APIs
+    //Thread-process management APIs
     {
         let run_kernel_api = function (handler) {
-            if (thread_in_execution !== null) {
+            if (thread_in_execution !== null && process_in_execution !== null)
                 handler();
-            } else {
-                warn("A kernel API was called outside of a process context.");
-            }
+            else
+                warn("A kernel API was called outside of a process context. (process: " + process_in_execution + ", thread: " + thread_in_execution + ")");
+        }
+        function interrupt() {
+            throw "interrupt";
         }
         function sleep(timeout) {
             run_kernel_api(() => {
                 thread_in_execution.sleep_time = timeout;
-                thread_in_execution.time_marker = thread_in_execution.last_execution;
+            });
+        }
+        function thread(command) {
+            run_kernel_api(() => {
+                process_in_execution.thread(command);
             });
         }
         function fork() {
             run_kernel_api(() => {
-                let forked_process = new Process(thread_in_execution.command);
-                forked_process.process_name = thread_in_execution.process_name;
-                processes.push(forked_process);
+                // let process = new Process(process_in_execution.command);
+                // process.process_name = thread_in_execution.process_name;
+                processes.push(process_in_execution);
+            });
+        }
+        function exec(command) {
+            run_kernel_api(() => {
+                thread_in_execution.command = command;
             });
         }
         function getpid() {
@@ -691,17 +706,19 @@ let canvas, graphics, webgl;
             });
         }
         function proc() {
-            return thread_in_execution;
+            return process_in_execution;
         }
     }
 
     //Timer management
-    /* I don't know whether to make this exposed as an API or make it kernel-level only */
     let timers = [];
     function create_timeout(handler, time) {
         if (panicked === false) {
+            let process_context = process_in_execution;
             let timer_id = set_timeout(() => {
+                process_in_execution = process_context
                 handler();
+                process_in_execution = null;
                 timers.splice(timer_id);
             }, time);
             timers.push(timer_id);
@@ -731,7 +748,6 @@ let canvas, graphics, webgl;
     let system_time = 0;
     let kernel_overhead = 0;
     if (track_performance === true) {
-        let scheduler_performance = 0;
         let low_performance_mode = false;
         let percent_total = 0;
         let percent_system = 0;
@@ -760,12 +776,6 @@ let canvas, graphics, webgl;
             }
             add_kernel_daemon(performance_tracker);
         }
-        let scheduler_performance_timer = get_time();
-        create_ktask(() => {
-            const current_time = get_time();
-            scheduler_performance = current_time - scheduler_performance_timer;
-            scheduler_performance_timer = current_time;
-        });
         //Gauge performance
         {
             let performance_tracker = handler => {
@@ -798,10 +808,8 @@ let canvas, graphics, webgl;
         }
         function get_performance() {
             const const_realtime_performance = realtime_performance;
-            const const_scheduler_performance = scheduler_performance;
             let result = {
                 realtime: const_realtime_performance,
-                scheduler: const_scheduler_performance,
                 average: load_average,
                 percent: percent_total * 100,
                 percent_user: (percent_total - percent_system) * 100,
@@ -813,6 +821,7 @@ let canvas, graphics, webgl;
             }
             return result;
         }
+        //QOL functions
         function ktop() {
             let output_text = "";
             let add_text = function (line) {
@@ -852,10 +861,66 @@ let canvas, graphics, webgl;
             let sorted_processes = processes.sort((a, b) => b.cpu_time - a.cpu_time);
             for (let i = 0; i < sorted_processes.length; i++) {
                 let process = sorted_processes[i];
-                add_text(process.process_name + "(" + process.PID + ") - " + (Math.round(process.cpu_time / ((get_time() - process.creation_time) - get_suspended_time()) * 10000) / 100) + "% CPU - " + (Math.round(process.cpu_time / 10) / 100) + " seconds CPU time - " + round_hundredth(process.exec_time) + "ms exec time - " + Math.round(process.sleep_time) + "ms sleep time");
+                add_text(process.process_name + "(" + process.PID + ") - " + (Math.round(process.cpu_time / (raw_uptime().active - process.starting_uptime) * 10000) / 100) + "% CPU - " + (Math.round(process.cpu_time / 10) / 100) + " seconds CPU time - " + round_hundredth(process.exec_time) + "ms exec time - " + Math.round(process.sleep_time) + "ms sleep time");
             }
 
             return output_text;
+        }
+        function get_system_info() {
+            let get_percent = function (number) {
+                return number * 100;
+            }
+            let useless_cycles = get_statistic("useless_cycles");
+            let perfect_cycles = get_statistic("perfect_cycles");
+            let late_threads = get_statistic("late_threads");
+            let on_time_threads = get_statistic("on_time_threads");
+            let result = {
+                usage: {
+                    total: get_percent(percent_total),
+                    user: get_percent(percent_total - percent_system),
+                    system: get_percent(percent_system),
+                    idle: get_percent(1 - percent_total),
+                    load_average: load_average
+                },
+                info: {
+                    system_time: system_time,
+                    kernel_overhead: kernel_overhead,
+                    sched_overhead: sched_overhead,
+                    realtime: realtime_performance,
+                    js_overhead: system_overhead,
+                },
+                statistics: {
+                    useless_cycles: useless_cycles,
+                    perfect_cycles: perfect_cycles,
+                    sched_run_count: scheduler_run_count,
+                    late_threads: late_threads,
+                    on_time_threads: on_time_threads,
+                    total_threads_run: late_threads + on_time_threads,
+                },
+                processes: []
+            }
+            for (let i = 0; i < processes.length; i++) {
+                let process = processes[i];
+                let process_name = process.process_name;
+                if (process_name === "")
+                    process_name = "unnamed";
+                let process_buffer = {
+                    process_name: process_name,
+                    PID: process.PID,
+                    cpu_time: process.cpu_time,
+                    exec_time: process.exec_time,
+                    sleep_time: process.sleep_time,
+                    creation_time: process.creation_time,
+                    starting_uptime: process.starting_uptime
+                }
+                result.processes.push(process_buffer);
+            }
+            return result;
+        }
+        function perf_track(command) {
+            let time_marker = get_time();
+            command();
+            return get_time() - time_marker;
         }
     }
 
@@ -879,10 +944,13 @@ let canvas, graphics, webgl;
                 let time_buffer = get_time();
                 for (let i = 0; i < processes.length; i++) {
                     let process = processes[i];
-                    if (process.time_marker !== 0) {
-                        let process_scheduled_exec = process.time_marker + process.sleep_time - time_buffer;
-                        if (process_scheduled_exec < minimum_execution_point)
-                            minimum_execution_point = process_scheduled_exec;
+                    for (let l = 0; l < process.threads.length; l++) {
+                        let thread = process.threads[l];
+                        if (thread.sleep_time !== 0) {
+                            let scheduled_exec = thread.last_execution + thread.sleep_time - time_buffer;
+                            if (scheduled_exec < minimum_execution_point)
+                                minimum_execution_point = scheduled_exec;
+                        }
                     }
                 }
                 if (manage_power === true && minimum_execution_point !== Infinity)
@@ -917,24 +985,46 @@ let canvas, graphics, webgl;
         let scheduler_cycle_count = 0;
         let cycle_count_buffer = 0;
         let timer = 0;
+        const watchdog_timeout = 3000;
         let overload_monitor = function () {
             if (system_suspended !== true) {
                 if (cycle_count_buffer === scheduler_cycle_count) {
-                    warn("Overload monitor has been detected");
+                    warn("Overload monitor has been triggered");
                 } else if (cycle_count_buffer < scheduler_cycle_count) {
                     timer = get_time();
                     cycle_count_buffer = scheduler_cycle_count;
                 }
-                if (get_time() - timer > 3000)
+                if (get_time() - timer > watchdog_timeout)
                     panic("System has been overloaded");
             } else {
                 timer = get_time();
             }
         }
         create_interval(overload_monitor, 2500);
-        create_ktask(() => { scheduler_cycle_count++; });
+        system_process.thread(() => {
+            scheduler_cycle_count++;
+            sleep(watchdog_timeout / 2);
+        });
     }
 
+    //Init
+    {
+        let inits = [];
+        system_process.thread(() => {
+            if(inits.length !== 0){
+                for (let i = inits.length; i > 0; i--) {
+                    debug("Intializing " + inits[0].name);
+                    create_process(inits[0])
+                    inits.splice(0, 1);
+                }
+            }
+            sleep(500);
+        });
+        function create_init(command) {
+            inits.push(command);
+        }
+        push_process(system_process);
+    }
     //Main loop
     let execution_count = 0;
     {

@@ -167,6 +167,6 @@ try {
       tty.draw(canvas, graphics);
       tty.update();
     }
-    create_process(terminal);
+    create_init(terminal);
   }
 } catch (error) { }

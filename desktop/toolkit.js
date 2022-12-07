@@ -131,13 +131,13 @@ function listSelector(graphics, variable, options, x, y, w, h, text, customFunct
     return result;
 }
 //Reset button clicked status
-let toolkit_daemon = function(){
+let toolkitd = function(){
     if(get_devices().mouse.clicked === false){
         buttonClicked = false;
     }
     sleep(20)
 }
-create_process(toolkit_daemon);
+create_init(toolkitd);
 //Animation handler
 function animateAcceleration(value, targetSize, time) {
     if(animateSystem === true){
@@ -196,8 +196,6 @@ function setTheme(is_darkmode){
     }
     let bg_color = "rgb(" + scaleBg(result.r) + ", " + scaleBg(result.g) + ", " + scaleBg(result.b) + ")";
     // background = "white"
-
-    console.log(accent_color, bg_color);
 
     if(darkmode === true){
         colorScheme = {

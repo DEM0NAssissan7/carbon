@@ -53,7 +53,7 @@ class Paint{
             this.draw_points = [];
             this.released = false;
         }
-        sleep(50);
+        sleep(20);
     }
     create_window(){
         let paint_instance = new Paint();
