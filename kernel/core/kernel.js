@@ -1048,7 +1048,7 @@ let canvas, graphics, webgl;
                 panic("Kernel execution encountered an error.");
             }
         }
-        console.debug(Kernel.name + " " + Kernel.version);
+        console.log(Kernel.name + " " + Kernel.version);
         try {
             debug("Starting kernel");
             main();
