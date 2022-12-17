@@ -339,7 +339,7 @@
     }
 
     //Init
-    document.body.style.cursor = 'none';
+    document.body.style.cursor = "none";
     let time_marker = performance.now();
     let wm_round_trip = 0;
     graphics.imageSmoothingEnabled = false

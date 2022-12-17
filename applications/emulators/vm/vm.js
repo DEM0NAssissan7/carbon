@@ -25,6 +25,25 @@ Set specs as needed.
             target.push(binary[i]);
         }
     }
+    let insdc = function(verb, binary){
+        return {
+            verb: verb,
+            binary: binary
+        }
+    }
+    let instruction_description_table = [
+        insdc("lod", 0),
+        insdc("str", 1),
+        insdc("set", 2),
+        insdc("add", 3),
+        insdc("jdmp", 4),
+        insdc("sub", 5),
+        insdc("and", 6),
+        insdc("brc", 7),
+        insdc("hlt", 8),
+        insdc("rld", 9),
+        insdc("cbr", 10),
+    ]
     let VMIDs = 0;
 
     class CarboniteVM {
@@ -38,19 +57,23 @@ Set specs as needed.
             this.instruction_length = 4 + this.arch;
             this.increment = Math.floor(this.instruction_length / 8) + 1;
 
+            //Vectors
+            this.reset_vector = 64;
+
             //Initialize data sets
             this.ram = new Uint8Array(ram_size);
             this.reg = 0;
             this.cache = [];
             this.program_counter = 0;
             this.halt = false;
+            this.output = [];
 
             /* Instruction set:
                 0: LOD (reg = m) [0000]
                 1: STR (m = reg) [0001]
                 2: SET (reg = arg) [0010]
                 3: ADD (reg += op) [0011]
-                4: DMP (dump register contents through outputs) [0100]
+                4: DMP (dump register contents through console.log) [0100]
                 5: SUB (reg = XOR(reg, m) ) [0101]
                 6: AND (reg = AND(reg, m)) [0110]
                 7: BRC (pc = m) [0111]
@@ -122,9 +145,8 @@ Set specs as needed.
         clock() {
             if (this.halt === false) {
                 this.opcode_buffer = 0;
-                for(let i = 1; i < this.increment; i++){
+                for(let i = 1; i < this.increment; i++)
                     this.opcode_buffer += this.ram[this.program_counter + i];
-                }
                 try{
                     let instruction_output = this.instruction_set[this.ram[this.program_counter]](this.opcode_buffer);
 
@@ -181,6 +203,15 @@ Set specs as needed.
         }
     }
     function convert_program_to_decimal(program) {
+
+    }
+}
+
+class VMGUI{
+    constructor(){
+        this.vm = createVM(256, 8, 1);
+    }
+    update(){
 
     }
 }

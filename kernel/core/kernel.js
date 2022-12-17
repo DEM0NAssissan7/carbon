@@ -326,6 +326,7 @@ let canvas, graphics, webgl;
                 this.dead = true;
             }
         }
+        waiting_processes++;
     }
     //Processes
     let processes = [];
@@ -712,6 +713,7 @@ let canvas, graphics, webgl;
     let system_overhead = 0;
     let system_time = 0;
     let kernel_overhead = 0;
+    let waiting_processes = 0;
     if (track_performance === true) {
         let low_performance_mode = false;
         let percent_total = 0;
@@ -740,8 +742,8 @@ let canvas, graphics, webgl;
 
                     if (scheduler_run_count >= 1) {
                         let n = Math.min(scheduler_run_count - 1, 5000 / realtime_performance);
-                        // load_average = (waiting_processes + n * load_average) / (n + 1);
-                        // waiting_processes = 0;
+                        load_average = (waiting_processes + n * load_average) / (n + 1);
+                        waiting_processes = 0;
                     }
                 }
             }
