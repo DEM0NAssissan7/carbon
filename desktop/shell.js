@@ -141,8 +141,8 @@ function createIcon(iconFunction, x, y, size, create_windowFunction) {
   icon.original_processes = [iconRender, iconKiller];
   icon.x = x;
   icon.y = y;
-  icon.canvas.width = size;
-  icon.canvas.height = size;
+  icon.canvas.width = size * global_scale;
+  icon.canvas.height = size * global_scale;
   icon.title_bar_height = 0;
   icon.focusable = false;
   icon.foreground = true;
@@ -185,11 +185,12 @@ rainbow.prototype.create_window = function () {
 //Add applications
 addApplicationFromClass(TTY);//JSTerm
 addApplicationFromClass(Settings);//Settings
+addApplicationFromClass(FileBrowser);//File Browser
 addApplicationFromClass(SOTF);//Survival of the Fittest
 addApplicationFromClass(Octane);//Game Engine
-addApplicationFromClass(Paint);//Physics
+addApplicationFromClass(Paint);//Paint
 addApplicationFromClass(Physics);//Physics
-addApplicationFromClass(RayCast);//Physics
+addApplicationFromClass(RayCast);//Ray Casting
 addApplicationFromClass(CookieClicker);//Cookie Clicker
 addApplicationFromClass(Gcode);//Gcode
 addApplicationFromClass(SystemMonitor);//System Monitor
@@ -346,3 +347,6 @@ if(play_startup === true)
 function updateAppDockSystem() {
   appDockSystem.update();
 }
+
+//The help file
+create_file("help", "Welcome to Graphite! This is a shitty operating system thing that I decided to make a while back.\nIt has gone through numerous rewrites, and a majority of the focus was put on the kernel because it seems like the part that has the most potential.\nIt is also critical the kernel is as stable and well-worked as possible. We build buildings from the foundation, not the top floor.\n Hope you enjoy! (It might have potential for real-world use... maybe)", "text");

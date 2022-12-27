@@ -12,6 +12,7 @@
             "desktop/toolkit.js",
             "applications/system/settings.js",
             "applications/games/sotf.js",
+            "applications/system/file-browser.js",
             "applications/development/octane.js",
             "applications/development/gcode.js",
             "applications/experimentation/signal-processing.js",

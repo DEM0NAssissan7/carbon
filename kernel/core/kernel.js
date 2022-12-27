@@ -38,6 +38,8 @@ if (typeof System === "object") {
 let canvas, graphics, webgl;
 
 {
+    /* Kernel Execution Context */
+
     //Option variables
     const suspend_on_unfocus = true;
     const print_debug_logs = false;
@@ -58,10 +60,9 @@ let canvas, graphics, webgl;
 
     const do_logging = true;
     const error_handler = true;
-    const track_cycle_info = true;
 
     const use_watchdog = true;
-    const overload_protection = true;
+    const overload_protection = false;
 
     //Auto-set constants
     const windowed = (typeof window !== "undefined");
@@ -543,6 +544,34 @@ let canvas, graphics, webgl;
         document.body.appendChild(canvas);
     }
 
+    //Files
+    let files = [];
+    let fsFile = function(name, data, type){
+        this.name = name;
+        this.data = data;
+        if(type !== undefined)
+            this.type = type;
+        else
+            this.type = "text";
+    }
+    function get_files(){
+        return JSON.parse(JSON.stringify(files));
+    }
+    function read_file(name){
+        for(let i = 0; i < files.length; i++)
+            if(files[i].name === name)
+                return files[i];
+    }
+    function create_file(name, data, type){
+        files.push(new fsFile(name, data, type));
+    }
+    function export_filesystem(){
+        return JSON.stringify(files);
+    }
+    function import_filesystem(filesystem){
+        files = JSON.parse(filesystem);
+    }
+
     //Sound
     function play_sound(url) {
         try {
@@ -597,7 +626,7 @@ let canvas, graphics, webgl;
         };
         process_in_execution = { PID: 0 };
         thread_in_execution = {};
-        system_process = new Process(system);
+        system_process = spawn_process(system);
         process_in_execution = null;
         thread_in_execution = null;
     }

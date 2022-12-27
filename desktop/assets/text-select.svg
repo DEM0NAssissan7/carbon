@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<svg viewBox="0 0 20 60" xmlns="http://www.w3.org/2000/svg">
-  <g style="" transform="matrix(0.524413, 0, 0, 1, -5.200334, -30.144957)">
-    <path style="fill: none; stroke: rgb(0, 0, 0); stroke-width: 3.93594px;" d="M 10.991 32.374 L 22.991 32.374 C 23.929 32.665 25.852 34.519 27.991 35.374 L 27.991 79.374"/>
-    <path style="fill: none; stroke: rgb(0, 0, 0); stroke-width: 3.93594px;" d="M 44.991 81.394 L 44.991 59.394 L 44.991 37.394 C 43.922 36.966 42.906 36.289 42.041 35.682 C 41.175 35.076 40.46 34.539 39.991 34.394 L 33.991 34.394 L 27.991 34.394" transform="matrix(-1, 0, 0, -1, 72.982, 115.787998)"/>
-    <path style="fill: none; stroke: rgb(0, 0, 0); stroke-width: 3.93594px;" d="M 27.975 79.374 L 39.975 79.374 C 40.913 79.083 42.836 77.229 44.975 76.374 L 44.975 32.374" transform="matrix(-1, 0, 0, -1, 72.949999, 111.748001)"/>
-    <path style="fill: none; stroke: rgb(0, 0, 0); stroke-width: 3.93594px;" d="M 10.994 81.374 L 22.994 81.374 C 23.932 81.083 25.855 79.229 27.994 78.374 L 27.994 34.374"/>
-  </g>
-</svg>
