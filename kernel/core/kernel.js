@@ -527,6 +527,48 @@ let canvas, graphics, webgl;
     }
 
     //Graphics
+    let Kimage = function (width, height) {
+        this.data_size = width * height * 4;
+        this.data = new Uint8Array(this.data_size);
+        this.width = width;
+        this.height = height;
+    };
+    Kimage.prototype.point = function (x, y, r, g, b, a) {
+        let index = x + y * this.width;
+        this.data[index] = r;
+        this.data[index + 1] = g;
+        this.data[index + 2] = b;
+        this.data[index + 3] = a;
+    };
+    Kimage.prototype.clear = function (r, g, b) {
+        for (let i = 0; i < this.height; i++){
+            let y = i * this.width;
+            for (let j = 0; j < this.width; j++){
+                let index = (j + y) * 4;
+                this.data[index] = r;
+                this.data[index + 1] = g;
+                this.data[index + 2] = b;
+                this.data[index + 3] = 255;
+            }
+        }
+    };
+    Kimage.prototype.draw_image = function (image, x, y) {
+        for (let i = 0; i < image.height; i++) {
+            let src_y = (i + y) * this.width;
+            let orig_y = i * image.width;
+            for (let j = 0; j < image.width; j++) {
+                let index = (x + j + src_y) * 4;
+                let o_index = (j + orig_y) * 4;
+                for (let k = 0; k < 4; k++)
+                    this.data[index + k] = image.data[o_index + k]
+            }
+        }
+    };
+    function create_image(width, height) {
+        return new Kimage(width, height);
+    }
+    let framebuffer;
+    let draw_framebuffer = () => {};
     if (use_graphics === true && windowed === true && is_browser === true) {
         debug("Initializing graphics stack");
         canvas = document.createElement("canvas");
@@ -542,6 +584,27 @@ let canvas, graphics, webgl;
         canvas.width = window.innerWidth - 20;
         canvas.height = window.innerHeight - 21;
         document.body.appendChild(canvas);
+
+        framebuffer = create_image(canvas.width, canvas.height);//New graphics pipeline API
+        function g_point(x, y, r, g, b, a) {
+            framebuffer.point(x, y, r, g, b, a);
+        }
+        function g_clear(r, g, b) {
+            framebuffer.clear(r, g, b);
+        }
+        function draw_image(image, x, y) {
+            framebuffer.draw_image(image, x, y);
+        }
+        draw_framebuffer = function () {
+            //Get a copy of the display data
+            let graphics_data = graphics.getImageData(0, 0, graphics.canvas.width, graphics.canvas.height);
+            //Reassign the image data to the framebuffer data
+            graphics_data.data.set(framebuffer.data);
+            // Clear the display
+            graphics.clearRect(0, 0, canvas.width, canvas.height);
+            // Write the framebuffer to the display
+            graphics.putImageData(graphics_data, 0, 0);
+        }
     }
 
     //Files
@@ -1013,6 +1076,7 @@ let canvas, graphics, webgl;
             try {
                 let time_marker = get_time();
                 system_overhead = time_marker - overhead_time_marker - execution_time;
+                // draw_framebuffer();
                 scheduler();//Run processes
                 run_kernel_daemons();
                 execution_count++;
