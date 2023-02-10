@@ -5,7 +5,9 @@
         let graphite = [
             [
             //Kernel
-            "kernel/core/kernel.js",
+            "kernel/core/newkernel.js",
+            "kernel/core/servers.js",
+            // "kernel/core/kernel.js",
             "kernel/extra/tools.js",
             //App manager
             "desktop/app-manager.js",
@@ -102,6 +104,13 @@
             ],
             "Thread Testing"
         ]
+        let microkernel = [
+            [
+                "kernel/core/newkernel.js",
+                "kernel/core/servers.js"
+            ],
+            "Microkernel"
+        ]
         let systems = [
             graphite,
             graphiteGui2,
@@ -110,6 +119,7 @@
             graphiteCore,
             thread_testing,
             bareKernel,
+            microkernel
         ]
         init_system(systems, kernel);//Leave this at the end
 }

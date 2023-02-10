@@ -56,9 +56,6 @@ if (typeof System === "object") {
     const windowed = (typeof window !== "undefined");
 
     //Debug logging
-    let debug = function () { };
-    let warn = function () { };
-    let error = function () { };
     if (do_logging === true) {
         let debug_logs = [];
         let debug_object = function (message, level) {
@@ -66,17 +63,17 @@ if (typeof System === "object") {
             this.level = level;
             this.date = Date.now();
         }
-        debug = function (message) {
+        function debug(message) {
             debug_logs.push(new debug_object(message, 0));
             if (print_debug_logs === true)
                 console.debug(message);
         }
-        warn = function (message) {
+        function warn (message) {
             debug_logs.push(new debug_object(message, 1));
             if (print_debug_logs === true)
                 console.warn(message);
         }
-        error = function (message) {
+        function error (message) {
             debug_logs.push(new debug_object(message, 2));
             if (print_error_logs === true)
                 console.error(message);
@@ -205,14 +202,14 @@ if (typeof System === "object") {
     {
         let time_suspended = 0;
         let time_marker = get_time();
-        let suspend_system = function () {
+        function suspend_system () {
             if (system_suspended !== true) {
                 execution_time = 500;
                 system_suspended = true;
                 time_marker = get_time();
             }
         }
-        let resume_system = function () {
+        function resume_system () {
             if (system_suspended !== false) {
                 execution_time = 0;
                 system_suspended = false;
@@ -247,7 +244,6 @@ if (typeof System === "object") {
         this.dead = false;
         this.PID = PIDs;
         PIDs++;
-        this.init();
     }
     Thread.prototype.run = function () {
         this.last_execution = get_time();
@@ -262,12 +258,6 @@ if (typeof System === "object") {
             }
         }
         waiting_processes++;
-    }
-    Thread.prototype.init = function(){
-        let task_code = `
-            ${this.command}
-        `
-        this.task = task(task_code);
     }
     //Processes
     let processes = [];
@@ -372,6 +362,8 @@ if (typeof System === "object") {
     }
 
     //Scheduler
+    let sched_overhead = 0;
+    let sched_run_count = 0;
     let scheduler = function () {
         if (system_suspended !== true) {
             let start_time = get_time();
@@ -389,7 +381,17 @@ if (typeof System === "object") {
             thread_in_execution = null;
             sched_overhead = get_time() - start_time - user_time_buffer;
             user_time = user_time_buffer;
+            sched_run_count++;
         }
+    }
+
+    //System info
+    function get_sys_info() {
+        let result = {
+            sched_run_count: sched_run_count,
+
+        }
+        return result;
     }
 
     //System call APIs
@@ -397,7 +399,7 @@ if (typeof System === "object") {
         if (thread_in_execution !== null && process_in_execution !== null)
             handler();
         else
-            throw new Error("A kernel API was called outside of a process context. (process: " + process_in_execution + ", thread: " + thread_in_execution + ")");
+            throw new Error("A system call was made outside of a process context. (process: " + process_in_execution + ", thread: " + thread_in_execution + ")");
     }
     let rootsyscall = function(handler){
         systemcall(() => {
