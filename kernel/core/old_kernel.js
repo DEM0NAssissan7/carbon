@@ -216,6 +216,26 @@ let canvas, graphics, webgl;
         }
     }
 
+    //Workers
+    function create_worker(handler){
+        console.log(`${handler}`)
+        return new Worker(
+            URL.createObjectURL(new Blob([`(${handler})();`]), {
+                type: 'application/javascript; charset=utf-8'
+            })
+        );
+    };
+
+    let func = () => {
+        onmessage = e => {
+            console.log(e);
+        }
+        console.log("init")
+    }
+    let worker = create_worker(func);
+    worker.postMessage("HIe");
+    console.log(worker)
+
     //Internal use functions
     let run_command_buffer = function (command) {
         // create_task(command)
@@ -306,16 +326,6 @@ let canvas, graphics, webgl;
             error_screen_handler = handler;
         }
     }
-
-    //Workers
-    function create_worker(handler){
-        console.log(`${handler}`)
-        return new Worker(
-            URL.createObjectURL(new Blob([`(${handler})();`]), {
-                type: 'application/javascript; charset=utf-8'
-            })
-        );
-    };
 
     //Threads
     let PIDs = 0;

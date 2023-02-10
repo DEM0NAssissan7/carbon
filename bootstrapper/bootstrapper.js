@@ -1,6 +1,6 @@
 {
     const print_loadout_message = true;
-    const boot_select_timeout = 500;
+    const boot_select_timeout = 300;
 
     let set_timeout = setTimeout;
 
@@ -9,7 +9,7 @@
         script.src = file;
         return script;
     }
-    function load_script(file){
+    let load_script = function(file){
         document.body.append(create_script_element(file));
     }
     let load_system = function(script_array){
@@ -17,7 +17,7 @@
         let name = script_array[1];
         console.warn("Loading " + name + "...");
         for(let i = 0; i < scripts.length; i++){
-            set_timeout(() => {
+            setTimeout(() => {
                 load_script(scripts[i]);
                 if(print_loadout_message === true){
                     console.log("Bootstrapper: Loaded " + scripts[i]);
@@ -26,7 +26,7 @@
         }
         document.title = name;
     }
-    function init_system(scripts, kernel){
+    function init_system(scripts){
         let interrupted = false;
         let prompt_interrupt = function(e) {//Escape key
             if(e.key === "Escape"){
@@ -34,7 +34,7 @@
             }
         }
         window.addEventListener('keydown', prompt_interrupt);
-        set_timeout(() => {
+        setTimeout(() => {
             if(interrupted === true){
                 console.warn("The system has been interrupted. Prompting load selection.");
                 for(let i = 0; i < Math.min(scripts.length, 9); i++){
@@ -44,17 +44,14 @@
                     if(e.key > 0 && e.key < scripts.length + 1){
                         document.open();
                         document.close();
-                        load_script(kernel);
                         load_system(scripts[e.key - 1]);
                         document.removeEventListener('keydown', boot_select_interruptor);
                     }
                 }
                 window.removeEventListener('keydown', prompt_interrupt);
                 window.addEventListener('keydown', boot_select_interruptor);
-            } else {
-                load_script(kernel);
+            } else
                 load_system(scripts[0]);
-            }
         }, boot_select_timeout);
     }
 }

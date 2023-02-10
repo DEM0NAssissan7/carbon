@@ -5,6 +5,7 @@
         let graphite = [
             [
             //Kernel
+            "kernel/core/kernel.js",
             "kernel/extra/tools.js",
             //App manager
             "desktop/app-manager.js",
@@ -35,6 +36,7 @@
         let graphiteGui2 = [
             [
             //Kernel
+            "kernel/core/kernel.js",
             "kernel/extra/tools.js",
             //Applications
             "desktop/toolkit.js",
@@ -53,6 +55,7 @@
         let sotfLaunch = [
             [
             //Kernel
+            "kernel/core/kernel.js",
             "kernel/extra/tools.js",
             //Applications
             "desktop/toolkit.js",
@@ -67,6 +70,7 @@
         let graphiteCore = [
             [
             //Kernel
+            "kernel/core/kernel.js",
             "kernel/extra/tools.js",
             //Stress Tools
             "kernel/extra/stresstest.js",
@@ -77,23 +81,34 @@
         ];
         let bareKernel = [
             [
+                "kernel/core/kernel.js",
             ],
             "Bare Kernel"
         ]
         let virtual_machine = [
             [
+            //Kernel
+            "kernel/core/kernel.js",
             //Applications
             "applications/emulators/vm/vm.js",
             "applications/emulators/vm/test machine.js",
             ],
             "Carbonite VM"
         ];
+        let thread_testing = [
+            [
+            "kernel/core/newkernel.js",
+            "kernel/core/threading.js",
+            ],
+            "Thread Testing"
+        ]
         let systems = [
             graphite,
             graphiteGui2,
             sotfLaunch,
             virtual_machine,
             graphiteCore,
+            thread_testing,
             bareKernel,
         ]
         init_system(systems, kernel);//Leave this at the end

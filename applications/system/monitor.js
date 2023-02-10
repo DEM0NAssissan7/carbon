@@ -3,6 +3,7 @@ class SystemMonitor{
         this.percent_data = [];
         this.offset = 0;
         this.menu = "processes";
+        this.previous_processes;
         this.element_spacing = 16;
         this.text_size = 12;
         this.spacing = 40;
@@ -27,12 +28,19 @@ class SystemMonitor{
 
             let processes = sys_info.processes;
             processes = processes.sort((a, b) => b.cpu_time - a.cpu_time)
+            if(!this.previous_processes)
+                this.previous_processes = processes;
             graphics.translate(0, this.spacing);
             graphics.font = this.text_size + "px Monospace";
             graphics.fillStyle = colorScheme.dialogueBackground;
             graphics.fillRect(0, 0, canvas.width, 1)
             for(let i = 0; i < processes.length; i++){
                 let process = processes[i];
+                let previous_process;
+                if(!this.previous_processes[i])
+                    previous_process = process;
+                else
+                    previous_process = this.previous_processes[i]
                 graphics.fillStyle = colorScheme.background;
                 graphics.fillRect(0, i * this.element_spacing + 1, canvas.width, this.element_spacing);
                 graphics.fillStyle = colorScheme.dialogueBackground;
@@ -41,13 +49,17 @@ class SystemMonitor{
                 //Name
                 graphics.fillText(process.process_name, 5, (i + 1) * this.element_spacing - (this.element_spacing - this.text_size) / 2, 160);
                 //CPU percent
-                graphics.fillText(Math.round(process.cpu_time / (raw_uptime().active - process.starting_uptime) * 100) + "%", 162, (i + 1) * this.element_spacing - (this.element_spacing - this.text_size) / 2, 20);
+                process.runtime = raw_uptime().active - process.starting_uptime;
+                if(!previous_process.runtime)
+                    previous_process.runtime = process.runtime;
+                graphics.fillText(Math.round((process.cpu_time - previous_process.cpu_time) / (process.runtime - previous_process.runtime) * 100) + "%", 162, (i + 1) * this.element_spacing - (this.element_spacing - this.text_size) / 2, 20);
                 //CPU time
                 graphics.fillText((Math.round(process.cpu_time / 10) / 100) + "s", 187, (i + 1) * this.element_spacing - (this.element_spacing - this.text_size) / 2, 40);
                 //CPU time
                 graphics.fillText(process.PID, 230, (i + 1) * this.element_spacing - (this.element_spacing - this.text_size) / 2, 40);
             }
             graphics.translate(0, -this.spacing);
+            this.previous_processes = processes;
         }
         if(this.menu === "graph"){
             graphics.strokeStyle = "blue";
@@ -73,7 +85,6 @@ class SystemMonitor{
     }
     create_window(){
         let app = new SystemMonitor();
-        let init = false;
         let sysmon = (canvas, graphics) => {
             app.renderGraphics(canvas, graphics);;
             sleep(3000);
