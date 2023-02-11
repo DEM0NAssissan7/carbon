@@ -53,7 +53,7 @@ let canvas, graphics, webgl;
     const manage_power = true;
 
     const use_graphics = true;
-    const use_frambuffer = false;
+    const use_framebuffer = false;
     const graphics_compatibility = true;
 
     const use_devices = true;
@@ -572,11 +572,19 @@ let canvas, graphics, webgl;
             throw new Error("Passed graphics reference is not the same size as the image.");
         this.data.set(graphics.getImageData(0, 0, graphics.canvas.width, graphics.canvas.height).data);
     }
+    Kimage.prototype.draw_to_graphics = function (graphics) {
+        if(graphics.canvas.width !== this.width || graphics.canvas.height !== this.height)
+            throw new Error("Passed graphics reference is not the same size as the image.");
+        
+        let graphics_data = graphics.getImageData(0, 0, graphics.canvas.width, graphics.canvas.height);
+        graphics_data.data.set(framebuffer.data);
+        graphics.clearRect(0, 0, canvas.width, canvas.height);
+        graphics.putImageData(graphics_data, 0, 0);
+    }
     function create_image(width, height) {
         return new Kimage(width, height);
     }
     let framebuffer;
-    let draw_framebuffer = () => {};
     if (use_graphics === true && windowed === true && is_browser === true) {
         debug("Initializing graphics stack");
         canvas = document.createElement("canvas");
@@ -593,7 +601,7 @@ let canvas, graphics, webgl;
         canvas.height = window.innerHeight - 21;
         document.body.appendChild(canvas);
 
-        if(use_frambuffer === true) {
+        if(use_framebuffer === true) {
             framebuffer = create_image(canvas.width, canvas.height);//New graphics pipeline API
             function g_point(x, y, r, g, b, a) {
                 framebuffer.point(x, y, r, g, b, a);
@@ -604,16 +612,10 @@ let canvas, graphics, webgl;
             function draw_image(image, x, y) {
                 framebuffer.draw_image(image, x, y);
             }
-            draw_framebuffer = function () {
-                //Get a copy of the display data
-                let graphics_data = graphics.getImageData(0, 0, graphics.canvas.width, graphics.canvas.height);
-                //Reassign the image data to the framebuffer data
-                graphics_data.data.set(framebuffer.data);
-                // Clear the display
-                graphics.clearRect(0, 0, canvas.width, canvas.height);
-                // Write the framebuffer to the display
-                graphics.putImageData(graphics_data, 0, 0);
+            let draw_framebuffer = function () {
+                framebuffer.draw_to_graphics(graphics);
             }
+            add_kernel_daemon(draw_framebuffer);
         }
     }
 
@@ -1086,7 +1088,6 @@ let canvas, graphics, webgl;
             try {
                 let time_marker = get_time();
                 system_overhead = time_marker - overhead_time_marker - execution_time;
-                draw_framebuffer();
                 scheduler();//Run processes
                 run_kernel_daemons();
                 execution_count++;
