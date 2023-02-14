@@ -76,6 +76,7 @@ class SystemMonitor{
         let init = false;
         let sysmon = (canvas, graphics) => {
             app.renderGraphics(canvas, graphics);;
+            call_draw();
             sleep(3000);
         }
         let process = spawn_process(sysmon);

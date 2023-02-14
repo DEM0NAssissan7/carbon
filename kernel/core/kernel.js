@@ -298,7 +298,7 @@ let canvas, graphics, webgl;
             error: undefined
         }
         let error_screen_daemon = () => { }
-        add_kernel_daemon(error_screen_daemon);
+        // add_kernel_daemon(error_screen_daemon);
         function set_error_screen(handler) {
             error_screen_handler = handler;
         }
@@ -530,67 +530,12 @@ let canvas, graphics, webgl;
     }
 
     //Graphics
-    let Kimage = function (width, height) {
-        this.data_size = width * height * 4;
-        this.data = new Uint8Array(this.data_size);
-        this.width = width;
-        this.height = height;
-    };
-    Kimage.prototype.point = function (x, y, r, g, b, a) {
-        let index = x + y * this.width;
-        this.data[index] = r;
-        this.data[index + 1] = g;
-        this.data[index + 2] = b;
-        this.data[index + 3] = a;
-    };
-    Kimage.prototype.clear = function (r, g, b) {
-        for (let i = 0; i < this.height; i++){
-            let y = i * this.width;
-            for (let j = 0; j < this.width; j++){
-                let index = (j + y) * 4;
-                this.data[index] = r;
-                this.data[index + 1] = g;
-                this.data[index + 2] = b;
-                this.data[index + 3] = 255;
-            }
-        }
-    };
-    Kimage.prototype.draw_image = function (image, x, y) {
-        for (let i = 0; i < image.height; i++) {
-            let src_y = (i + y) * this.width;
-            let orig_y = i * image.width;
-            for (let j = 0; j < image.width; j++) {
-                let index = (x + j + src_y) * 4;
-                let o_index = (j + orig_y) * 4;
-                for (let k = 0; k < 4; k++)
-                    this.data[index + k] = image.data[o_index + k]
-            }
-        }
-    };
-    Kimage.prototype.import_graphics = function(graphics) {
-        if(graphics.canvas.width !== this.width || graphics.canvas.height !== this.height)
-            throw new Error("Passed graphics reference is not the same size as the image.");
-        this.data.set(graphics.getImageData(0, 0, graphics.canvas.width, graphics.canvas.height).data);
-    }
-    Kimage.prototype.draw_to_graphics = function (graphics) {
-        if(graphics.canvas.width !== this.width || graphics.canvas.height !== this.height)
-            throw new Error("Passed graphics reference is not the same size as the image.");
-        
-        let graphics_data = graphics.getImageData(0, 0, graphics.canvas.width, graphics.canvas.height);
-        graphics_data.data.set(framebuffer.data);
-        graphics.clearRect(0, 0, canvas.width, canvas.height);
-        graphics.putImageData(graphics_data, 0, 0);
-    }
-    function create_image(width, height) {
-        return new Kimage(width, height);
-    }
-    let framebuffer;
     if (use_graphics === true && windowed === true && is_browser === true) {
         debug("Initializing graphics stack");
         canvas = document.createElement("canvas");
         if (!canvas)
             error("Graphics: Failed to create canvas.");
-        graphics = canvas.getContext('2d');
+        graphics = canvas.getContext('2d', { alpha: false });
         if (!graphics)
             error("Graphics: Failed to load 2d context.");
         webgl = canvas.getContext('webgl');
@@ -599,24 +544,8 @@ let canvas, graphics, webgl;
         canvas.id = "canvas";
         canvas.width = window.innerWidth - 20;
         canvas.height = window.innerHeight - 21;
+        canvas.style.translate = "translate3d(0,0,0)";
         document.body.appendChild(canvas);
-
-        if(use_framebuffer === true) {
-            framebuffer = create_image(canvas.width, canvas.height);//New graphics pipeline API
-            function g_point(x, y, r, g, b, a) {
-                framebuffer.point(x, y, r, g, b, a);
-            }
-            function g_clear(r, g, b) {
-                framebuffer.clear(r, g, b);
-            }
-            function draw_image(image, x, y) {
-                framebuffer.draw_image(image, x, y);
-            }
-            let draw_framebuffer = function () {
-                framebuffer.draw_to_graphics(graphics);
-            }
-            add_kernel_daemon(draw_framebuffer);
-        }
     }
 
     //Files
@@ -715,7 +644,7 @@ let canvas, graphics, webgl;
             let start_time = get_time();
             let target_time = 1000 / minimum_cycle_rate + start_time;
             let time_marker = start_time;
-            processes.sort((a, b) => a.exec_time - b.exec_time);//Prioritize light processes
+            // processes.sort((a, b) => a.exec_time - b.exec_time);//Prioritize light processes
             user_time_buffer = 0;
             for (let i = 0; i < processes.length; i++) {
                 let process = processes[i];
@@ -927,7 +856,7 @@ let canvas, graphics, webgl;
             let sorted_processes = processes.sort((a, b) => b.cpu_time - a.cpu_time);
             for (let i = 0; i < sorted_processes.length; i++) {
                 let process = sorted_processes[i];
-                add_text(process.process_name + "(" + process.PID + ") - " + (Math.round(process.cpu_time / (raw_uptime().active - process.starting_uptime) * 10000) / 100) + "% CPU - " + (Math.round(process.cpu_time / 10) / 100) + " seconds CPU time - " + round_hundredth(process.exec_time) + "ms exec time - " + Math.round(process.sleep_time) + "ms sleep time");
+                add_text(process.process_name + "(" + process.PID + ") - " + (Math.round(process.cpu_time / (raw_uptime().active - process.starting_uptime) * 10000) / 100) + "% CPU - " + (Math.round(process.cpu_time / 10) / 100) + " seconds CPU time - " + round_hundredth(process.exec_time) + "ms exec time - " + Math.round(process.threads[0].sleep_time) + "ms sleep time");
             }
 
             return output_text;

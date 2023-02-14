@@ -119,6 +119,7 @@ class Physics{
             create_thread(() => {this.objects[i].draw();});
         }
         create_thread(() => {
+            call_draw();
             graphics.drawImage(this.canvas, 0, 0, canvas.width, canvas.height);
         });
     }

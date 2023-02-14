@@ -76,6 +76,7 @@ class CookieClicker{
 
         this.timer.update();
         this.money += getTransition(this.cps, 1000, this.timer);
+        call_draw();
         sleep(50);
     }
     create_window(){

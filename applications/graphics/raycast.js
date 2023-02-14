@@ -117,6 +117,7 @@ class RayCast{
             exit();
 
         graphics.putImageData(this.image_data, 0, 0);
+        call_draw();
         sleep(100);
     }
     create_window(){

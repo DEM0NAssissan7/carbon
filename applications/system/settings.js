@@ -35,6 +35,8 @@ class Settings {
             }
             set_cursor(renderMouseCursor)
         });
+        call_draw();
+        sleep(50);
     }
 
     iconFunction(canvas, graphics){

@@ -117,7 +117,6 @@ class TTY {
         }
       }
     }
-    sleep(40);
   }
   draw(canvas, graphics) {
     graphics.font = '12px Monospace';
@@ -138,13 +137,14 @@ class TTY {
       graphics.fillText(currentPrompt + this.textArray[i], 2, i * 12 + 12);
     }
     graphics.fillText(this.prompt + this.textBuffer, 2, this.textArray.length * 12 + 12);
-    sleep(40);
+    sleep(60);
   }
   create_window() {
     var tty = new TTY();
 
     let terminal = function(canvas, graphics){
       tty.draw(canvas, graphics);
+      call_draw();
       tty.update();
     }
     create_window([

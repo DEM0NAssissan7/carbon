@@ -132,9 +132,8 @@ function listSelector(graphics, variable, options, x, y, w, h, text, customFunct
 }
 //Reset button clicked status
 let toolkitd = function(){
-    if(get_devices().mouse.clicked === false){
+    if(get_devices().mouse.clicked === false)
         buttonClicked = false;
-    }
     sleep(20)
 }
 create_init(toolkitd);

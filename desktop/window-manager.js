@@ -12,6 +12,7 @@ const global_scale = 1;
     let alpha_value = 1;
     let window_exec = null;
     let window_tint = [0, 0, 0, 0];
+    let call_render = false;
     let foreground_image;
     {
         //Detect monitor frame rate:
@@ -221,21 +222,7 @@ const global_scale = 1;
         }
     }
     wm_window.prototype.draw = function (graphics, foreground_graphics) {
-        //Animations
         this.timer.update();
-        if (this.dying !== true) {
-            if (Math.round(this.fade * 100) / 100 < 1)
-                this.fade += (getTransition(1, animation_time, this.timer) - (getTransition(this.fade, animation_time, this.timer))) * 2;
-            else
-                this.fade = 1;
-        } else {
-            if (Math.floor(this.fade * 100) / 100 > 0)
-                this.fade -= (getTransition(1, animation_time, this.timer) - (getTransition(1 - this.fade, animation_time, this.timer))) * 2;
-            else {
-                this.fade = 0;
-                this.dead = true;
-            }
-        }
         let draw_surface = graphics;
         if (this.foreground === true)
             draw_surface = foreground_graphics;
@@ -243,7 +230,7 @@ const global_scale = 1;
             switch (animation) {
                 case 0:
                     draw_surface.globalAlpha = this.fade * alpha_value;
-                    draw_surface.translate((this.x + this.canvas.width / 2) - (this.canvas.width / 2 * this.fade), (this.y + this.canvas.height / 2) - (this.canvas.height / 2 * this.fade));
+                    draw_surface.translate(Math.round((this.x + this.canvas.width / 2) - (this.canvas.width / 2 * this.fade)), Math.round((this.y + this.canvas.height / 2) - (this.canvas.height / 2 * this.fade)));
                     draw_surface.scale(this.fade, this.fade);
                     draw_surface.drawImage(this.canvas, 0, 0, this.canvas.width / global_scale, this.canvas.height / global_scale);
                     this.draw_top_bar(draw_surface, 0, 0, 1);
@@ -264,7 +251,6 @@ const global_scale = 1;
                     draw_surface.putImageData(image, scaled_x, scaled_y);
                     this.draw_top_bar(draw_surface, scaled_x, scaled_y, this.fade);
                     break;
-
             }
         } else {
             // let image = this.graphics.getImageData(0, 0, this.canvas.width, this.canvas.height);
@@ -274,7 +260,7 @@ const global_scale = 1;
             if(downscale_factor > 1)
                 draw_surface.putImageData(scale_canvas(this.canvas, this.graphics), Math.round(this.x), Math.round(this.y));
             else
-                draw_surface.drawImage(this.canvas, Math.round(this.x) * global_scale, Math.round(this.y) * global_scale, this.canvas.width * downscale_factor, this.canvas.height * downscale_factor);
+                draw_surface.drawImage(this.canvas, Math.round(this.x * global_scale), Math.round(this.y * global_scale), this.canvas.width * downscale_factor, this.canvas.height * downscale_factor);
             draw_surface.scale(global_scale, global_scale);
             this.draw_top_bar(draw_surface, this.x, this.y, 1);
         }
@@ -291,6 +277,7 @@ const global_scale = 1;
                 devices.mouse.x < this.x + this.canvas.width / global_scale - button_padding &&
                 devices.mouse.y < this.y + (button_padding - (this.title_bar_height - 1)) + (this.title_bar_height - button_padding * 2) && devices.mouse.pressed && this.dragged === false) {
                 this.close();
+                this.timer.update();
                 return;
             }
             //Movement
@@ -310,6 +297,23 @@ const global_scale = 1;
                 this.y = (devices.mouse.y - this.intital_drag.mouseY) + this.intital_drag.windowY;
             }
         }
+
+        //Animations
+        if (this.dying !== true) {
+            if (Math.round(this.fade * 100) / 100 < 1)
+                this.fade += (getTransition(1, animation_time, this.timer) - (getTransition(this.fade, animation_time, this.timer))) * 2;
+            else
+                this.fade = 1;
+        } else {
+            if (Math.floor(this.fade * 100) / 100 > 0)
+                this.fade -= (getTransition(1, animation_time, this.timer) - (getTransition(1 - this.fade, animation_time, this.timer))) * 2;
+            else {
+                this.fade = 0;
+                this.dead = true;
+            }
+        }
+        if(this.fade < 1)
+            call_render = true;
     }
 
     function spawn_window(processes, window_name) {
@@ -353,6 +357,9 @@ const global_scale = 1;
                 window_exec.direct_render = false;
                 break;
         }
+    }
+    function call_draw() {
+        call_render = true;
     }
 
     //Buffer
@@ -464,35 +471,45 @@ const global_scale = 1;
             windows.push(window);
         }
     }
+    let previous_devices = get_devices();
     let window_manager = function () {
-        let previous_canvas = canvas;
-        let previous_graphics = graphics;
-        canvas = buffer_canvas;
-        graphics = buffer_graphics;
-        window_logic();
-        buffer_graphics.drawImage(bg_canvas, 0, 0);
-        for (let i = 0; i < windows.length; i++)
-            windows[i].draw(buffer_graphics, foreground_graphics);
-        buffer_graphics.drawImage(foreground_graphics.canvas, 0, 0);
+        let devices = get_devices();
+        if(previous_devices.mouse.x !== devices.mouse.x ||
+            previous_devices.mouse.y !== devices.mouse.y)
         {
-            let devices = get_devices();
+            call_render = true;
+        }
+        window_logic();
+        if(call_render === true) {
+            call_render = false;
+            buffer_graphics.drawImage(bg_canvas, 0, 0);
+            for (let i = 0; i < windows.length; i++)
+                windows[i].draw(buffer_graphics, foreground_graphics);
+            buffer_graphics.drawImage(foreground_graphics.canvas, 0, 0);
+            //Cursor
             buffer_graphics.translate(devices.mouse.x * mouse_factor, devices.mouse.y * mouse_factor);
             cursor_handler(buffer_graphics);
             buffer_graphics.translate(-devices.mouse.x * mouse_factor, -devices.mouse.y * mouse_factor);
-        }
-        if(use_buffer === true && downscale_factor > 1){
-            //Downscale image
-            previous_graphics.putImageData(scale_canvas(buffer_canvas, buffer_graphics), 0, 0);
-        } else if(use_buffer === true)
-            previous_graphics.drawImage(buffer_canvas, 0, 0);
-        let time_buffer = performance.now();
-        wm_round_trip = time_buffer - time_marker;
-        time_marker = time_buffer;
-        performance_display();
-        canvas = previous_canvas;
-        graphics = previous_graphics;
+            previous_devices = devices;
 
-        sleep(1000 / monitor_refresh_rate);
+            //Scaling
+            if(use_buffer === true && downscale_factor > 1){
+                //Downscale image
+                graphics.putImageData(scale_canvas(buffer_canvas, buffer_graphics), 0, 0);
+            } else if(use_buffer === true)
+                graphics.drawImage(buffer_canvas, 0, 0);
+            
+            //Performance
+            let time_buffer = performance.now();
+            wm_round_trip = time_buffer - time_marker;
+            time_marker = time_buffer;
+            performance_display();
+        }
+
+        if(monitor_refresh_rate < 240)
+            sleep(1000 / monitor_refresh_rate);
+        else
+            sleep(16);
     }
     create_init(window_manager);
 }

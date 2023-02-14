@@ -28,6 +28,8 @@ class Autoclick{
                 return;
             }
         }
+        call_draw();
+        sleep(100);
     }
     create_window(){
         let autoclick = new Autoclick();

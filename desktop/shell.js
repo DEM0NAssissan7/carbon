@@ -121,6 +121,7 @@ function createIcon(iconFunction, x, y, size, create_windowFunction) {
     } catch (e){
       console.error(e);
     }
+    call_draw();
     sleep(15);
   });
   let iconKiller = spawn_process(() => {

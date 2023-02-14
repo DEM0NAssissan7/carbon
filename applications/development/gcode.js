@@ -200,6 +200,7 @@ class Gcode{
             graphics.resetTransform();
 
         }
+        call_draw();
         sleep(40)
     }
     create_window(){
