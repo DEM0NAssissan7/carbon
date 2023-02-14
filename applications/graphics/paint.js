@@ -39,6 +39,7 @@ class Paint{
             this.previous_mouse_x = devices.mouse.x;
             this.previous_mouse_y = devices.mouse.y;
             this.draw_graphics.closePath();
+            call_draw();
         }
         if(devices.mouse.pressed === false && this.released === true){
             this.graphics_buffer.beginPath();

@@ -45,7 +45,7 @@ let canvas, graphics, webgl;
     const print_debug_logs = false;
     const print_error_logs = true;
     const minimum_cycle_rate = 10;
-    const display_performance = true;
+    const display_performance = false;
 
     //Customization variables
     const run_loop = true;
@@ -1022,7 +1022,7 @@ let canvas, graphics, webgl;
                 execution_count++;
                 //Rexecute loop
                 if (run_loop === true && panicked === false)
-                    create_timeout(main, execution_time);
+                    set_timeout(main, execution_time);
                 let time_marker_2 = get_time();
                 system_time = time_marker_2 - time_marker;
                 kernel_overhead = system_time - user_time;

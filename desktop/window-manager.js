@@ -8,11 +8,13 @@ const global_scale = 1;
     const mouse_factor = 1 / Math.max(global_scale / downscale_factor, 1);
     const animation_time = 450;
     const use_buffer = false;
+    const track_wm_performance = false;
     let animation = 0;
     let alpha_value = 1;
     let window_exec = null;
     let window_tint = [0, 0, 0, 0];
     let call_render = false;
+    let call_cursor_update = true;
     let foreground_image;
     {
         //Detect monitor frame rate:
@@ -209,7 +211,7 @@ const global_scale = 1;
             // graphics.fillStyle = "white";
             graphics.fillStyle = colorScheme.textColor;
             graphics.font = "12px Monospace";
-            // graphics.fillText(this.windowName, scaled_width/2, this.canvas.height/2);
+                // graphics.fillText(this.windowName, scaled_width/2, this.canvas.height/2);
             if (fade > 0.5)
                 graphics.fillText(this.window_name, scaled_width / 2 - (graphics.measureText(this.window_name).width / 2), (12 / 3) - scaled_title_bar_height / 2);
             //Close button
@@ -260,13 +262,12 @@ const global_scale = 1;
             if(downscale_factor > 1)
                 draw_surface.putImageData(scale_canvas(this.canvas, this.graphics), Math.round(this.x), Math.round(this.y));
             else
-                draw_surface.drawImage(this.canvas, Math.round(this.x * global_scale), Math.round(this.y * global_scale), this.canvas.width * downscale_factor, this.canvas.height * downscale_factor);
+                draw_surface.drawImage(this.canvas, Math.round(this.x * global_scale), Math.round(this.y * global_scale));
             draw_surface.scale(global_scale, global_scale);
             this.draw_top_bar(draw_surface, this.x, this.y, 1);
         }
     }
-    wm_window.prototype.update_logic = function () {
-        let devices = get_devices();
+    wm_window.prototype.update_logic = function (devices) {
         devices.mouse.x = devices.mouse.x * mouse_factor;
         devices.mouse.y = devices.mouse.y * mouse_factor;
         if (devices.mouse.x > this.x && devices.mouse.x < this.x + this.canvas.width / global_scale && devices.mouse.y > this.y - this.title_bar_height && devices.mouse.y < this.y + this.canvas.height && this.focusable && devices.mouse.pressed && !this.request_focus && this.dying !== true)
@@ -295,6 +296,7 @@ const global_scale = 1;
                     this.dragged = false;
                 this.x = (devices.mouse.x - this.intital_drag.mouseX) + this.intital_drag.windowX;
                 this.y = (devices.mouse.y - this.intital_drag.mouseY) + this.intital_drag.windowY;
+                call_draw();
             }
         }
 
@@ -396,9 +398,13 @@ const global_scale = 1;
     })
 
     //Cursor
-    let cursor_handler;
+    let cursor_canvas = document.createElement("canvas");
+    cursor_canvas.width = 16;
+    cursor_canvas.height = 16;
+    let cursor_graphics = cursor_canvas.getContext("2d");
     function set_cursor(handler) {
-        cursor_handler = handler;
+        cursor_graphics.clearRect(0, 0, cursor_canvas.width, cursor_canvas.height);
+        handler(cursor_graphics);
     }
     set_cursor(graphics => {//Default wm cursor
         graphics.strokeStyle = 'black';
@@ -437,20 +443,18 @@ const global_scale = 1;
     let time_marker = performance.now();
     let wm_round_trip = 0;
 
-    let performance_display = () => {
-        graphics.font = '14px Monospace';
+    let performance_display = (graphics) => {
         graphics.fillStyle = '#AAAAEE';
         graphics.fillRect(76, 0, 38, 30);
         graphics.fillStyle = 'black';
         graphics.fillText(Math.round(1000 / wm_round_trip), 86, 19);
     };
 
-
-    let window_logic = function () {
+    let window_logic = function (devices) {
         let requested_window_index;
         for (let i = 0; i < windows.length; i++) {
             let window = windows[i];
-            window.update_logic();
+            window.update_logic(devices);
             if (window.dead === true) {
                 window.kill();
                 windows.splice(i, 1);
@@ -472,39 +476,50 @@ const global_scale = 1;
         }
     }
     let previous_devices = get_devices();
+
+    //Initialization
+    buffer_graphics.font = '14px Monospace';
+
     let window_manager = function () {
         let devices = get_devices();
         if(previous_devices.mouse.x !== devices.mouse.x ||
             previous_devices.mouse.y !== devices.mouse.y)
         {
-            call_render = true;
+            if(use_buffer === true)
+                call_cursor_update = true;
+            else
+                call_render = true;
         }
-        window_logic();
+        window_logic(devices);
         if(call_render === true) {
-            call_render = false;
             buffer_graphics.drawImage(bg_canvas, 0, 0);
             for (let i = 0; i < windows.length; i++)
                 windows[i].draw(buffer_graphics, foreground_graphics);
             buffer_graphics.drawImage(foreground_graphics.canvas, 0, 0);
-            //Cursor
-            buffer_graphics.translate(devices.mouse.x * mouse_factor, devices.mouse.y * mouse_factor);
-            cursor_handler(buffer_graphics);
-            buffer_graphics.translate(-devices.mouse.x * mouse_factor, -devices.mouse.y * mouse_factor);
-            previous_devices = devices;
 
+            //Performance
+            if(track_wm_performance === true) {
+                let time_buffer = performance.now();
+                wm_round_trip = time_buffer - time_marker;
+                time_marker = time_buffer;
+                performance_display(buffer_graphics);
+            }
+        }
+        if(call_cursor_update === true || call_render === true){
             //Scaling
             if(use_buffer === true && downscale_factor > 1){
                 //Downscale image
                 graphics.putImageData(scale_canvas(buffer_canvas, buffer_graphics), 0, 0);
             } else if(use_buffer === true)
                 graphics.drawImage(buffer_canvas, 0, 0);
-            
-            //Performance
-            let time_buffer = performance.now();
-            wm_round_trip = time_buffer - time_marker;
-            time_marker = time_buffer;
-            performance_display();
+
+            //Cursor
+            graphics.drawImage(cursor_canvas, devices.mouse.x * mouse_factor, devices.mouse.y * mouse_factor);
+            previous_devices = devices;
+
+            call_cursor_update = false;
         }
+        if(call_render) call_render = false;
 
         if(monitor_refresh_rate < 240)
             sleep(1000 / monitor_refresh_rate);
