@@ -7,7 +7,7 @@ const global_scale = 1;
     const downscale_factor = 1;
     const mouse_factor = 1 / Math.max(global_scale / downscale_factor, 1);
     const animation_time = 450;
-    const use_buffer = false;
+    const use_buffer = true;
     const track_wm_performance = false;
     let animation = 0;
     let alpha_value = 1;
@@ -16,6 +16,12 @@ const global_scale = 1;
     let call_render = false;
     let call_cursor_update = true;
     let foreground_image;
+
+    //Initialize kernel graphics
+    graphics = canvas.getContext("2d", { alpha: false, desynchronized: true, willReadFrequently: false });
+    graphics.imageSmoothingEnabled = false;
+    graphics.globalCompositeOperation = "none";
+
     {
         //Detect monitor frame rate:
         let test_count = 200;
@@ -90,7 +96,7 @@ const global_scale = 1;
         this.canvas = document.createElement("canvas");
         this.canvas.width = 450 * global_scale;
         this.canvas.height = 450 * global_scale;
-        this.graphics = this.canvas.getContext("2d");
+        this.graphics = this.canvas.getContext("2d", { alpha: false, desynchronized: true, willReadFrequently: false });
         this.graphics.scale(global_scale, global_scale);
 
         this.x = (canvas.width / global_scale) / 2 - (this.canvas.width / global_scale) / 2;
@@ -370,7 +376,7 @@ const global_scale = 1;
         buffer_canvas = document.createElement("canvas");
         buffer_canvas.width = canvas.width * downscale_factor;
         buffer_canvas.height = canvas.height * downscale_factor;
-        buffer_graphics = buffer_canvas.getContext("2d");
+        buffer_graphics = buffer_canvas.getContext("2d", { alpha: false, desynchronized: true, willReadFrequently: false });
     } else{
         buffer_canvas = canvas;
         buffer_graphics = graphics;
@@ -383,7 +389,7 @@ const global_scale = 1;
     let bg_canvas = document.createElement("canvas");
     bg_canvas.width = buffer_canvas.width;
     bg_canvas.height = buffer_canvas.height;
-    let bg_graphics = bg_canvas.getContext('2d');
+    let bg_graphics = bg_canvas.getContext("2d", { alpha: false, desynchronized: true, willReadFrequently: false });
     function set_background(handler) {
         handler(bg_canvas, bg_graphics);
         background_image = bg_graphics.getImageData(0, 0, buffer_canvas.width, buffer_canvas.height);
@@ -401,7 +407,7 @@ const global_scale = 1;
     let cursor_canvas = document.createElement("canvas");
     cursor_canvas.width = 16;
     cursor_canvas.height = 16;
-    let cursor_graphics = cursor_canvas.getContext("2d");
+    let cursor_graphics = cursor_canvas.getContext("2d", { desynchronized: true, willReadFrequently: false });
     function set_cursor(handler) {
         cursor_graphics.clearRect(0, 0, cursor_canvas.width, cursor_canvas.height);
         handler(cursor_graphics);
@@ -435,7 +441,7 @@ const global_scale = 1;
         let fg_canvas = document.createElement("canvas");
         fg_canvas.width = buffer_canvas.width;
         fg_canvas.height = buffer_canvas.height;
-        foreground_graphics = fg_canvas.getContext("2d");
+        foreground_graphics = fg_canvas.getContext("2d", { desynchronized: true, willReadFrequently: false });
     }
 
     //Init
