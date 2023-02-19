@@ -35,7 +35,7 @@ if (typeof System === "object") {
     Kernel.version = "0.0";
 }
 
-let canvas, graphics, webgl;
+let canvas, graphics, webgl, bitmap;
 
 {
     /* Kernel Execution Context */
@@ -531,20 +531,33 @@ let canvas, graphics, webgl;
 
     //Graphics
     if (use_graphics === true && windowed === true && is_browser === true) {
+        const context_mode = "2d";
         debug("Initializing graphics stack");
         canvas = document.createElement("canvas");
         if (!canvas)
             error("Graphics: Failed to create canvas.");
-        graphics = canvas.getContext('2d', { alpha: false });
-        if (!graphics)
-            error("Graphics: Failed to load 2d context.");
-        webgl = canvas.getContext('webgl');
-        if (!webgl)
-            debug("Graphics: Failed to load webgl context.");
+        switch (context_mode) {
+            case "2d":
+                graphics = canvas.getContext("2d", { alpha: false });
+                if (!graphics)
+                    error("Graphics: Failed to load 2d context.");
+                break;
+
+            case "webgl":
+                webgl = canvas.getContext('webgl');
+                if (!webgl)
+                    debug("Graphics: Failed to load webgl context.");
+                break;
+
+            case "bitmaprenderer":
+                bitmap = canvas.getContext("bitmaprenderer");
+                if(!bitmap)
+                    debug("Graphics: Failed to load bitmap renderer.");
+                break;
+        }
         canvas.id = "canvas";
         canvas.width = window.innerWidth - 20;
         canvas.height = window.innerHeight - 21;
-        canvas.style.translate = "translate3d(0,0,0)";
         document.body.appendChild(canvas);
     }
 
