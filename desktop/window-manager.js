@@ -7,7 +7,7 @@ const global_scale = 1;
     const downscale_factor = 1;
     const mouse_factor = 1 / Math.max(global_scale / downscale_factor, 1);
     const animation_time = 450;
-    const use_buffer = true;
+    const use_buffer = false;
     const track_wm_performance = false;
     const use_2d_render = true;
     let animation = 0;
@@ -27,22 +27,32 @@ const global_scale = 1;
 
     {
         //Detect monitor frame rate:
-        let test_count = 200;
+        let test_count = 20;
         let run_count = 0;
         let timer = performance.now();
         let runs = [];
+        //Median function
+        const median = arr => {
+            const mid = Math.floor(arr.length / 2),
+              nums = [...arr].sort((a, b) => a - b);
+            return arr.length % 2 !== 0 ? nums[mid] : (nums[mid - 1] + nums[mid]) / 2;
+          };
         let tester = function () {
             let time_buffer = performance.now();
-            runs.push(1000 / Math.max(time_buffer - timer, 0));
+            runs[run_count] = 1000 / Math.max(time_buffer - timer, 0);
             timer = time_buffer;
             if (run_count < test_count)
                 requestAnimationFrame(tester);
             else {
                 monitor_refresh_rate = 0;
-                for (let i = 0; i < run_count; i++)
-                    monitor_refresh_rate += runs[i];
-                monitor_refresh_rate = monitor_refresh_rate / run_count;
-                console.log("Detected refresh rate: " + monitor_refresh_rate + " FPS");
+                monitor_refresh_rate = median(runs);
+                if(monitor_refresh_rate === Infinity) {
+                    run_count = 0;
+                    monitor_refresh_rate = 60;
+                    test_count = test_count / 2;
+                    requestAnimationFrame(tester);
+                } else
+                    console.log("Detected refresh rate: " + monitor_refresh_rate + " FPS");
             }
             run_count++;
         }
@@ -303,7 +313,7 @@ const global_scale = 1;
                     this.dragged = false;
                 this.x = (devices.mouse.x - this.intital_drag.mouseX) + this.intital_drag.windowX;
                 this.y = (devices.mouse.y - this.intital_drag.mouseY) + this.intital_drag.windowY;
-                call_draw();
+                call_render = true;
             }
         }
 
