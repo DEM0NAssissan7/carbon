@@ -8,7 +8,8 @@ const global_scale = 1;
     const mouse_factor = 1 / Math.max(global_scale / downscale_factor, 1);
     const animation_time = 450;
     const use_buffer = false;
-    const track_wm_performance = false;
+    const track_wm_performance = true;
+    const dynamic_buffer = true;
     const use_2d_render = true;
     let animation = 0;
     let alpha_value = 1;
@@ -19,10 +20,10 @@ const global_scale = 1;
     let foreground_image;
 
     //Initialize kernel graphics
-    if(use_2d_render === true) {
+    if (use_2d_render === true) {
         graphics = canvas.getContext("2d", { alpha: false });
         graphics.imageSmoothingEnabled = false;
-        graphics.globalCompositeOperation = "none";    
+        graphics.globalCompositeOperation = "none";
     }
 
     {
@@ -34,9 +35,9 @@ const global_scale = 1;
         //Median function
         const median = arr => {
             const mid = Math.floor(arr.length / 2),
-              nums = [...arr].sort((a, b) => a - b);
+                nums = [...arr].sort((a, b) => a - b);
             return arr.length % 2 !== 0 ? nums[mid] : (nums[mid - 1] + nums[mid]) / 2;
-          };
+        };
         let tester = function () {
             let time_buffer = performance.now();
             runs[run_count] = 1000 / Math.max(time_buffer - timer, 0);
@@ -46,7 +47,7 @@ const global_scale = 1;
             else {
                 monitor_refresh_rate = 0;
                 monitor_refresh_rate = median(runs);
-                if(monitor_refresh_rate === Infinity) {
+                if (monitor_refresh_rate === Infinity) {
                     run_count = 0;
                     monitor_refresh_rate = 60;
                     test_count = test_count / 2;
@@ -58,35 +59,35 @@ const global_scale = 1;
         }
         requestAnimationFrame(tester);
     }
-    let scale_canvas = function(canvas, graphics){
-        if(downscale_factor > 1){
+    let scale_canvas = function (canvas, graphics) {
+        if (downscale_factor > 1) {
             let canvas_width = canvas.width;
             let target_width = canvas_width / downscale_factor;
             let target_height = canvas.height / downscale_factor;
-    
+
             let image_data = graphics.getImageData(0, 0, canvas_width, canvas.height).data;
             let final_image = graphics.getImageData(0, 0, target_width, target_height);
             let final_image_data = final_image.data;
-    
+
             // index: (x + y * width) * 4;
             let x, y, norm_y, scale_x, scale_y, result_point, r, g, b, a, i, upscale_y, l, index;
             let downscale_factor_squared = downscale_factor * downscale_factor;
             let normalize = val => val / downscale_factor_squared;
-    
-            for(y = 0; y < target_height; y++){
+
+            for (y = 0; y < target_height; y++) {
                 norm_y = y * target_width * 4;
                 scale_y = y * downscale_factor * canvas_width;
-                for(x = 0; x < target_width; x++){
+                for (x = 0; x < target_width; x++) {
                     result_point = (x * 4 + norm_y);
                     r = 0;
                     g = 0;
                     b = 0;
                     a = 0;
-    
+
                     scale_x = x * downscale_factor;
-                    for(i = 0; i < downscale_factor; i++){
+                    for (i = 0; i < downscale_factor; i++) {
                         upscale_y = (scale_y + i * canvas_width);
-                        for(l = 0; l < downscale_factor; l++){
+                        for (l = 0; l < downscale_factor; l++) {
                             index = (scale_x + l + upscale_y) * 4;
                             r += image_data[index + 0];
                             g += image_data[index + 1];
@@ -94,7 +95,7 @@ const global_scale = 1;
                             a += image_data[index + 3];
                         }
                     }
-    
+
                     final_image_data[result_point + 0] = normalize(r);
                     final_image_data[result_point + 1] = normalize(g);
                     final_image_data[result_point + 2] = normalize(b);
@@ -102,7 +103,7 @@ const global_scale = 1;
                 }
             }
             return final_image;
-        } else if(downscale_factor < 1){
+        } else if (downscale_factor < 1) {
         }
     }
     let wm_window = function (processes, window_name) {
@@ -142,7 +143,7 @@ const global_scale = 1;
     wm_window.prototype.initialize = function () {
         for (let i = 0; i < this.processes_buffer.length; i++) {
             let process_buffer = this.processes_buffer[i];
-            for(let l = 0; l < process_buffer.threads.length; l++){
+            for (let l = 0; l < process_buffer.threads.length; l++) {
                 let command = process_buffer.threads[l].command;
                 process_buffer.threads[l].command = () => {
                     let devices = get_devices();
@@ -167,21 +168,36 @@ const global_scale = 1;
                         keyCode: devices.keyboard.keyCode,
                         info: devices.keyboard.info
                     };
+                    let old_mouse = {
+                        x: devices.mouse.x,
+                        y: devices.mouse.y,
+                        vectorX: devices.mouse.vectorX,
+                        vectorY: devices.mouse.vectorY,
+                        clicked: devices.mouse.clicked
+                    };
                     if (this.has_focus === false) {
                         devices.keyboard.keys = [];
                         devices.keyboard.keyCodes = [];
                         devices.keyboard.keyCode = 0;
                         devices.keyboard.pressed = false;
                         devices.keyboard.info = {};
+
+                        devices.mouse.clicked = false;
                     }
                     get_devices = function () {
                         return devices;
                     }
-    
+
                     window_exec = this;
-                    command(canvas, graphics);
+                    try {
+                        command(canvas, graphics);
+                    } catch (e) {
+                        console.error(this.window_name + " has encountered an error.");
+                        console.error(e);
+                        this.dying = true;
+                    }
                     window_exec = null;
-    
+
                     canvas = old_canvas;
                     graphics = old_graphics;
                     get_devices = old_get_devices;
@@ -190,6 +206,7 @@ const global_scale = 1;
                         devices.mouse.y += this.y;
                     }
                     devices.keyboard = old_keyboard;
+                    devices.mouse = old_mouse;
                 };
             }
             this.processes.push(process_buffer);
@@ -228,7 +245,7 @@ const global_scale = 1;
             // graphics.fillStyle = "white";
             graphics.fillStyle = colorScheme.textColor;
             graphics.font = "12px Monospace";
-                // graphics.fillText(this.windowName, scaled_width/2, this.canvas.height/2);
+            // graphics.fillText(this.windowName, scaled_width/2, this.canvas.height/2);
             if (fade > 0.5)
                 graphics.fillText(this.window_name, scaled_width / 2 - (graphics.measureText(this.window_name).width / 2), (12 / 3) - scaled_title_bar_height / 2);
             //Close button
@@ -276,7 +293,7 @@ const global_scale = 1;
             // draw_surface.putImageData(image, this.x, this.y);
             draw_surface.resetTransform();
             // draw_surface.scale(downscale_factor, downscale_factor);
-            if(downscale_factor > 1)
+            if (downscale_factor > 1)
                 draw_surface.putImageData(scale_canvas(this.canvas, this.graphics), Math.round(this.x), Math.round(this.y));
             else
                 draw_surface.drawImage(this.canvas, Math.round(this.x * global_scale), Math.round(this.y * global_scale));
@@ -331,7 +348,7 @@ const global_scale = 1;
                 this.dead = true;
             }
         }
-        if(this.fade < 1)
+        if (this.fade < 1)
             call_render = true;
     }
 
@@ -382,16 +399,17 @@ const global_scale = 1;
     }
 
     //Buffer
-    let buffer_graphics, buffer_canvas;
-    if(use_buffer === true){
-        buffer_canvas = new OffscreenCanvas(canvas.width * downscale_factor, canvas.height * downscale_factor);
-        buffer_graphics = buffer_canvas.getContext("2d", { alpha: false });
-    } else{
+    let offscreen_canvas = new OffscreenCanvas(canvas.width * downscale_factor, canvas.height * downscale_factor);
+    let offscreen_graphics = offscreen_canvas.getContext("2d", { alpha: false });
+    if (use_buffer === true) {
+        buffer_canvas = offscreen_canvas;
+        graphics = offscreen_graphics;
+    } else {
         buffer_canvas = canvas;
-        buffer_graphics = graphics;
+        graphics = graphics;
     }
-    buffer_graphics.imageSmoothingEnabled = false;
-    buffer_graphics.scale(global_scale, global_scale);
+    graphics.imageSmoothingEnabled = false;
+    graphics.scale(global_scale, global_scale);
 
     //Background
     let background_image;
@@ -452,7 +470,7 @@ const global_scale = 1;
     let time_marker = performance.now();
     let wm_round_trip = 0;
 
-    let performance_display = (graphics) => {
+    let performance_display = graphics => {
         graphics.fillStyle = '#AAAAEE';
         graphics.fillRect(76, 0, 38, 30);
         graphics.fillStyle = 'black';
@@ -487,53 +505,76 @@ const global_scale = 1;
     let previous_devices = get_devices();
 
     //Initialization
-    buffer_graphics.font = '14px Monospace';
+    graphics.font = '14px Monospace';
 
+
+    // If on time: layers -> canvas
+    // If late: layers -> buffer -> canvas
+    // Order: layres -> buffer ; then buffer -> canvas | layers -> buffer
+    // 
+    // During cursor rendering:
+    // If not before: layers -> buffer
+    // buffer -> canvas
+    // cursor -> canvas
+
+
+
+
+
+    let buffer_updated = false;
+    let draw_cursor = function (graphics, devices) {
+        //Cursor
+        graphics.drawImage(cursor_canvas, devices.mouse.x * mouse_factor, devices.mouse.y * mouse_factor);
+        previous_devices = devices;
+    }
+    let draw_layers = function (graphics) {
+        // Draw windows
+        graphics.drawImage(bg_canvas, 0, 0);
+        for (let i = 0; i < windows.length; i++)
+            windows[i].draw(graphics, foreground_graphics);
+        graphics.drawImage(foreground_graphics.canvas, 0, 0);
+    }
+    let scanout = function (graphics, canvas) {
+
+        //Scaling and buffers
+        // if((use_buffer === true && downscale_factor > 1)){
+        //     //Downscale image
+        //     graphics.putImageData(scale_canvas(buffer_canvas, buffer_graphics), 0, 0);
+        // } else if(use_buffer === true || call_buffer === true)
+        graphics.drawImage(canvas, 0, 0);
+    }
     let window_manager = function () {
         let devices = get_devices();
-        if(previous_devices.mouse.x !== devices.mouse.x ||
-            previous_devices.mouse.y !== devices.mouse.y)
-        {
-            if(use_buffer === true)
-                call_cursor_update = true;
-            else
-                call_render = true;
+        if (previous_devices.mouse.x !== devices.mouse.x ||
+            previous_devices.mouse.y !== devices.mouse.y) {
+            call_cursor_update = true;
         }
         window_logic(devices);
-        if(call_render === true) {
-            buffer_graphics.drawImage(bg_canvas, 0, 0);
-            for (let i = 0; i < windows.length; i++)
-                windows[i].draw(buffer_graphics, foreground_graphics);
-            buffer_graphics.drawImage(foreground_graphics.canvas, 0, 0);
 
-            //Performance
-            if(track_wm_performance === true) {
-                let time_buffer = performance.now();
-                wm_round_trip = time_buffer - time_marker;
-                time_marker = time_buffer;
-                performance_display(buffer_graphics);
-            }
-        }
-        if(call_cursor_update === true || call_render === true){
-            //Scaling
-            if(use_buffer === true && downscale_factor > 1){
-                //Downscale image
-                graphics.putImageData(scale_canvas(buffer_canvas, buffer_graphics), 0, 0);
-            } else if(use_buffer === true)
-                graphics.drawImage(buffer_canvas, 0, 0);
+        //Performance
 
-            //Cursor
-            graphics.drawImage(cursor_canvas, devices.mouse.x * mouse_factor, devices.mouse.y * mouse_factor);
-            previous_devices = devices;
-
+        if (call_render) {
+            call_render = false;
             call_cursor_update = false;
+            draw_layers(graphics);
+            draw_cursor(graphics, devices);
+            buffer_updated = false;
+        } else if (dynamic_buffer && call_cursor_update) {
+            call_cursor_update = false;
+            if(!buffer_updated) {
+                draw_layers(offscreen_graphics);
+                buffer_updated = true;
+            }
+            scanout(graphics, offscreen_canvas);
+            draw_cursor(graphics, devices);
         }
-        if(call_render) call_render = false;
-
-        if(monitor_refresh_rate < 240)
-            sleep(1000 / monitor_refresh_rate);
-        else
-            sleep(16);
+        if (track_wm_performance) {
+            let time_buffer = performance.now();
+            wm_round_trip = time_buffer - time_marker;
+            time_marker = time_buffer;
+            performance_display(graphics);
+        }
+        sleep(1000 / monitor_refresh_rate);
     }
     create_init(window_manager);
 }
