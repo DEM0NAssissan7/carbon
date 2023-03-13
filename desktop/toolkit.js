@@ -38,7 +38,6 @@ function blankButton(x, y, w, h, func){
     }
 }
 function Button(graphics, x, y, w, h, func) {
-    graphics.save();
     let devices = get_devices();
     if (devices.mouse.x > x && devices.mouse.x < x + w && devices.mouse.y > y && devices.mouse.y < y + h) {
         graphics.strokeStyle = colorScheme.accent;
@@ -63,7 +62,6 @@ function Button(graphics, x, y, w, h, func) {
     graphics.lineTo(x+w, y);
     graphics.fill();
     graphics.stroke();
-    graphics.restore();
 }
 function labledButton(graphics, x, y, w, h, func, buttonText){
     Button(graphics, x, y, w, h, func);
@@ -88,14 +86,12 @@ function booleanToggleButton(graphics, bool, textFalse, textTrue, x, y, w, h, cu
             return;
         }
     }
-    graphics.save();
     if(bool === false){
         labledButton(graphics, x, y, w, h, changeBoolean, textFalse, textColor);
     }
     if(bool === true){
         labledButton(graphics, x, y, w, h, changeBoolean, textTrue, textColor);
     }
-    graphics.restore();
     return result;
 }
 function listSelector(graphics, variable, options, x, y, w, h, text, customFunction){
@@ -110,24 +106,20 @@ function listSelector(graphics, variable, options, x, y, w, h, text, customFunct
     if(customFunction){
         _customFunction = customFunction;
     }
-    graphics.save();
     if(listViewOpened === text){
         let menuClicked = false;
         for(var i = 0; i < options.length; i++){
-            graphics.save();
             labledButton(graphics, x, y + (h*i), w, h, () => {
                 result = options[i][0];
                 listViewOpened = "";
                 _customFunction();
                 menuClicked = true;
             }, options[i][1]);
-            graphics.restore();
         }
     }
     if(listViewOpened.length < 1){
         labledButton(graphics, x, y, w, h, openMenu, text);
     }
-    graphics.restore();
     return result;
 }
 //Reset button clicked status
