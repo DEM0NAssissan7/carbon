@@ -17,18 +17,17 @@ const global_scale = 1;
     let window_tint = [0, 0, 0, 0];
     let call_render = false;
     let call_cursor_update = true;
-    let foreground_image;
 
     //Initialize kernel graphics
     if (use_2d_render === true) {
-        graphics = canvas.getContext("2d", { alpha: false });
+        graphics = canvas.getContext("2d", { alpha: false, willReadFrequently: true });
         graphics.imageSmoothingEnabled = false;
         graphics.globalCompositeOperation = "none";
     }
 
     {
         //Detect monitor frame rate:
-        let test_count = 20;
+        let test_count = 200;
         let run_count = 0;
         let timer = performance.now();
         let runs = [];
@@ -58,6 +57,9 @@ const global_scale = 1;
             run_count++;
         }
         requestAnimationFrame(tester);
+    }
+    function set_monitor_refresh_rate(refresh_rate) {
+        monitor_refresh_rate = refresh_rate;
     }
     let scale_canvas = function (canvas, graphics) {
         if (downscale_factor > 1) {
@@ -414,7 +416,7 @@ const global_scale = 1;
     //Background
     let background_image;
     let bg_canvas = new OffscreenCanvas(buffer_canvas.width, buffer_canvas.height);
-    let bg_graphics = bg_canvas.getContext("2d", { alpha: false });
+    let bg_graphics = bg_canvas.getContext("2d", { alpha: false, willReadFrequently: true });
     function set_background(handler) {
         handler(bg_canvas, bg_graphics);
         background_image = bg_graphics.getImageData(0, 0, buffer_canvas.width, buffer_canvas.height);
@@ -507,20 +509,7 @@ const global_scale = 1;
     //Initialization
     graphics.font = '14px Monospace';
 
-
-    // If on time: layers -> canvas
-    // If late: layers -> buffer -> canvas
-    // Order: layres -> buffer ; then buffer -> canvas | layers -> buffer
-    // 
-    // During cursor rendering:
-    // If not before: layers -> buffer
-    // buffer -> canvas
-    // cursor -> canvas
-
-
-
-
-
+    // Main window manager process
     let buffer_updated = false;
     let draw_cursor = function (graphics, devices) {
         //Cursor

@@ -53,8 +53,9 @@ class Paint{
             this.draw_graphics.drawImage(this.canvas_buffer, 0, 0);
             this.draw_points = [];
             this.released = false;
+            call_draw();
         }
-        sleep(20);
+        sleep(16);
     }
     create_window(){
         let paint_instance = new Paint();
