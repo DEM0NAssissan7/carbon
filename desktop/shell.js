@@ -188,7 +188,6 @@ addApplicationFromClass(TTY);//JSTerm
 addApplicationFromClass(Settings);//Settings
 addApplicationFromClass(FileBrowser);//File Browser
 addApplicationFromClass(SOTF);//Survival of the Fittest
-addApplicationFromClass(Octane);//Game Engine
 addApplicationFromClass(Paint);//Paint
 addApplicationFromClass(Physics);//Physics
 addApplicationFromClass(RayCast);//Ray Casting
