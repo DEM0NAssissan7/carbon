@@ -12,19 +12,19 @@ class Octane{
     }
     update(canvas, graphics){
 
-        class Object{
-            constructor(){
-                this.x = 0;
-                this.y = 0;
-            }
-            shade(){
+        let Object = function(){
+            this.x = 0;
+            this.y = 0;
+        }
+        Object.prototype.shade = function() {
 
-            }
         }
 
         //GUI
         graphics.fillStyle = "#7777FF";
         graphics.fillRect(0, 0, canvas.width, canvas.height);
+        sleep(100);
+        call_draw();
     }
     iconFunction(canvas,graphics){
         graphics.fillStyle = '#AA22FF';
@@ -46,16 +46,14 @@ class Octane{
         graphics.resetTransform();
     }
     create_window(){
-        let octaneObject = new Octane();
-        let windowProcesses = [
-            spawn_process(octaneObject.update),
-        ]
-        let octaneWindow = spawn_window(windowProcesses, "Octane Game Engine");
-        octaneWindow.width = 600;
-        octaneWindow.height = 600;
+        let instance = new Octane();
+        let process = spawn_process(instance.update);
+        process.process_name = "octane";
+        let window = spawn_window([process], "Octane Game Engine");
+        window.canvas.width = 600;
+        window.canvas.height = 600;
         
-        octaneWindow.init();
-        octaneWindow.initProcesses();
-        windows.push(octaneWindow);
+        window.initialize();
+        push_window(window);
     }
 }
