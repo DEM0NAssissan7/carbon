@@ -215,8 +215,14 @@ let canvas, graphics, webgl, bitmap;
     }
 
     //Internal use functions
-    let run_command_buffer = function (command) {
-        (function () { command(); })();
+    let run_command_buffer = function (command, error_handler) {
+        (function () { 
+            try {
+                command();
+            } catch (e) {
+                error_handler(e);
+            }
+        })();
     }
 
     //Kernel daemons
@@ -226,12 +232,10 @@ let canvas, graphics, webgl, bitmap;
         this.daemon_name = handler.name;
     }
     Kernel_daemon.prototype.run = function () {
-        try {
-            run_command_buffer(this.command);
-        } catch (e) {
+        run_command_buffer(this.command, (e) => {
             console.error(e);
             panic("Kernel daemon '" + this.daemon_name + "' encountered an error.");
-        }
+        });
     }
     let add_kernel_daemon = function (handler) {
         kernel_daemons.push(new Kernel_daemon(handler));
@@ -321,15 +325,13 @@ let canvas, graphics, webgl, bitmap;
     Thread.prototype.run = function () {
         this.last_execution = get_time();
         thread_in_execution = this;
-        try {
-            run_command_buffer(this.command);
-        } catch (e) {
+        run_command_buffer(this.command, (e) => {
             if (e !== "interrupt") {
                 console.error("Process " + this.process_name + " (" + this.PID + ") has encountered an error.");
                 console.error(e);
                 this.dead = true;
             }
-        }
+        });
         waiting_processes++;
     }
     //Processes
@@ -857,6 +859,7 @@ let canvas, graphics, webgl, bitmap;
             add_text("CPU usage: " + get_percent(percent_total) + "% total (" + get_percent(percent_user) + "% user, " + get_percent(percent_system) + "% system, " + get_percent(percent_idle) + "% idle)");
             add_text("Task count: " + (processes.length));
             add_text("Uptime: " + uptime());
+            if(system_suspended === true) add_text("System is suspended");
             add_text("Load average: " + round_hundredth(load_average));
             add_text("- Kernel info -");
             add_text("System time: " + round_hundredth(system_time) + "ms")
