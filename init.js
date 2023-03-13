@@ -1,4 +1,4 @@
 const System = {
-    version: "2.0-rc4 Alpha",
+    version: "2.0-rc5 Alpha",
     name: "Graphite"
 }
