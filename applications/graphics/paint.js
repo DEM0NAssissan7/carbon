@@ -15,14 +15,13 @@ class Paint{
         this.canvas_buffer.width = paint_window_size - this.ui_area;
         this.canvas_buffer.height = 400;
         this.graphics_buffer = this.canvas_buffer.getContext("2d");
-        this.draw_color = "black"
     }
     run(canvas, graphics){
         setBackground(canvas, graphics);
         graphics.drawImage(this.draw_canvas, this.ui_area, 0);
         let devices = get_devices();
         if(devices.mouse.pressed === true && this.released === false){
-            this.draw_graphics.strokeStyle = this.draw_color;
+            this.draw_graphics.strokeStyle = colorScheme.textColor;
             this.previous_canvas = this.draw_canvas;
             this.previous_graphics = this.draw_graphics;
             this.previous_mouse_x = devices.mouse.x;
@@ -42,6 +41,7 @@ class Paint{
             call_draw();
         }
         if(devices.mouse.pressed === false && this.released === true){
+            this.graphics_buffer.strokeStyle = colorScheme.textColor;
             this.graphics_buffer.beginPath();
             this.graphics_buffer.moveTo(this.draw_points[0][0], this.draw_points[0][1]);
             for(let i = 1; i < this.draw_points.length; i++)
