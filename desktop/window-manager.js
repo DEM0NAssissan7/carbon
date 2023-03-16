@@ -29,7 +29,7 @@ const global_scale = 1;
         //Detect monitor frame rate:
         let test_count = 200;
         let run_count = 0;
-        let timer = performance.now();
+        let timer = get_time();
         let runs = [];
         //Median function
         const median = arr => {
@@ -38,7 +38,7 @@ const global_scale = 1;
             return arr.length % 2 !== 0 ? nums[mid] : (nums[mid - 1] + nums[mid]) / 2;
         };
         let tester = function () {
-            let time_buffer = performance.now();
+            let time_buffer = get_time();
             runs[run_count] = 1000 / Math.max(time_buffer - timer, 0);
             timer = time_buffer;
             if (run_count < test_count)
@@ -124,6 +124,7 @@ const global_scale = 1;
         this.processes_buffer = processes;
         this.direct_render = false;
         this.foreground = false;
+        this.call_render = false;
 
         this.title_bar_height = 40;
         this.dragged = false;
@@ -304,6 +305,7 @@ const global_scale = 1;
         }
     }
     wm_window.prototype.update_logic = function (devices) {
+        window_exec = this;
         devices.mouse.x = devices.mouse.x * mouse_factor;
         devices.mouse.y = devices.mouse.y * mouse_factor;
         if (devices.mouse.x > this.x && devices.mouse.x < this.x + this.canvas.width / global_scale && devices.mouse.y > this.y - this.title_bar_height && devices.mouse.y < this.y + this.canvas.height && this.focusable && devices.mouse.pressed && !this.request_focus && this.dying !== true)
@@ -332,7 +334,7 @@ const global_scale = 1;
                     this.dragged = false;
                 this.x = (devices.mouse.x - this.intital_drag.mouseX) + this.intital_drag.windowX;
                 this.y = (devices.mouse.y - this.intital_drag.mouseY) + this.intital_drag.windowY;
-                call_render = true;
+                call_draw();
             }
         }
 
@@ -351,7 +353,8 @@ const global_scale = 1;
             }
         }
         if (this.fade < 1)
-            call_render = true;
+            call_draw();
+        window_exec = null;
     }
 
     function spawn_window(processes, window_name) {
@@ -398,6 +401,7 @@ const global_scale = 1;
     }
     function call_draw() {
         call_render = true;
+        window_exec.call_render = true;
     }
 
     //Buffer
@@ -469,7 +473,7 @@ const global_scale = 1;
 
     //Init
     document.body.style.cursor = "none";
-    let time_marker = performance.now();
+    let time_marker = get_time();
     let wm_round_trip = 0;
 
     let performance_display = graphics => {
@@ -502,6 +506,7 @@ const global_scale = 1;
             let window = windows[requested_window_index];
             windows.splice(requested_window_index, 1);
             windows.push(window);
+            call_render = true;
         }
     }
     let previous_devices = get_devices();
@@ -516,12 +521,18 @@ const global_scale = 1;
         graphics.drawImage(cursor_canvas, devices.mouse.x * mouse_factor, devices.mouse.y * mouse_factor);
         previous_devices = devices;
     }
-    let draw_layers = function (graphics) {
+    let draw_layers = function (target_graphics) {
         // Draw windows
-        graphics.drawImage(bg_canvas, 0, 0);
-        for (let i = 0; i < windows.length; i++)
-            windows[i].draw(graphics, foreground_graphics);
-        graphics.drawImage(foreground_graphics.canvas, 0, 0);
+        target_graphics.drawImage(bg_canvas, 0, 0);
+        let draw = false;
+        for (let i = 0; i < windows.length; i++) {
+            let window = windows[i];
+            if(window.call_render === true)
+                draw = true;
+            if(draw)
+                window.draw(target_graphics, foreground_graphics);
+        }
+        target_graphics.drawImage(foreground_graphics.canvas, 0, 0);
     }
     let scanout = function (graphics, canvas) {
 
@@ -540,25 +551,33 @@ const global_scale = 1;
         }
         window_logic(devices);
 
-        //Performance
-
-        if (call_render) {
+        if(dynamic_buffer) {
+            if (call_render) {
+                call_render = false;
+                call_cursor_update = false;
+                draw_layers(graphics);
+                draw_cursor(graphics, devices);
+                buffer_updated = false;
+            } else if (call_cursor_update) {
+                call_cursor_update = false;
+                if(!buffer_updated) {
+                    // This is dumb, but somehow faster than draw_layers(offscreen_graphics).
+                    // Javascript moment
+                    draw_layers(graphics);
+                    scanout(offscreen_graphics, canvas);
+                    buffer_updated = true;
+                }
+                scanout(graphics, offscreen_canvas);
+                draw_cursor(graphics, devices);
+            }
+        } else if (call_render || call_cursor_update) {
             call_render = false;
             call_cursor_update = false;
             draw_layers(graphics);
             draw_cursor(graphics, devices);
-            buffer_updated = false;
-        } else if (dynamic_buffer && call_cursor_update) {
-            call_cursor_update = false;
-            if(!buffer_updated) {
-                draw_layers(offscreen_graphics);
-                buffer_updated = true;
-            }
-            scanout(graphics, offscreen_canvas);
-            draw_cursor(graphics, devices);
         }
         if (track_wm_performance) {
-            let time_buffer = performance.now();
+            let time_buffer = get_time();
             wm_round_trip = time_buffer - time_marker;
             time_marker = time_buffer;
             performance_display(graphics);
