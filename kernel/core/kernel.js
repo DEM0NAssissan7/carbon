@@ -425,6 +425,15 @@ let canvas, graphics, webgl, bitmap;
         debug("Resumed " + PID);
     }
 
+    // Workers
+    /* This is basically multithreading for javascript */
+    function create_worker(handler){
+        return new Worker(URL.createObjectURL(
+            new Blob([`(${handler.toString()})()`],
+                    { type:'text/javascript' })
+        ));
+    }
+
     //Devices
     if (use_devices === true && windowed === true && is_browser === true) {
         let devices = {};
