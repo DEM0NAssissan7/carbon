@@ -5,12 +5,11 @@ const global_scale = 1;
     const button_padding = 8;
     let monitor_refresh_rate = 60;
     const downscale_factor = 1;
-    const draw_software_cursor = false;
     const mouse_factor = 1 / Math.max(global_scale / downscale_factor, 1);
     const animation_time = 450;
     const use_buffer = false;
     const track_wm_performance = false;
-    const dynamic_buffer = false;
+    const dynamic_buffer = true;
     const use_2d_render = true;
     let animation = 0;
     let alpha_value = 1;
@@ -110,9 +109,7 @@ const global_scale = 1;
         }
     }
     let wm_window = function (processes, window_name) {
-        this.canvas = document.createElement("canvas");
-        this.canvas.width = 450 * global_scale;
-        this.canvas.height = 450 * global_scale;
+        this.canvas = new OffscreenCanvas(450 * global_scale, 450 * global_scale);
         this.graphics = this.canvas.getContext("2d", { alpha: false });
         this.graphics.scale(global_scale, global_scale);
 
@@ -127,7 +124,6 @@ const global_scale = 1;
         this.processes_buffer = processes;
         this.direct_render = false;
         this.foreground = false;
-        this.native = true;
         this.call_render = false;
 
         this.title_bar_height = 40;
@@ -145,21 +141,9 @@ const global_scale = 1;
             kill(this.processes[i].PID);
     }
     wm_window.prototype.close = function () {
-        if(this.native) {
-            document.body.removeChild(this.canvas);
-            this.dead = true;
-        } else
-            this.dying = true;
+        this.dying = true;
     }
     wm_window.prototype.initialize = function () {
-        // Add window to DOM and configure
-        if (this.native) {
-            let style = this.canvas.style;
-            style.position = "fixed";
-            document.body.appendChild(this.canvas);
-        }
-
-        // Initialize processes
         for (let i = 0; i < this.processes_buffer.length; i++) {
             let process_buffer = this.processes_buffer[i];
             for (let l = 0; l < process_buffer.threads.length; l++) {
@@ -213,7 +197,7 @@ const global_scale = 1;
                     } catch (e) {
                         console.error(this.window_name + " has encountered an error.");
                         console.error(e);
-                        this.close();
+                        this.dying = true;
                     }
                     window_exec = null;
 
@@ -355,8 +339,6 @@ const global_scale = 1;
         }
 
         //Animations
-        if(this.native)
-            this.timer.update();
         if (this.dying !== true) {
             if (Math.round(this.fade * 100) / 100 < 1)
                 this.fade += (getTransition(1, animation_time, this.timer) - (getTransition(this.fade, animation_time, this.timer))) * 2;
@@ -373,18 +355,6 @@ const global_scale = 1;
         if (this.fade < 1)
             call_draw();
         window_exec = null;
-
-        // Update native window position
-        if (this.native) {
-            this.canvas.style.left = (this.x + 8) + "px";
-            this.canvas.style.top = (this.y + 8) + "px";
-        }
-    }
-    wm_window.prototype.reappend = function() {
-        if(this.native) {
-            document.body.removeChild(this.canvas);
-            document.body.appendChild(this.canvas);
-        }
     }
 
     function spawn_window(processes, window_name) {
@@ -430,10 +400,8 @@ const global_scale = 1;
         }
     }
     function call_draw() {
-        if(!window_exec.native) {
-            call_render = true;
-            window_exec.call_render = true;
-        }
+        call_render = true;
+        window_exec.call_render = true;
     }
 
     //Buffer
@@ -504,8 +472,7 @@ const global_scale = 1;
     }
 
     //Init
-    if (draw_software_cursor)
-        document.body.style.cursor = "none";
+    document.body.style.cursor = "none";
     let time_marker = get_time();
     let wm_round_trip = 0;
 
@@ -530,7 +497,7 @@ const global_scale = 1;
                 window.request_focus = false;
             }
         }
-        if (requested_window_index !== undefined && requested_window_index < windows.length) {
+        if (requested_window_index !== undefined) {
             for (let i = 0; i < windows.length; i++) {
                 windows[i].request_focus = false;
                 windows[i].has_focus = false;
@@ -539,7 +506,6 @@ const global_scale = 1;
             let window = windows[requested_window_index];
             windows.splice(requested_window_index, 1);
             windows.push(window);
-            window.reappend();
             call_render = true;
         }
     }
@@ -552,10 +518,8 @@ const global_scale = 1;
     let buffer_updated = false;
     let draw_cursor = function (graphics, devices) {
         //Cursor
-        if (draw_software_cursor) {
-            graphics.drawImage(cursor_canvas, devices.mouse.x * mouse_factor, devices.mouse.y * mouse_factor);
-            previous_devices = devices;
-        }
+        graphics.drawImage(cursor_canvas, devices.mouse.x * mouse_factor, devices.mouse.y * mouse_factor);
+        previous_devices = devices;
     }
     let draw_layers = function (target_graphics) {
         // Draw windows
@@ -563,14 +527,10 @@ const global_scale = 1;
         let draw = false;
         for (let i = 0; i < windows.length; i++) {
             let window = windows[i];
-            if (window.call_render === true)
+            if(window.call_render === true)
                 draw = true;
-            if (draw) {
-                if(!window.native)
-                    window.draw(target_graphics, foreground_graphics);
-                else
-                    window.draw_top_bar(target_graphics, window.x, window.y, 1);
-            }
+            if(draw)
+                window.draw(target_graphics, foreground_graphics);
         }
         target_graphics.drawImage(foreground_graphics.canvas, 0, 0);
     }
@@ -591,7 +551,7 @@ const global_scale = 1;
         }
         window_logic(devices);
 
-        if (dynamic_buffer) {
+        if(dynamic_buffer) {
             if (call_render) {
                 call_render = false;
                 call_cursor_update = false;
@@ -600,7 +560,7 @@ const global_scale = 1;
                 buffer_updated = false;
             } else if (call_cursor_update) {
                 call_cursor_update = false;
-                if (!buffer_updated) {
+                if(!buffer_updated) {
                     // This is dumb, but somehow faster than draw_layers(offscreen_graphics).
                     // Javascript moment
                     draw_layers(graphics);

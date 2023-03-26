@@ -144,6 +144,7 @@ function createIcon(iconFunction, x, y, size, create_windowFunction) {
   icon.y = y;
   icon.canvas.width = size * global_scale;
   icon.canvas.height = size * global_scale;
+  icon.native = false;
   icon.title_bar_height = 0;
   icon.focusable = false;
   icon.foreground = true;
