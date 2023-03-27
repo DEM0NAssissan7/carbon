@@ -5,13 +5,14 @@ const global_scale = 1;
     const button_padding = 8;
     let monitor_refresh_rate = 60;
     const downscale_factor = 1;
-    const draw_software_cursor = false;
+    const draw_software_cursor = true;
     const mouse_factor = 1 / Math.max(global_scale / downscale_factor, 1);
     const animation_time = 450;
     const use_buffer = false;
     const track_wm_performance = false;
     const dynamic_buffer = false;
     const use_2d_render = true;
+    const use_native_canvas = true;
     let animation = 0;
     let alpha_value = 1;
     let window_exec = null;
@@ -24,6 +25,15 @@ const global_scale = 1;
         graphics = canvas.getContext("2d", { alpha: false, willReadFrequently: true });
         graphics.imageSmoothingEnabled = false;
         graphics.globalCompositeOperation = "none";
+    }
+
+    // Initialize layer dom containers
+    let window_layer, foreground_layer;
+    if(use_native_canvas) {
+        window_layer = document.createElement("div");
+        foreground_layer = document.createElement("div");
+        document.body.appendChild(window_layer);
+        document.body.appendChild(foreground_layer);
     }
 
     {
@@ -116,6 +126,9 @@ const global_scale = 1;
         this.graphics = this.canvas.getContext("2d", { alpha: false });
         this.graphics.scale(global_scale, global_scale);
 
+        this.div = document.createElement("div");
+        this.div.style.position = "fixed";
+
         this.x = (canvas.width / global_scale) / 2 - (this.canvas.width / global_scale) / 2;
         this.y = (canvas.height / global_scale) / 2 - (this.canvas.height / global_scale) / 2;
         this.window_name = "window";
@@ -127,7 +140,7 @@ const global_scale = 1;
         this.processes_buffer = processes;
         this.direct_render = false;
         this.foreground = false;
-        this.native = true;
+        this.native = use_native_canvas;
         this.call_render = false;
 
         this.title_bar_height = 40;
@@ -146,17 +159,28 @@ const global_scale = 1;
     }
     wm_window.prototype.close = function () {
         if(this.native) {
-            document.body.removeChild(this.canvas);
+            try{
+                window_layer.removeChild(this.div);
+            } catch (e) {}
             this.dead = true;
         } else
             this.dying = true;
     }
     wm_window.prototype.initialize = function () {
-        // Add window to DOM and configure
+        // Add window to div and configure
         if (this.native) {
-            let style = this.canvas.style;
-            style.position = "fixed";
-            document.body.appendChild(this.canvas);
+            let top_bar = document.createElement("canvas");
+            top_bar.width = this.canvas.width;
+            top_bar.height = this.title_bar_height;
+            top_bar.style.position = "absolute";
+            top_bar.style.top = "-40px";
+
+            let top_bar_graphics = top_bar.getContext("2d");
+            this.draw_top_bar(top_bar_graphics, 0, 40, 1);
+
+            this.div.appendChild(top_bar);
+            this.div.appendChild(this.canvas);
+            window_layer.appendChild(this.div);
         }
 
         // Initialize processes
@@ -376,14 +400,14 @@ const global_scale = 1;
 
         // Update native window position
         if (this.native) {
-            this.canvas.style.left = (this.x + 8) + "px";
-            this.canvas.style.top = (this.y + 8) + "px";
+            this.div.style.left = (this.x + 8) + "px";
+            this.div.style.top = (this.y + 8) + "px";
         }
     }
     wm_window.prototype.reappend = function() {
         if(this.native) {
-            document.body.removeChild(this.canvas);
-            document.body.appendChild(this.canvas);
+            window_layer.removeChild(this.div);
+            window_layer.appendChild(this.div);
         }
     }
 
@@ -454,7 +478,10 @@ const global_scale = 1;
     let bg_canvas = new OffscreenCanvas(buffer_canvas.width, buffer_canvas.height);
     let bg_graphics = bg_canvas.getContext("2d", { alpha: false, willReadFrequently: true });
     function set_background(handler) {
-        handler(bg_canvas, bg_graphics);
+        if(!use_native_canvas)
+            handler(bg_canvas, bg_graphics);
+        else
+            handler(canvas, graphics);
         background_image = bg_graphics.getImageData(0, 0, buffer_canvas.width, buffer_canvas.height);
     }
     function get_background_image() {
@@ -467,7 +494,9 @@ const global_scale = 1;
     })
 
     //Cursor
-    let cursor_canvas = new OffscreenCanvas(16, 16);
+    let cursor_canvas = document.createElement("canvas");
+    cursor_canvas.width = 16;
+    cursor_canvas.height = 16;
     let cursor_graphics = cursor_canvas.getContext("2d", { desynchronized: true });
     function set_cursor(handler) {
         cursor_graphics.clearRect(0, 0, cursor_canvas.width, cursor_canvas.height);
@@ -499,8 +528,21 @@ const global_scale = 1;
     //Foreground
     let foreground_graphics;
     {
-        let fg_canvas = new OffscreenCanvas(buffer_canvas.width, buffer_canvas.height);
+        let fg_canvas = document.createElement("canvas");
+        fg_canvas.width = buffer_canvas.width;
+        fg_canvas.height = buffer_canvas.height;
         foreground_graphics = fg_canvas.getContext("2d");
+        if(use_native_canvas) {
+            fg_canvas.style.position = "fixed";
+            fg_canvas.style.left = "0px";
+            fg_canvas.style.top = "0px";
+            foreground_layer.append(fg_canvas);
+        }
+    }
+    // Append cursor
+    if(use_native_canvas && draw_software_cursor) {
+        cursor_canvas.style.position = "fixed";
+        foreground_layer.appendChild(cursor_canvas);
     }
 
     //Init
@@ -539,7 +581,8 @@ const global_scale = 1;
             let window = windows[requested_window_index];
             windows.splice(requested_window_index, 1);
             windows.push(window);
-            window.reappend();
+            if(requested_window_index < windows.length - 1)
+                window.reappend();
             call_render = true;
         }
     }
@@ -553,13 +596,18 @@ const global_scale = 1;
     let draw_cursor = function (graphics, devices) {
         //Cursor
         if (draw_software_cursor) {
-            graphics.drawImage(cursor_canvas, devices.mouse.x * mouse_factor, devices.mouse.y * mouse_factor);
+            if(use_native_canvas) {
+                cursor_canvas.style.left = ((devices.mouse.x + 8) * mouse_factor) + "px";
+                cursor_canvas.style.top = ((devices.mouse.y + 8) * mouse_factor) + "px";
+            } else
+                graphics.drawImage(cursor_canvas, devices.mouse.x * mouse_factor, devices.mouse.y * mouse_factor);
             previous_devices = devices;
         }
     }
     let draw_layers = function (target_graphics) {
         // Draw windows
-        target_graphics.drawImage(bg_canvas, 0, 0);
+        if(!use_native_canvas)
+            target_graphics.drawImage(bg_canvas, 0, 0);
         let draw = false;
         for (let i = 0; i < windows.length; i++) {
             let window = windows[i];
@@ -568,11 +616,11 @@ const global_scale = 1;
             if (draw) {
                 if(!window.native)
                     window.draw(target_graphics, foreground_graphics);
-                else
-                    window.draw_top_bar(target_graphics, window.x, window.y, 1);
             }
+            // window.draw_top_bar(target_graphics, window.x, window.y, 1);
         }
-        target_graphics.drawImage(foreground_graphics.canvas, 0, 0);
+        if(!use_native_canvas)
+            target_graphics.drawImage(foreground_graphics.canvas, 0, 0);
     }
     let scanout = function (graphics, canvas) {
 
@@ -583,46 +631,55 @@ const global_scale = 1;
         // } else if(use_buffer === true || call_buffer === true)
         graphics.drawImage(canvas, 0, 0);
     }
-    let window_manager = function () {
-        let devices = get_devices();
-        if (previous_devices.mouse.x !== devices.mouse.x ||
-            previous_devices.mouse.y !== devices.mouse.y) {
-            call_cursor_update = true;
-        }
-        window_logic(devices);
-
-        if (dynamic_buffer) {
-            if (call_render) {
+    {
+        let initialized = false;
+        let window_manager = function () {
+            if(!initialized) {
+                thread(() => {
+                    exit();
+                });
+                initialized = true;
+            }
+            let devices = get_devices();
+            if (previous_devices.mouse.x !== devices.mouse.x ||
+                previous_devices.mouse.y !== devices.mouse.y) {
+                call_cursor_update = true;
+            }
+            window_logic(get_devices());
+    
+            if (dynamic_buffer) {
+                if (call_render) {
+                    call_render = false;
+                    call_cursor_update = false;
+                    draw_layers(graphics);
+                    draw_cursor(graphics, devices);
+                    buffer_updated = false;
+                } else if (call_cursor_update) {
+                    call_cursor_update = false;
+                    if (!buffer_updated) {
+                        // This is dumb, but somehow faster than draw_layers(offscreen_graphics).
+                        // Javascript moment
+                        draw_layers(graphics);
+                        scanout(offscreen_graphics, canvas);
+                        buffer_updated = true;
+                    }
+                    scanout(graphics, offscreen_canvas);
+                    draw_cursor(graphics, devices);
+                }
+            } else if (call_render || call_cursor_update) {
                 call_render = false;
                 call_cursor_update = false;
                 draw_layers(graphics);
                 draw_cursor(graphics, devices);
-                buffer_updated = false;
-            } else if (call_cursor_update) {
-                call_cursor_update = false;
-                if (!buffer_updated) {
-                    // This is dumb, but somehow faster than draw_layers(offscreen_graphics).
-                    // Javascript moment
-                    draw_layers(graphics);
-                    scanout(offscreen_graphics, canvas);
-                    buffer_updated = true;
-                }
-                scanout(graphics, offscreen_canvas);
-                draw_cursor(graphics, devices);
             }
-        } else if (call_render || call_cursor_update) {
-            call_render = false;
-            call_cursor_update = false;
-            draw_layers(graphics);
-            draw_cursor(graphics, devices);
+            if (track_wm_performance) {
+                let time_buffer = get_time();
+                wm_round_trip = time_buffer - time_marker;
+                time_marker = time_buffer;
+                performance_display(graphics);
+            }
+            sleep(1000 / monitor_refresh_rate);
         }
-        if (track_wm_performance) {
-            let time_buffer = get_time();
-            wm_round_trip = time_buffer - time_marker;
-            time_marker = time_buffer;
-            performance_display(graphics);
-        }
-        sleep(1000 / monitor_refresh_rate);
+        create_init(window_manager);
     }
-    create_init(window_manager);
 }
