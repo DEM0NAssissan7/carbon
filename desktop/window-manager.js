@@ -128,6 +128,7 @@ const global_scale = 1;
 
         this.div = document.createElement("div");
         this.div.style.position = "fixed";
+        this.div.style.display = "none";
 
         this.x = (canvas.width / global_scale) / 2 - (this.canvas.width / global_scale) / 2;
         this.y = (canvas.height / global_scale) / 2 - (this.canvas.height / global_scale) / 2;
@@ -169,16 +170,16 @@ const global_scale = 1;
     wm_window.prototype.initialize = function () {
         // Add window to div and configure
         if (this.native) {
-            let top_bar = document.createElement("canvas");
-            top_bar.width = this.canvas.width;
-            top_bar.height = this.title_bar_height;
-            top_bar.style.position = "absolute";
-            top_bar.style.top = "-40px";
+            this.top_bar = document.createElement("canvas");
+            this.top_bar.width = this.canvas.width;
+            this.top_bar.height = this.title_bar_height;
+            this.top_bar.style.position = "absolute";
+            this.top_bar.style.top = "-40px";
 
-            let top_bar_graphics = top_bar.getContext("2d");
-            this.draw_top_bar(top_bar_graphics, 0, 40, 1);
+            this.top_bar_graphics = this.top_bar.getContext("2d");
+            this.draw_top_bar(this.top_bar_graphics, 0, 40, 1);
 
-            this.div.appendChild(top_bar);
+            this.div.appendChild(this.top_bar);
             this.div.appendChild(this.canvas);
             window_layer.appendChild(this.div);
         }
@@ -402,6 +403,7 @@ const global_scale = 1;
         if (this.native) {
             this.div.style.left = (this.x + 8) + "px";
             this.div.style.top = (this.y + 8) + "px";
+            this.div.style.display = "inline";
         }
     }
     wm_window.prototype.reappend = function() {
@@ -409,6 +411,9 @@ const global_scale = 1;
             window_layer.removeChild(this.div);
             window_layer.appendChild(this.div);
         }
+    }
+    wm_window.prototype.regenerate_top_bar = function() {
+        this.draw_top_bar(this.top_bar_graphics, 0, 40, 1);
     }
 
     function spawn_window(processes, window_name) {
@@ -616,6 +621,8 @@ const global_scale = 1;
             if (draw) {
                 if(!window.native)
                     window.draw(target_graphics, foreground_graphics);
+                // else
+                //     window.regenerate_top_bar();
             }
             // window.draw_top_bar(target_graphics, window.x, window.y, 1);
         }
