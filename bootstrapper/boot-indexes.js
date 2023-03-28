@@ -27,7 +27,8 @@
             //Machine Code Emulator
             "applications/emulators/vm/vm.js",
             //Desktop
-            "desktop/window-manager.js",
+            // "desktop/window-manager.js",
+            "desktop/native-wm.js",
             "desktop/shell.js",
             ],
             "Graphite Desktop"

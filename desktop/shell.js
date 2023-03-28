@@ -121,15 +121,12 @@ function createIcon(iconFunction, x, y, size, create_windowFunction) {
     } catch (e){
       console.error(e);
     }
-    call_draw();
+    draw_foreground();
     sleep(15);
   });
-  let iconKiller = spawn_process(() => {
-    if(icon.fade === 1){
-      icon.dead = true;
-    }
-    sleep(100);
-  });
+  create_timeout(() => {
+    icon.dead = true;
+  }, 1000);
   icons.push({
     x: x, 
     y: y,
@@ -138,13 +135,12 @@ function createIcon(iconFunction, x, y, size, create_windowFunction) {
   });
 
 
-  icon.processes_buffer = [iconRender, iconKiller];
-  icon.original_processes = [iconRender, iconKiller];
+  icon.processes_buffer = [iconRender];
+  icon.original_processes = [iconRender];
   icon.x = x;
   icon.y = y;
   icon.canvas.width = size * global_scale;
   icon.canvas.height = size * global_scale;
-  icon.native = false;
   icon.title_bar_height = 0;
   icon.focusable = false;
   icon.foreground = true;
