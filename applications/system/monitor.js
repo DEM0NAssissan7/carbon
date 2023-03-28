@@ -44,8 +44,10 @@ class SystemMonitor{
                 graphics.fillText(Math.round(process.cpu_time / (raw_uptime().active - process.starting_uptime) * 100) + "%", 162, (i + 1) * this.element_spacing - (this.element_spacing - this.text_size) / 2, 20);
                 //CPU time
                 graphics.fillText((Math.round(process.cpu_time / 10) / 100) + "s", 187, (i + 1) * this.element_spacing - (this.element_spacing - this.text_size) / 2, 40);
-                //CPU time
-                graphics.fillText(process.PID, 230, (i + 1) * this.element_spacing - (this.element_spacing - this.text_size) / 2, 40);
+                //Execution Time
+                graphics.fillText((Math.round(process.exec_time * 100) / 100) + "ms", 230, (i + 1) * this.element_spacing - (this.element_spacing - this.text_size) / 2, 40);
+                //PID
+                graphics.fillText(process.PID, 270, (i + 1) * this.element_spacing - (this.element_spacing - this.text_size) / 2, 40);
             }
             graphics.translate(0, -this.spacing);
         }
