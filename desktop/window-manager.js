@@ -225,19 +225,20 @@ const global_scale = 1;
 
             //Actual top bar
             // graphics.fillStyle = "#222222";
-            if (darkmode === true) {
+            let color_scheme = get_color_scheme();
+            if (get_theme().dark_mode === true) {
                 if (this.has_focus !== true)
-                    graphics.fillStyle = colorScheme.elementColors;
+                    graphics.fillStyle = color_scheme.element;
                 else
-                    graphics.fillStyle = colorScheme.background;
+                    graphics.fillStyle = color_scheme.background;
             } else {
                 if (this.has_focus !== true)
-                    graphics.fillStyle = colorScheme.background;
+                    graphics.fillStyle = color_scheme.background;
                 else
-                    graphics.fillStyle = colorScheme.elementColors;
+                    graphics.fillStyle = color_scheme.element;
             }
 
-            graphics.strokeStyle = colorScheme.elementColors;
+            graphics.strokeStyle = color_scheme.element;
             graphics.lineWidth = 1;
             graphics.fillRect(0, -scaled_title_bar_height, scaled_width, scaled_title_bar_height);
             graphics.beginPath();
@@ -246,7 +247,7 @@ const global_scale = 1;
             graphics.stroke();
 
             // graphics.fillStyle = "white";
-            graphics.fillStyle = colorScheme.textColor;
+            graphics.fillStyle = color_scheme.text;
             graphics.font = "12px Monospace";
             // graphics.fillText(this.windowName, scaled_width/2, this.canvas.height/2);
             if (fade > 0.5)

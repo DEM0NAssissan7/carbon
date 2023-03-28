@@ -9,7 +9,7 @@
             //App manager
             "desktop/app-manager.js",
             //Applications
-            "desktop/toolkit.js",
+            "desktop/pencil/toolkit.js",
             "applications/system/settings.js",
             "applications/games/sotf.js",
             "applications/system/file-browser.js",
@@ -24,11 +24,13 @@
             "applications/games/cookieclicker.js",
             "applications/utilities/autoclick.js",
             "kernel/interface/tty.js",
+            //Add Apps
+            "desktop/addapps.js",
             //Machine Code Emulator
             "applications/emulators/vm/vm.js",
             //Desktop
             "desktop/window-manager.js",
-            "desktop/shell.js",
+            "desktop/pencil/shell.js",
             ],
             "Graphite Desktop"
         ];

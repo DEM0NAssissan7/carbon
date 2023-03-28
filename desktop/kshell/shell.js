@@ -184,17 +184,6 @@ rainbow.prototype.create_window = function () {
 }
 
 //Add applications
-addApplicationFromClass(TTY);//JSTerm
-addApplicationFromClass(Settings);//Settings
-addApplicationFromClass(FileBrowser);//File Browser
-addApplicationFromClass(SOTF);//Survival of the Fittest
-addApplicationFromClass(Paint);//Paint
-addApplicationFromClass(Physics);//Physics
-addApplicationFromClass(RayCast);//Ray Casting
-addApplicationFromClass(CookieClicker);//Cookie Clicker
-addApplicationFromClass(Gcode);//Gcode
-addApplicationFromClass(SystemMonitor);//System Monitor
-addApplicationFromClass(Autoclick);//Autoclicker
 //addApplicationFromClass(Rayham);//Raycast
 addApplicationFromClass(rainbow);//Render Rainbow
 //App Dock

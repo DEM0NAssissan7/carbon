@@ -127,8 +127,8 @@ class TTY {
         graphics.fillStyle = 'white';
       }
     } catch (e) {
-      setBackground(canvas, graphics);
-      graphics.fillStyle = colorScheme.textColor;
+      color_background(graphics);
+      graphics.fillStyle = get_color_scheme().text;
     }
     for (var i = 0; i < this.textArray.length; i++) {
       let currentPrompt = this.promptArray[i];

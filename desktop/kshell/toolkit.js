@@ -4,7 +4,7 @@ var listViewOpened = "";
 let darkmode = false;
 
 //Color scheme
-let colorScheme = {
+let color_scheme = {
     accent: '#466EFF',
     background: "black",
     dialogueBackground: "#1E1E1E",
@@ -14,7 +14,7 @@ let colorScheme = {
 
 //GUI Elements
 function setBackground(canvas, graphics){
-    graphics.fillStyle = colorScheme.background;
+    graphics.fillStyle = color_scheme.background;
     graphics.fillRect(0, 0, canvas.width, canvas.height);
 }
 function centerText(graphics, displayText, textX, textY, textW, textH, textStyle) {
@@ -40,7 +40,7 @@ function blankButton(x, y, w, h, func){
 function Button(graphics, x, y, w, h, func) {
     let devices = get_devices();
     if (devices.mouse.x > x && devices.mouse.x < x + w && devices.mouse.y > y && devices.mouse.y < y + h) {
-        graphics.strokeStyle = colorScheme.accent;
+        graphics.strokeStyle = color_scheme.accent;
         graphics.lineWidth = 1.8;
 
         if(devices.mouse.clicked && buttonClicked === false){
@@ -48,9 +48,9 @@ function Button(graphics, x, y, w, h, func) {
             buttonClicked = true;
         }
     }else{
-        graphics.strokeStyle = colorScheme.elementColors;
+        graphics.strokeStyle = color_scheme.elementColors;
     }
-    graphics.fillStyle = colorScheme.elementColors;
+    graphics.fillStyle = color_scheme.elementColors;
     
     graphics.beginPath();
     graphics.moveTo(x,y);
@@ -65,7 +65,7 @@ function Button(graphics, x, y, w, h, func) {
 }
 function labledButton(graphics, x, y, w, h, func, buttonText){
     Button(graphics, x, y, w, h, func);
-    graphics.fillStyle = colorScheme.textColor;
+    graphics.fillStyle = color_scheme.textColor;
     centerText(graphics, buttonText, x, y, w, h);
 }
 function booleanToggleButton(graphics, bool, textFalse, textTrue, x, y, w, h, customFunction, textColor){
@@ -189,7 +189,7 @@ function setTheme(is_darkmode){
     // background = "white"
 
     if(darkmode === true){
-        colorScheme = {
+        color_scheme = {
             accent: accent_color,
             background: "black",
             dialogueBackground: "#1E1E1E",
@@ -197,7 +197,7 @@ function setTheme(is_darkmode){
             textColor: "white",
         };
     } else {
-        colorScheme = {
+        color_scheme = {
             accent: accent_color,
             background: "white",
             dialogueBackground: "#E1E1E1",
