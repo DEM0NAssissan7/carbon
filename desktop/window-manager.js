@@ -159,13 +159,7 @@ const global_scale = 1;
             kill(this.processes[i].PID);
     }
     wm_window.prototype.close = function () {
-        if(this.native) {
-            try{
-                window_layer.removeChild(this.div);
-            } catch (e) {}
-            this.dead = true;
-        } else
-            this.dying = true;
+        this.dying = true;
     }
     wm_window.prototype.initialize = function () {
         // Add window to div and configure
@@ -399,11 +393,12 @@ const global_scale = 1;
             call_draw();
         window_exec = null;
 
-        // Update native window position
+        // Update native window styles
         if (this.native) {
             this.div.style.left = (this.x + 8) + "px";
             this.div.style.top = (this.y + 8) + "px";
             this.div.style.display = "inline";
+            this.div.style.opacity = this.fade;
         }
     }
     wm_window.prototype.reappend = function() {
@@ -569,6 +564,8 @@ const global_scale = 1;
             let window = windows[i];
             window.update_logic(devices);
             if (window.dead === true) {
+                if(window.native)
+                    window_layer.removeChild(window.div);
                 window.kill();
                 windows.splice(i, 1);
             }
