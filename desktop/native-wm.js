@@ -400,11 +400,13 @@
     
         //Initialization
         graphics.font = '14px Monospace';
+        let previous_devices = get_devices();
 
-        let window_manager = function () {
+        let native_wm = function () {
             let devices = get_devices();
 
-            update_cursor(devices);
+            if(devices.mouse.x !== previous_devices.mouse.x || devices.mouse.y !== previous_devices.mouse.y)
+                update_cursor(devices);
             window_logic(devices);
             
             if (track_wm_performance) {
@@ -413,7 +415,8 @@
                 time_marker = time_buffer;
                 performance_display(graphics);
             }
-            sleep(10);
+            previous_devices = devices;
+            sleep(7);
         }
-        create_init(window_manager);
+        create_init(native_wm);
     }
