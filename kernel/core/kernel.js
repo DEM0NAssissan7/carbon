@@ -164,6 +164,14 @@ let canvas, graphics, webgl, bitmap;
         return Math.floor(time_tracker() * 100) / 100;
     }
 
+    //System calls
+    let run_system_call = function(handler) {
+        let time = get_time();
+        let result = handler();
+        user_time_buffer -= get_time() - time;
+        return result;
+    }
+
     //Javascript API reassignment
     let set_timeout = setTimeout;
     let set_interval = setInterval;
@@ -388,11 +396,13 @@ let canvas, graphics, webgl, bitmap;
         this.threads.push(new Thread(command));
     }
     function create_process(command) {
-        processes.push(new Process(command));
+        run_system_call(() => {
+            processes.push(new Process(command));
+        });
         return PIDs - 1;
     }
     function spawn_process(command) {
-        return new Process(command);
+        return run_system_call(() => new Process(command));
     }
     function push_process(process) {
         processes.push(process);
@@ -413,25 +423,31 @@ let canvas, graphics, webgl, bitmap;
         return result;
     }
     function kill(PID) {
-        find_by_pid(PID).process.dead = true;
-        debug("Killed " + PID);
+        run_system_call(() => {
+            find_by_pid(PID).process.dead = true;
+            debug("Killed " + PID);
+        });
     }
     function suspend(PID) {
-        find_by_pid(PID).process.suspended = true;
-        debug("Suspended " + PID);
+        run_system_call(() => {
+            find_by_pid(PID).process.suspended = true;
+            debug("Suspended " + PID);
+        });
     }
     function resume(PID) {
-        find_by_pid(PID).process.suspended = false;
-        debug("Resumed " + PID);
+        run_system_call(() => {
+            find_by_pid(PID).process.suspended = false;
+            debug("Resumed " + PID);
+        });
     }
 
     // Workers
     /* This is basically multithreading for javascript */
     function create_worker(handler){
-        return new Worker(URL.createObjectURL(
-            new Blob([`(${handler.toString()})()`],
-                    { type:'text/javascript' })
-        ));
+        return run_system_call(() => new Worker(URL.createObjectURL(
+                new Blob([`(${handler.toString()})()`],
+                        { type:'text/javascript' })
+            )));
     }
 
     //Devices
@@ -489,7 +505,7 @@ let canvas, graphics, webgl, bitmap;
             devices.controllers.splice(e.gamepad, 1);
         });
         function get_devices() {
-            return JSON.parse(JSON.stringify(devices));
+            return run_system_call(() => JSON.parse(JSON.stringify(devices)));
         }
     }
 
@@ -512,30 +528,34 @@ let canvas, graphics, webgl, bitmap;
             }
         }
         function net_get(url, handler) {
-            run_network_request(() => {
-                let xml_http = init_networking();
-                xml_http.onreadystatechange = function () {
-                    if (this.readyState == 4 && this.status == 200)
-                        handler(this.responseText);
-                }
-                xml_http.open("GET", url, true);
-                xml_http.send(null);
+            run_system_call(() => {
+                run_network_request(() => {
+                    let xml_http = init_networking();
+                    xml_http.onreadystatechange = function () {
+                        if (this.readyState == 4 && this.status == 200)
+                            handler(this.responseText);
+                    }
+                    xml_http.open("GET", url, true);
+                    xml_http.send(null);
+                });
             });
         }
         function net_send(url, data) {
-            run_network_request(() => {
-                let xml_http = init_networking();
-                const urlEncodedDataPairs = [];
-                for (const [name, value] of Object.entries(data)) {
-                    urlEncodedDataPairs.push(`${encodeURIComponent(name)}=${encodeURIComponent(value)}`);
-                }
-                xml_http.addEventListener('load', (event) => {
-                    debug("Network send request successful");
+            run_system_call(() => {
+                run_network_request(() => {
+                    let xml_http = init_networking();
+                    const urlEncodedDataPairs = [];
+                    for (const [name, value] of Object.entries(data)) {
+                        urlEncodedDataPairs.push(`${encodeURIComponent(name)}=${encodeURIComponent(value)}`);
+                    }
+                    xml_http.addEventListener('load', (event) => {
+                        debug("Network send request successful");
+                    });
+                    const urlEncodedData = urlEncodedDataPairs.join('&').replace(/%20/g, '+');
+                    xml_http.open('POST', url);
+                    xml_http.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+                    xml_http.send(urlEncodedData);
                 });
-                const urlEncodedData = urlEncodedDataPairs.join('&').replace(/%20/g, '+');
-                xml_http.open('POST', url);
-                xml_http.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
-                xml_http.send(urlEncodedData);
             });
         }
     }
@@ -583,18 +603,20 @@ let canvas, graphics, webgl, bitmap;
             this.type = "text";
     }
     function get_files(){
-        return JSON.parse(JSON.stringify(files));
+        return run_system_call(() => JSON.parse(JSON.stringify(files)));
     }
     function read_file(name){
-        for(let i = 0; i < files.length; i++)
-            if(files[i].name === name)
-                return files[i];
+        return run_system_call(() => {
+            for(let i = 0; i < files.length; i++)
+                if(files[i].name === name)
+                    return files[i];
+        });
     }
     function create_file(name, data, type){
         files.push(new fsFile(name, data, type));
     }
     function export_filesystem(){
-        return JSON.stringify(files);
+        return run_system_call(() => JSON.stringify(files));
     }
     function import_filesystem(filesystem){
         files = JSON.parse(filesystem);
@@ -602,11 +624,13 @@ let canvas, graphics, webgl, bitmap;
 
     //Sound
     function play_sound(url) {
-        try {
-            new Audio(url).play();
-        } catch (e) {
-            error("Sound '" + url + "' failed to play.");
-        }
+        run_system_call(() => {
+            try {
+                new Audio(url).play();
+            } catch (e) {
+                error("Sound '" + url + "' failed to play.");
+            }
+        });
     }
 
     //Suspension
@@ -686,10 +710,12 @@ let canvas, graphics, webgl, bitmap;
 
     {//Thread-process management APIs
         let run_kernel_api = function (handler) {
-            if (thread_in_execution !== null && process_in_execution !== null)
-                handler();
-            else
-                warn("A kernel API was called outside of a process context. (process: " + process_in_execution + ", thread: " + thread_in_execution + ")");
+            run_system_call(() => {
+                if (thread_in_execution !== null && process_in_execution !== null)
+                    handler();
+                else
+                    warn("A kernel API was called outside of a process context. (process: " + process_in_execution + ", thread: " + thread_in_execution + ")");
+            });
         }
         function interrupt() {
             throw "interrupt";
@@ -729,24 +755,26 @@ let canvas, graphics, webgl, bitmap;
             });
         }
         function proc() {
-            return process_in_execution;
+            return run_system_call(() => process_in_execution);
         }
     }
 
     //Timer management
     let timers = [];
     function create_timeout(handler, time) {
-        if (panicked === false) {
-            let process_context = process_in_execution;
-            let timer_id = set_timeout(() => {
-                process_in_execution = process_context
-                handler();
-                process_in_execution = null;
-                timers.splice(timer_id);
-            }, time);
-            timers.push(timer_id);
-            return timer_id;
-        }
+        return run_system_call(() => {
+            if (panicked === false) {
+                let process_context = process_in_execution;
+                let timer_id = set_timeout(() => {
+                    process_in_execution = process_context
+                    handler();
+                    process_in_execution = null;
+                    timers.splice(timer_id);
+                }, time);
+                timers.push(timer_id);
+                return timer_id;
+            }
+        });
     }
     let create_interval = function (handler, time) {
         let timer_id = set_interval(() => {
@@ -837,19 +865,21 @@ let canvas, graphics, webgl, bitmap;
                 low_performance_mode = true;
         }
         function get_performance() {
-            const const_realtime_performance = realtime_performance;
-            let result = {
-                realtime: const_realtime_performance,
-                average: load_average,
-                percent: percent_total * 100,
-                percent_user: percent_user * 100,
-                percent_system: percent_system * 100,
-                percent_idle: percent_idle * 100,
-                overhead: system_overhead,
-                system: system_time,
-                low_performance: low_performance_mode
-            }
-            return result;
+            return run_system_call(() => {
+                const const_realtime_performance = realtime_performance;
+                let result = {
+                    realtime: const_realtime_performance,
+                    average: load_average,
+                    percent: percent_total * 100,
+                    percent_user: percent_user * 100,
+                    percent_system: percent_system * 100,
+                    percent_idle: percent_idle * 100,
+                    overhead: system_overhead,
+                    system: system_time,
+                    low_performance: low_performance_mode
+                }
+                return result;
+            });
         }
         //QOL functions
         function ktop() {
@@ -887,44 +917,46 @@ let canvas, graphics, webgl, bitmap;
             return output_text;
         }
         function get_system_info() {
-            let get_percent = function (number) {
-                return number * 100;
-            }
-            let result = {
-                usage: {
-                    total: get_percent(percent_total),
-                    user: get_percent(percent_user),
-                    system: get_percent(percent_system),
-                    idle: get_percent(percent_idle),
-                    load_average: load_average
-                },
-                info: {
-                    system_time: system_time,
-                    kernel_overhead: kernel_overhead,
-                    sched_overhead: sched_overhead,
-                    user_time: user_time,
-                    realtime: realtime_performance,
-                    js_overhead: system_overhead,
-                },
-                processes: []
-            }
-            for (let i = 0; i < processes.length; i++) {
-                let process = processes[i];
-                let process_name = process.process_name;
-                if (process_name === "")
-                    process_name = "unnamed";
-                let process_buffer = {
-                    process_name: process_name,
-                    PID: process.PID,
-                    cpu_time: process.cpu_time,
-                    exec_time: process.exec_time,
-                    sleep_time: process.sleep_time,
-                    creation_time: process.creation_time,
-                    starting_uptime: process.starting_uptime
+            return run_system_call(() => {
+                let get_percent = function (number) {
+                    return number * 100;
                 }
-                result.processes.push(process_buffer);
-            }
-            return result;
+                let result = {
+                    usage: {
+                        total: get_percent(percent_total),
+                        user: get_percent(percent_user),
+                        system: get_percent(percent_system),
+                        idle: get_percent(percent_idle),
+                        load_average: load_average
+                    },
+                    info: {
+                        system_time: system_time,
+                        kernel_overhead: kernel_overhead,
+                        sched_overhead: sched_overhead,
+                        user_time: user_time,
+                        realtime: realtime_performance,
+                        js_overhead: system_overhead,
+                    },
+                    processes: []
+                }
+                for (let i = 0; i < processes.length; i++) {
+                    let process = processes[i];
+                    let process_name = process.process_name;
+                    if (process_name === "")
+                        process_name = "unnamed";
+                    let process_buffer = {
+                        process_name: process_name,
+                        PID: process.PID,
+                        cpu_time: process.cpu_time,
+                        exec_time: process.exec_time,
+                        sleep_time: process.sleep_time,
+                        creation_time: process.creation_time,
+                        starting_uptime: process.starting_uptime
+                    }
+                    result.processes.push(process_buffer);
+                }
+                return result;
+            });
         }
         function perf_track(command) {
             let time_marker = get_time();
@@ -940,8 +972,10 @@ let canvas, graphics, webgl, bitmap;
         }
         let daemon_id = add_kernel_daemon(performance_display);
         function set_performance_display(handler) {
-            kernel_daemons[daemon_id].command = handler;
-            debug("Performance display has been set (" + handler.name + ")");
+            run_system_call(() => {
+                kernel_daemons[daemon_id].command = handler;
+                debug("Performance display has been set (" + handler.name + ")");
+            });
         }
     }
 
@@ -1029,7 +1063,7 @@ let canvas, graphics, webgl, bitmap;
             sleep(500);
         });
         function create_init(command) {
-            inits.push(command);
+            run_system_call(() => inits.push(command));
         }
     }
     push_process(system_process);
