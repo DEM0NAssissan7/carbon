@@ -57,6 +57,7 @@ let canvas, graphics, webgl, bitmap;
 
     const use_graphics = true;
     const use_devices = true;
+    const reparse_devices = true;
     const use_networking = true;
     const reassign_jsapi = true;
     const use_init = true;
@@ -357,6 +358,7 @@ let canvas, graphics, webgl, bitmap;
             else
                 this.parent = process_in_execution.PID;
         }
+        this.process = this;
         this.creation_time = get_time();
         this.starting_uptime = raw_uptime().active;
         this.full_execution_time = 0;
@@ -419,13 +421,13 @@ let canvas, graphics, webgl, bitmap;
     }
     function suspend(PID) {
         run_system_call(() => {
-            find_by_pid(PID).process.suspended = true;
+            find_by_pid(PID).process.process.suspended = true;
             debug("Suspended " + PID);
         });
     }
     function resume(PID) {
         run_system_call(() => {
-            find_by_pid(PID).process.suspended = false;
+            find_by_pid(PID).process.process.suspended = false;
             debug("Resumed " + PID);
         });
     }
@@ -494,7 +496,9 @@ let canvas, graphics, webgl, bitmap;
             devices.controllers.splice(e.gamepad, 1);
         });
         function get_devices() {
-            return run_system_call(() => JSON.parse(JSON.stringify(devices)));
+            if(reparse_devices)
+                return run_system_call(() => JSON.parse(JSON.stringify(devices)));
+            return run_system_call(() => devices);
         }
     }
 
@@ -707,6 +711,7 @@ let canvas, graphics, webgl, bitmap;
             
             // Execute added threads
             let time_buffer = get_time();
+            let time;
             while(threads.length > 0) {
                 sched_time = time_buffer - start_time;
                 if(time_buffer >= target_time) break; // Scheduler watchdog
@@ -724,7 +729,8 @@ let canvas, graphics, webgl, bitmap;
                 process = thread.process;
                 thread_in_execution = thread;
                 process_in_execution = process;
-                thread.last_execution = time_buffer
+                thread.last_execution = time_buffer;
+                if(thread.process.suspended !== true) {
                 run_command_buffer(thread.command, e => {
                     if (e !== "interrupt") {
                         console.error("Process " + process.process_name + " (" + thread.PID + ") has encountered an error.");
@@ -734,12 +740,13 @@ let canvas, graphics, webgl, bitmap;
                 });
                 // Keep track of performance
                 waiting_processes++;
-                let time = get_time();
+                time = get_time();
                 thread.exec_time = time - time_buffer;
                 user_time_buffer += thread.exec_time;
-                time_buffer = time;
                 process.cpu_time += Math.floor(thread.exec_time * 100) / 100;
                 process.exec_time_buffer += thread.exec_time;
+                } else time = get_time();
+                time_buffer = time;
                 threads.splice(0, 1); // Clean the executed thread
             }
             
