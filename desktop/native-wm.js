@@ -280,7 +280,7 @@
             }
         }
         function call_draw() {
-            console.warn("This method is invalid in native-wm.");
+            // console.warn("This method is invalid in native-wm.");
         }
         function draw_foreground() {
             window_exec.draw(null, foreground_graphics);
@@ -402,7 +402,12 @@
         graphics.font = '14px Monospace';
         let previous_devices = get_devices();
 
+        let started = false;
         let native_wm = function () {
+            if(!started) {
+                proc().priority = 1;
+                started = true;
+            }
             let devices = get_devices();
 
             if(devices.mouse.x !== previous_devices.mouse.x || devices.mouse.y !== previous_devices.mouse.y)
