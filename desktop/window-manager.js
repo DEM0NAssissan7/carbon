@@ -459,6 +459,9 @@ const global_scale = 1;
             window_exec.call_render = true;
         }
     }
+    function draw_foreground() {
+        window_exec.draw(null, foreground_graphics);
+    }
 
     //Buffer
     let offscreen_canvas = new OffscreenCanvas(canvas.width * downscale_factor, canvas.height * downscale_factor);
@@ -639,6 +642,7 @@ const global_scale = 1;
         let initialized = false;
         let window_manager = function () {
             if(!initialized) {
+                priority(1);
                 thread(() => {
                     exit();
                 });
