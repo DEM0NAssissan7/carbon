@@ -328,6 +328,8 @@ let canvas, graphics, webgl, bitmap;
         this.sleep_time = 0;
         this.last_execution = 0;
         this.exec_time = 0;
+        this.queued = false;
+        this.queued_execution = 0;
         this.dead = false;
         this.PID = PIDs;
         PIDs++;
@@ -682,7 +684,6 @@ let canvas, graphics, webgl, bitmap;
     let user_time = 0;
     let sched_time = 0;
     let threads = [];
-    let injected_threads = [];
     let scheduler = function () {
         if (system_suspended !== true) {
             let start_time = get_time();
@@ -697,9 +698,10 @@ let canvas, graphics, webgl, bitmap;
                     thread = process.threads[j];
                     if (thread.dead === true)
                         process.threads.splice(j, 1);
-                    else if (thread.sleep_time + thread.last_execution <= start_time) {
+                    else if (thread.queued_execution <= start_time && thread.queued === false) {
                         // Performance accounting from previous cycle
                         process.exec_time = process.exec_time_buffer;
+                        thread.queued = true;
                         threads.push(thread);
                     }
                 }
@@ -708,7 +710,7 @@ let canvas, graphics, webgl, bitmap;
                 if(process.dead === true)
                     processes.splice(i, 1);
             }
-            
+
             // Execute added threads
             let time_buffer = get_time();
             let time;
@@ -716,35 +718,34 @@ let canvas, graphics, webgl, bitmap;
                 sched_time = time_buffer - start_time;
                 if(time_buffer >= target_time) break; // Scheduler watchdog
 
-                // Check for a injected thread ready to be executed
-                if(injected_threads.length > 0) {
-                    thread = injected_threads[0]
-                    if(thread.sleep_time + thread.last_execution <= time_buffer && thread.process.priority >= threads[0].process.priority) {
-                        threads.splice(0, 0, thread);
-                        injected_threads.splice(0, 1);
-                    }
-                }
-
                 thread = threads[0];
                 process = thread.process;
                 thread_in_execution = thread;
                 process_in_execution = process;
+                thread.queued = false;
                 thread.last_execution = time_buffer;
                 if(thread.process.suspended !== true) {
-                run_command_buffer(thread.command, e => {
-                    if (e !== "interrupt") {
-                        console.error("Process " + process.process_name + " (" + thread.PID + ") has encountered an error.");
-                        console.error(e);
-                        thread.dead = true;
+                    if(thread.queued_execution > time_buffer && threads.length > 1 && threads[1].exec_time < thread.queued_execution - time_buffer) {
+                        // If a process is running early, and it will not be delayed if the next process runs, delay it until after the next process
+                        threads.splice(2, 0, thread);
+                        threads.splice(0, 1);
+                        time_buffer = get_time();
+                        continue;
                     }
-                });
-                // Keep track of performance
-                waiting_processes++;
-                time = get_time();
-                thread.exec_time = time - time_buffer;
-                user_time_buffer += thread.exec_time;
-                process.cpu_time += Math.floor(thread.exec_time * 100) / 100;
-                process.exec_time_buffer += thread.exec_time;
+                    run_command_buffer(thread.command, e => {
+                        if (e !== "interrupt") {
+                            console.error("Process " + process.process_name + " (" + thread.PID + ") has encountered an error.");
+                            console.error(e);
+                            thread.dead = true;
+                        }
+                    });
+                    // Keep track of performance
+                    waiting_processes++;
+                    time = get_time();
+                    thread.exec_time = time - time_buffer;
+                    user_time_buffer += thread.exec_time;
+                    process.cpu_time += Math.floor(thread.exec_time * 100) / 100;
+                    process.exec_time_buffer += thread.exec_time;
                 } else time = get_time();
                 time_buffer = time;
                 threads.splice(0, 1); // Clean the executed thread
@@ -752,7 +753,6 @@ let canvas, graphics, webgl, bitmap;
             
             process_in_execution = null;
             thread_in_execution = null;
-            injected_threads = [];
             sched_overhead = get_time() - start_time - user_time_buffer;
             user_time = user_time_buffer;
             scheduler_run_count++;
@@ -792,15 +792,16 @@ let canvas, graphics, webgl, bitmap;
 
                 */
                 thread_in_execution.sleep_time = timeout;
-                let estimated_system_time = 0;
-                for(let i = 0; i < threads.length; i++)
-                    estimated_system_time += threads[i].exec_time;
-                if(timeout < estimated_system_time - sched_time) { // Predicts if the cycle has a possibility to delay the process
-                    injected_threads.push(thread_in_execution);
-                    injected_threads.sort((a, b) => {
-                        if(a.priority !== b.priority) return b.priority - a.priority;
-                        return (a.sleep_time + a.last_execution) - (b.sleep_time + b.last_execution)
-                    })
+                thread_in_execution.queued_execution = timeout + thread_in_execution.last_execution;
+                let predicted_scheduler_time = 0;
+                for(let i = 1; i < threads.length - 1; i++) {
+                    let thread = threads[i];
+                    predicted_scheduler_time += thread.exec_time;
+                    if(timeout <= predicted_scheduler_time && thread_in_execution.process.priority >= thread.process.priority) {
+                        thread_in_execution.queued = true;
+                        threads.splice(i, 0, thread_in_execution);
+                        return;
+                    }
                 }
             });
         }
@@ -1079,7 +1080,7 @@ let canvas, graphics, webgl, bitmap;
                     for (let l = 0; l < process.threads.length; l++) {
                         let thread = process.threads[l];
                         if (thread.sleep_time !== 0) {
-                            let scheduled_exec = thread.last_execution + thread.sleep_time - time_buffer;
+                            let scheduled_exec = thread.queued_execution - time_buffer;
                             if (scheduled_exec < minimum_execution_point)
                                 minimum_execution_point = scheduled_exec;
                         }
