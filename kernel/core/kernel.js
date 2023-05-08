@@ -54,12 +54,8 @@ let canvas, graphics, webgl, bitmap;
     const run_loop = true;
     const track_performance = true;
     const manage_power = true;
-    const innacuracy_test_trials = 10;
 
     const use_graphics = true;
-    const use_framebuffer = false;
-    const graphics_compatibility = true;
-
     const use_devices = true;
     const use_networking = true;
     const reassign_jsapi = true;
@@ -676,30 +672,6 @@ let canvas, graphics, webgl, bitmap;
         thread_in_execution = null;
     }
 
-    //Javascript Timeout Innacuracy
-    let timeout_innacuracy = 0;
-    {
-        let trials_run = 0;
-        let delay_preset = 15;
-        for(let i = 0; i < innacuracy_test_trials; i++) {
-            let time = get_time();
-            set_timeout(() => {
-                timeout_innacuracy += get_time() - time - delay_preset;
-                trials_run++;
-            }, delay_preset);
-        }
-        function get_average_time_innacuracy() {
-            set_timeout(() => {
-                if(trials_run === innacuracy_test_trials) {
-                    timeout_innacuracy = timeout_innacuracy / trials_run;
-                    console.log(timeout_innacuracy);
-                }
-                else get_average_time_innacuracy();
-            }, 100);
-        }
-        get_average_time_innacuracy();
-    }
-
     //Scheduler
     let scheduler_run_count = 0;
     let sched_overhead = 0;
@@ -713,20 +685,14 @@ let canvas, graphics, webgl, bitmap;
             let target_time = 1000 / minimum_cycle_rate + start_time;
             processes.sort((a, b) => b.priority - a.priority);//Order processes by priority
             user_time_buffer = 0;
-            let dead_process = false;
             let process, thread;
             // Add ready threads to the scheduler
             for (let i = 0; i < processes.length; i++) {
                 process = processes[i];
-                if(process.threads.length < 1) process.dead = true;
-                if(process.dead === true) {
-                    dead_process = true;
-                    continue;
-                }
                 for(let j = 0; j < process.threads.length; j++) {
                     thread = process.threads[j];
                     if (thread.dead === true)
-                        process.threads.splice(i, 1);
+                        process.threads.splice(j, 1);
                     else if (thread.sleep_time + thread.last_execution <= start_time) {
                         // Performance accounting from previous cycle
                         process.exec_time = process.exec_time_buffer;
@@ -734,13 +700,10 @@ let canvas, graphics, webgl, bitmap;
                     }
                 }
                 process.exec_time_buffer = 0;
+                if(process.threads.length === 0) process.dead = true;
+                if(process.dead === true)
+                    processes.splice(i, 1);
             }
-
-            // Clean dead processes
-            if(dead_process === true)
-                for(let i = 0; i < processes.length; i++)
-                    if(processes[i].dead)
-                        processes.splice(i, 1);
             
             // Execute added threads
             let time_buffer = get_time();
