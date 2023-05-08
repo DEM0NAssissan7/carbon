@@ -10,6 +10,9 @@ The job of the hypervisor is to:
     4. Create a set of security and stability protocols in order to maintain the system
     5. Correct the faults of javascript
 
+TODO:
+- Add namespacing
+- Add preemptive re-execution scheduler in userspace (dynamically reschedule tasks depending on reported system time, probably include in userlib.js)
 */
 
 const Kernel = {
@@ -51,6 +54,7 @@ let canvas, graphics, webgl, bitmap;
     const run_loop = true;
     const track_performance = true;
     const manage_power = true;
+    const innacuracy_test_trials = 10;
 
     const use_graphics = true;
     const use_framebuffer = false;
@@ -321,11 +325,12 @@ let canvas, graphics, webgl, bitmap;
     let thread_in_execution = null;
     let Thread = function (command) {
         this.command = command;
-        this.process = process_in_execution.PID;
+        this.process = process_in_execution;
         if (process_in_execution === null)
             error("A thread was created outside of a process context.");
         this.sleep_time = 0;
         this.last_execution = 0;
+        this.exec_time = 0;
         this.dead = false;
         this.PID = PIDs;
         PIDs++;
@@ -348,6 +353,7 @@ let canvas, graphics, webgl, bitmap;
     let process_in_execution = null;
     let Process = function (command) {
         this.process_name = command.name;
+        this.priority = 0;
         this.threads = [];
         if (use_init === true) {
             if (process_in_execution === null)
@@ -359,6 +365,7 @@ let canvas, graphics, webgl, bitmap;
         this.starting_uptime = raw_uptime().active;
         this.full_execution_time = 0;
         this.exec_time = 0;
+        this.exec_time_buffer = 0;
         this.cpu_time = 0;
         this.suspended = false;
         this.dead = false;
@@ -373,23 +380,9 @@ let canvas, graphics, webgl, bitmap;
             process_in_execution = this;
             this.full_execution_time = time_marker - this.last_execution;
             this.last_execution = time_marker;
-            for (let i = 0; i < this.threads.length; i++) {//Run all threads
-                let thread = this.threads[i];
-                if (thread.dead === true)
-                    this.threads.splice(i, 1);
-                else if (thread.sleep_time + thread.last_execution <= start_time)
-                    thread.run();
-                if (thread.last_execution >= target_time) //Scheduler watchdog
-                    break;
-            }
             if (this.threads.length === 0)
                 this.dead = true;
         }
-        let time_buffer = get_time();
-        this.exec_time = time_buffer - time_marker;
-        user_time_buffer += this.exec_time;
-        this.cpu_time += Math.floor(this.exec_time * 100) / 100;
-        return time_buffer;
     }
     Process.prototype.thread = function (command) {
         process_in_execution = this;
@@ -663,7 +656,7 @@ let canvas, graphics, webgl, bitmap;
             let suspend_daemon = function () {
                 if (document.hasFocus())
                     resume_system();
-                if (!document.hasFocus())
+                else
                     suspend_system();
             }
             add_kernel_daemon(suspend_daemon);
@@ -683,25 +676,113 @@ let canvas, graphics, webgl, bitmap;
         thread_in_execution = null;
     }
 
+    //Javascript Timeout Innacuracy
+    let timeout_innacuracy = 0;
+    {
+        let trials_run = 0;
+        let delay_preset = 15;
+        for(let i = 0; i < innacuracy_test_trials; i++) {
+            let time = get_time();
+            set_timeout(() => {
+                timeout_innacuracy += get_time() - time - delay_preset;
+                trials_run++;
+            }, delay_preset);
+        }
+        function get_average_time_innacuracy() {
+            set_timeout(() => {
+                if(trials_run === innacuracy_test_trials) {
+                    timeout_innacuracy = timeout_innacuracy / trials_run;
+                    console.log(timeout_innacuracy);
+                }
+                else get_average_time_innacuracy();
+            }, 100);
+        }
+        get_average_time_innacuracy();
+    }
+
     //Scheduler
     let scheduler_run_count = 0;
     let sched_overhead = 0;
     let user_time = 0;
+    let sched_time = 0;
+    let threads = [];
+    let injected_threads = [];
     let scheduler = function () {
         if (system_suspended !== true) {
             let start_time = get_time();
             let target_time = 1000 / minimum_cycle_rate + start_time;
-            let time_marker = start_time;
-            // processes.sort((a, b) => a.exec_time - b.exec_time);//Prioritize light processes
+            processes.sort((a, b) => b.priority - a.priority);//Order processes by priority
             user_time_buffer = 0;
+            let dead_process = false;
+            let process, thread;
+            // Add ready threads to the scheduler
             for (let i = 0; i < processes.length; i++) {
-                let process = processes[i];
-                time_marker = process.run(time_marker, start_time, target_time);
-                if (process.dead === true)
-                    processes.splice(i, 1);
+                process = processes[i];
+                if(process.threads.length < 1) process.dead = true;
+                if(process.dead === true) {
+                    dead_process = true;
+                    continue;
+                }
+                for(let j = 0; j < process.threads.length; j++) {
+                    thread = process.threads[j];
+                    if (thread.dead === true)
+                        process.threads.splice(i, 1);
+                    else if (thread.sleep_time + thread.last_execution <= start_time) {
+                        // Performance accounting from previous cycle
+                        process.exec_time = process.exec_time_buffer;
+                        threads.push(thread);
+                    }
+                }
+                process.exec_time_buffer = 0;
             }
+
+            // Clean dead processes
+            if(dead_process === true)
+                for(let i = 0; i < processes.length; i++)
+                    if(processes[i].dead)
+                        processes.splice(i, 1);
+            
+            // Execute added threads
+            let time_buffer = get_time();
+            while(threads.length > 0) {
+                sched_time = time_buffer - start_time;
+                if(time_buffer >= target_time) break; // Scheduler watchdog
+
+                // Check for a injected thread ready to be executed
+                if(injected_threads.length > 0) {
+                    thread = injected_threads[0]
+                    if(thread.sleep_time + thread.last_execution <= time_buffer && thread.process.priority >= threads[0].process.priority) {
+                        threads.splice(0, 0, thread);
+                        injected_threads.splice(0, 1);
+                    }
+                }
+
+                thread = threads[0];
+                process = thread.process;
+                thread_in_execution = thread;
+                process_in_execution = process;
+                thread.last_execution = time_buffer
+                run_command_buffer(thread.command, e => {
+                    if (e !== "interrupt") {
+                        console.error("Process " + process.process_name + " (" + thread.PID + ") has encountered an error.");
+                        console.error(e);
+                        thread.dead = true;
+                    }
+                });
+                // Keep track of performance
+                waiting_processes++;
+                let time = get_time();
+                thread.exec_time = time - time_buffer;
+                user_time_buffer += thread.exec_time;
+                time_buffer = time;
+                process.cpu_time += Math.floor(thread.exec_time * 100) / 100;
+                process.exec_time_buffer += thread.exec_time;
+                threads.splice(0, 1); // Clean the executed thread
+            }
+            
             process_in_execution = null;
             thread_in_execution = null;
+            injected_threads = [];
             sched_overhead = get_time() - start_time - user_time_buffer;
             user_time = user_time_buffer;
             scheduler_run_count++;
@@ -722,7 +803,35 @@ let canvas, graphics, webgl, bitmap;
         }
         function sleep(timeout) {
             run_kernel_api(() => {
+                /*  Sleep 2.0
+
+                    This is a new feature in the kernel.
+                    Basically, it ensures that a process will run on-time no matter what, even if there are many processes in the way
+                    It does not, however, make it where the kernel will preemptively stop an executing process. That is unfortunately impossible
+                    in javascript.
+                    Instead, it is to ensure on-time execution of high priority processes, like window managers and audio systems,
+                    in the midst of a heavily loaded system (specifically with many processes, not one large process).
+
+                    How it works:
+
+                    The sleep system call will search through all threads and attempt to find a place where the process fits, using
+                    an algorithm to determine whether or not it is fitting to inject the thread into the thread stack, or to
+                    just let the scheduler deal with it on the next execution cycle.
+                    This should dramatically improve system smoothness on desktop operating systems running on the kernel
+                    that need high responsiveness. Things like software cursors should run MUCH better from this.
+
+                */
                 thread_in_execution.sleep_time = timeout;
+                let estimated_system_time = 0;
+                for(let i = 0; i < threads.length; i++)
+                    estimated_system_time += threads[i].exec_time;
+                if(timeout < estimated_system_time - sched_time) { // Predicts if the cycle has a possibility to delay the process
+                    injected_threads.push(thread_in_execution);
+                    injected_threads.sort((a, b) => {
+                        if(a.priority !== b.priority) return b.priority - a.priority;
+                        return (a.sleep_time + a.last_execution) - (b.sleep_time + b.last_execution)
+                    })
+                }
             });
         }
         function thread(command) {
@@ -756,6 +865,15 @@ let canvas, graphics, webgl, bitmap;
         }
         function proc() {
             return run_system_call(() => process_in_execution);
+        }
+        function get_thread() {
+            return run_system_call(() => thread_in_execution); 
+        }
+        function priority(num) {
+            run_system_call(() => {
+                if(num > 100 || num < -100) throw new Error("Specified priority is out of range (range must be between -100 and 100)");
+                process_in_execution.priority = num;
+            });
         }
     }
 
@@ -834,6 +952,7 @@ let canvas, graphics, webgl, bitmap;
             }
             add_kernel_daemon(performance_tracker);
         }
+
         //Gauge performance
         {
             let performance_tracker = handler => {
@@ -1056,7 +1175,7 @@ let canvas, graphics, webgl, bitmap;
             if (inits.length !== 0) {
                 for (let i = inits.length; i > 0; i--) {
                     debug("Intializing " + inits[0].name);
-                    create_process(inits[0])
+                    create_process(inits[0]);
                     inits.splice(0, 1);
                 }
             }

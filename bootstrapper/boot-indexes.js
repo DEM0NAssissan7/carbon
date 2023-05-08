@@ -5,6 +5,7 @@
         let graphite = [
             [
             //Kernel
+            "kernel/user/userlib.js",
             "kernel/extra/tools.js",
             //App manager
             "desktop/app-manager.js",
