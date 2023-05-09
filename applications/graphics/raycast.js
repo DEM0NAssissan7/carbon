@@ -9,6 +9,8 @@ class RayCast{
         this.lightQuality = 255; //The quality of the ray rendering
         this.radConst = (1 / 360) * (2 * Math.PI);
         this.init = false;
+        this.threading = true;
+        this.finshed_lights = 0;
 
         let canvas_buffer = document.createElement("canvas");
         canvas_buffer.width = 450;
@@ -116,24 +118,48 @@ class RayCast{
             // this.objects.push(new Object(100, 110, 30, 70, "diffuse"));
             this.objects.push(new Object(350, 350, 50, 70, "wall"));
             this.objects.push(new Object(175, 175, 50, 50, "wall"));
-            this.init = true;
         }
 
         let degToRadConv, f, l, i;
-        for(f = 0; f < this.execSpeed; f++){
-            for(l = 0; l < this.lightQuality; l++){
-                this.cycleCount += 1/this.lightQuality;
-                degToRadConv = this.cycleCount * this.radConst;
-                // degToRadConv = Math.random() * 360;
-                for(i = 0; i < this.lights.length; i++)
-                    this.lights[i].update(degToRadConv);
+        if(!this.threading) {
+            for(f = 0; f < this.execSpeed; f++){
+                for(l = 0; l < this.lightQuality; l++){
+                    this.cycleCount += 1/this.lightQuality;
+                    degToRadConv = this.cycleCount * this.radConst;
+                    // degToRadConv = Math.random() * 360;
+                    for(i = 0; i < this.lights.length; i++)
+                        this.lights[i].update(degToRadConv);
+                }
+            }
+            if(this.cycles >= 360)
+                exit();    
+        } else if(this.init === false) {
+            for(let l = 0; l < this.lights.length; l++){
+                let cycle_count = 0;
+                thread(() => {
+                    for(let j = 0; j < this.execSpeed; j++) {
+                        for(let i = 0; i < this.lightQuality; i++) {
+                            cycle_count += 1/this.lightQuality;
+                            if(cycle_count > 360){
+                                this.finshed_lights++;
+                                exit();
+                                j = this.execSpeed;
+                                break;
+                            }        
+                            let degToRadConv = cycle_count * this.radConst;
+                            // degToRadConv = Math.random() * 360;
+                            self.lights[l].update(degToRadConv)
+                        }
+                    }
+                    sleep(100);
+                });
             }
         }
+        this.init = true;
+
+        if(this.finshed_lights >= this.lights.length) exit();
 
         this.cycles += this.execSpeed;
-        if(this.cycles >= 360)
-            exit();
-
         graphics.putImageData(this.image_data, 0, 0);
         call_draw();
         sleep(100);

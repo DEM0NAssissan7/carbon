@@ -133,8 +133,7 @@ function createIcon(iconFunction, x, y, size, create_windowFunction) {
     size: size,
     window_function: create_windowFunction
   });
-
-
+  
   icon.processes_buffer = [iconRender];
   icon.original_processes = [iconRender];
   icon.x = x;
@@ -149,6 +148,7 @@ function createIcon(iconFunction, x, y, size, create_windowFunction) {
   push_window(icon);
 }
 let icond = function() {
+  priority(1);
   for(let i = 0; i < icons.length; i++){
     let icon = icons[i];
     let devices = get_devices();

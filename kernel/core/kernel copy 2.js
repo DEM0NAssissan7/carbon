@@ -683,7 +683,15 @@ let canvas, graphics, webgl, bitmap;
     let scheduler_run_count = 0;
     let sched_overhead = 0;
     let user_time = 0;
+    let queue_sort = false;
     let threads = [];
+    let sort_threads = function() {
+        threads.sort((a, b) => {
+            let predicted_exec_difference = (a.queued_execution + a.exec_time) - (b.queued_execution + b.exec_time);
+            if(predicted_exec_difference) return predicted_exec_difference;
+            return b.process.priority - a.process.priority;
+        });
+    }
     let scheduler = function () {
         if (system_suspended !== true) {
             let start_time = get_time();
@@ -711,6 +719,9 @@ let canvas, graphics, webgl, bitmap;
                     processes.splice(i, 1);
             }
 
+            // Sort threads for optimal execution
+            sort_threads();
+
             // Execute added threads
             let time_buffer = get_time();
             let time;
@@ -724,13 +735,22 @@ let canvas, graphics, webgl, bitmap;
                 process_in_execution = process;
                 thread.queued = false;
                 if(thread.process.suspended !== true) {
-                    if(thread.queued_execution > time_buffer && threads.length > 1 && threads[1].exec_time < thread.queued_execution - time_buffer) {//Unready threads
+                    if(thread.queued_execution > time_buffer && false) {//Unready threads
                         // If a process is running early, and it will not be delayed if the next process runs, delay it until after the next process
-                        // thread.queued = true;
-                        // threads.splice(0, 1);
-                        // threads.splice(1, 0, thread);
-                        // time_buffer = get_time();
-                        // continue;
+                        if(threads.length > 1 && thread.PID === threads[1].PID) {
+                            threads.splice(0, 1);
+                            continue;
+                        }
+                        if(threads.length > 1 && threads[1].exec_time < thread.queued_execution - time_buffer) {
+                            thread.queued = true;
+                            threads.splice(0, 1);
+                            threads.splice(1, 0, thread);
+                            time_buffer = get_time();
+                            continue;
+                        } else if (threads.length === 1){
+                            threads.splice(0, 1);
+                            break;
+                        }
                     }
                     thread.last_execution = time_buffer;
                     run_command_buffer(thread.command, e => {
@@ -749,8 +769,11 @@ let canvas, graphics, webgl, bitmap;
                     process.exec_time_buffer += thread.exec_time;
                 } else time = get_time();
                 time_buffer = time;
-                console.log(threads.length, thread.process.process_name)
                 threads.splice(0, 1); // Clean the executed thread
+                if(queue_sort === true) {
+                    sort_threads();
+                    queue_sort = false;
+                }
             }
             
             process_in_execution = null;
@@ -799,9 +822,11 @@ let canvas, graphics, webgl, bitmap;
                 for(let i = 1; i < threads.length - 1; i++) {
                     let thread = threads[i];
                     predicted_scheduler_time += Math.max(thread.exec_time, 0.1);
-                    if(timeout <= predicted_scheduler_time && thread_in_execution.process.priority > thread.process.priority && i !== 1) {
+                    if(timeout <= predicted_scheduler_time && thread_in_execution.process.priority >= thread.process.priority && i > 1) {
                         thread_in_execution.queued = true;
                         threads.splice(i, 0, thread_in_execution);
+                        // threads.push(thread_in_execution);
+                        // queue_sort = true;
                         return;
                     }
                 }
