@@ -405,7 +405,7 @@
         let started = false;
         let native_wm = function () {
             if(!started) {
-                proc().priority = 1;
+                priority(1);
                 started = true;
             }
             let devices = get_devices();
