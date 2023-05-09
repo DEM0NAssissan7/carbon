@@ -167,9 +167,9 @@ let canvas, graphics, webgl, bitmap;
 
     //System calls
     let run_system_call = function(handler) {
-        let time = get_time();
+        let time_buffer = get_time();
         let result = handler();
-        user_time_buffer -= get_time() - time;
+        user_time_buffer -= get_time() - time_buffer;
         return result;
     }
 
@@ -329,7 +329,7 @@ let canvas, graphics, webgl, bitmap;
         this.last_execution = 0;
         this.exec_time = 0;
         this.queued = false;
-        this.queued_execution = 0;
+        this.queued_execution = get_time();
         this.dead = false;
         this.PID = PIDs;
         PIDs++;
@@ -682,7 +682,6 @@ let canvas, graphics, webgl, bitmap;
     let scheduler_run_count = 0;
     let sched_overhead = 0;
     let user_time = 0;
-    let sched_time = 0;
     let threads = [];
     let scheduler = function () {
         if (system_suspended !== true) {
@@ -716,22 +715,28 @@ let canvas, graphics, webgl, bitmap;
             let time;
             while(threads.length > 0) {
                 sched_time = time_buffer - start_time;
-                if(time_buffer >= target_time) break; // Scheduler watchdog
+                if(time_buffer >= target_time) break; // Scheduler watchdog; prevent scheduler from running over the target time
 
                 thread = threads[0];
                 process = thread.process;
                 thread_in_execution = thread;
                 process_in_execution = process;
                 thread.queued = false;
-                thread.last_execution = time_buffer;
                 if(thread.process.suspended !== true) {
-                    if(thread.queued_execution > time_buffer && threads.length > 1 && threads[1].exec_time < thread.queued_execution - time_buffer) {
+                    if(thread.queued_execution > time_buffer) {//Unready threads
                         // If a process is running early, and it will not be delayed if the next process runs, delay it until after the next process
-                        threads.splice(2, 0, thread);
-                        threads.splice(0, 1);
-                        time_buffer = get_time();
-                        continue;
+                        if(threads.length > 1 && threads[1].exec_time < thread.queued_execution - time_buffer) {
+                            thread.queued = true;
+                            threads.splice(0, 1);
+                            threads.splice(1, 0, thread);
+                            time_buffer = get_time();
+                            continue;
+                        } else if (threads.length === 1){
+                            threads.splice(0, 1);
+                            break;
+                        }
                     }
+                    thread.last_execution = time_buffer;
                     run_command_buffer(thread.command, e => {
                         if (e !== "interrupt") {
                             console.error("Process " + process.process_name + " (" + thread.PID + ") has encountered an error.");
@@ -753,8 +758,7 @@ let canvas, graphics, webgl, bitmap;
             
             process_in_execution = null;
             thread_in_execution = null;
-            sched_overhead = get_time() - start_time - user_time_buffer;
-            user_time = user_time_buffer;
+            sched_overhead = sched_time - user_time_buffer;
             scheduler_run_count++;
         }
     }
@@ -791,12 +795,13 @@ let canvas, graphics, webgl, bitmap;
                     that need high responsiveness. Things like software cursors should run MUCH better from this.
 
                 */
+               if(timeout < 1) throw new Error("Sleep timeout cannot be less than 1");
                 thread_in_execution.sleep_time = timeout;
                 thread_in_execution.queued_execution = timeout + thread_in_execution.last_execution;
                 let predicted_scheduler_time = 0;
-                for(let i = 1; i < threads.length - 1; i++) {
+                for(let i = 2; i < threads.length - 1; i++) {
                     let thread = threads[i];
-                    predicted_scheduler_time += thread.exec_time;
+                    predicted_scheduler_time += Math.max(thread.exec_time, 0.1);
                     if(timeout <= predicted_scheduler_time && thread_in_execution.process.priority >= thread.process.priority) {
                         thread_in_execution.queued = true;
                         threads.splice(i, 0, thread_in_execution);
@@ -1174,6 +1179,7 @@ let canvas, graphics, webgl, bitmap;
                     set_timeout(main, execution_time);
                 let time_marker_2 = get_time();
                 system_time = time_marker_2 - time_marker;
+                user_time = user_time_buffer;
                 kernel_overhead = system_time - user_time;
                 overhead_time_marker = time_marker_2;
             } catch (e) {
